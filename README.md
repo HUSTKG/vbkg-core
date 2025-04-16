@@ -33,17 +33,11 @@ Hệ thống được chia thành 5 lớp chính:
 ### Backend
 
 - **FastAPI**: Web framework hiệu năng cao
-- **SQLAlchemy**: ORM để tương tác với PostgreSQL
-- **Pydantic**: Validation dữ liệu
-- **py2neo**: Kết nối với Neo4j
-- **Celery**: Quản lý tác vụ nền
-- **spaCy/Hugging Face**: Xử lý ngôn ngữ tự nhiên
 
 ### Frontend
 
-- **React/Next.js**: SPA framework
+- **React**: SPA framework
 - **TailwindCSS**: Utility-first CSS
-- **Nivo/D3.js**: Trực quan hóa đồ thị
 
 ### Database
 
@@ -90,9 +84,6 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Cài đặt dependencies
 pip install -r requirements.txt
-
-# Khởi tạo database
-alembic upgrade head
 
 # Chạy ứng dụng
 uvicorn main:app --reload
@@ -147,27 +138,6 @@ knowledge_graph_system/
 ├── frontend/                   # React frontend
 ├── tests/                      # Test suite
 └── docker-compose.yml          # Docker configuration
-```
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/v1/auth/register`: Đăng ký tài khoản
-- `POST /api/v1/auth/login`: Đăng nhập
-- `GET /api/v1/auth/me`: Thông tin người dùng
-
-### Knowledge Graph
-
-- `GET /api/v1/knowledge/entities`: Lấy danh sách thực thể
-- `POST /api/v1/knowledge/entities`: Tạo thực thể mới
-- `POST /api/v1/knowledge/relationships`: Tạo mối quan hệ
-- `POST /api/v1/knowledge/query`: Truy vấn đồ thị
-
-### Pipeline Management
-
-- `GET /api/v1/pipelines`: Lấy danh sách pipeline
-- `POST /api/v1/pipelines/{id}/execute`: Thực thi pipeline
 
 ## Đóng góp
 
@@ -177,14 +147,9 @@ Chúng tôi rất hoan nghênh mọi đóng góp! Hãy xem [CONTRIBUTING.md](CON
 
 Dự án này được phân phối dưới giấy phép MIT. Xem file [LICENSE](LICENSE) để biết thêm chi tiết.
 
-## Liên hệ
-
-- Email: your.email@example.com
-- GitHub Issues: [https://github.com/yourusername/knowledge-graph-system/issues](https://github.com/yourusername/knowledge-graph-system/issues)
-
 ## Tài liệu tham khảo
 
 - [Neo4j Documentation](https://neo4j.com/docs/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [spaCy Documentation](https://spacy.io/api/doc)
-- [Hugging Face Transformers](https://huggingface.co/docs/transformers/index)
+```
+
