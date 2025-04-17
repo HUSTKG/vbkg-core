@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://www.semanticweb.org/finance-banking-ontology#"
+     xml:base="http://www.semanticweb.org/finance-banking-ontology"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:fibo="https://spec.edmcouncil.org/fibo/ontology/">
+
+    <owl:Ontology rdf:about="http://www.semanticweb.org/finance-banking-ontology">
+        <rdfs:label xml:lang="en">Finance and Banking Domain Ontology</rdfs:label>
+        <rdfs:comment xml:lang="en">A foundational ontology for finance and banking domain, aligned with FIBO concepts</rdfs:comment>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/"/>
+    </owl:Ontology>
+
+    <!-- ================ -->
+    <!-- Business Entity Classes -->
+    <!-- ================ -->
+    
+    <owl:Class rdf:about="#BusinessEntity">
+        <rdfs:label xml:lang="en">Business Entity</rdfs:label>
+        <rdfs:comment xml:lang="en">An organization or individual engaged in business activities</rdfs:comment>
+        <owl:equivalentClass rdf:resource="fibo:BE/LegalEntities/LegalEntities/LegalEntity"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#FinancialInstitution">
+        <rdfs:subClassOf rdf:resource="#BusinessEntity"/>
+        <rdfs:label xml:lang="en">Financial Institution</rdfs:label>
+        <owl:equivalentClass rdf:resource="fibo:FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Bank">
+        <rdfs:subClassOf rdf:resource="#FinancialInstitution"/>
+        <rdfs:label xml:lang="en">Bank</rdfs:label>
+    </owl:Class>
+
+    <!-- ================ -->
+    <!-- Financial Product Classes -->
+    <!-- ================ -->
+
+    <owl:Class rdf:about="#FinancialProduct">
+        <rdfs:label xml:lang="en">Financial Product</rdfs:label>
+        <rdfs:comment xml:lang="en">A financial service or product offered by financial institutions</rdfs:comment>
+        <owl:equivalentClass rdf:resource="fibo:FBC/ProductsAndServices/FinancialProductsAndServices/FinancialProduct"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#DepositProduct">
+        <rdfs:subClassOf rdf:resource="#FinancialProduct"/>
+        <rdfs:label xml:lang="en">Deposit Product</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#LoanProduct">
+        <rdfs:subClassOf rdf:resource="#FinancialProduct"/>
+        <rdfs:label xml:lang="en">Loan Product</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#InvestmentProduct">
+        <rdfs:subClassOf rdf:resource="#FinancialProduct"/>
+        <rdfs:label xml:lang="en">Investment Product</rdfs:label>
+    </owl:Class>
+
+    <!-- ================ -->
+    <!-- Account Classes -->
+    <!-- ================ -->
+
+    <owl:Class rdf:about="#FinancialAccount">
+        <rdfs:label xml:lang="en">Financial Account</rdfs:label>
+        <rdfs:comment xml:lang="en">An arrangement between a financial institution and a customer</rdfs:comment>
+        <owl:equivalentClass rdf:resource="fibo:FND/AccountsAndPeople/Accounts/Account"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#DepositAccount">
+        <rdfs:subClassOf rdf:resource="#FinancialAccount"/>
+        <rdfs:label xml:lang="en">Deposit Account</rdfs:label>
+    </owl:Class>
+
+    <owl:Class rdf:about="#LoanAccount">
+        <rdfs:subClassOf rdf:resource="#FinancialAccount"/>
+        <rdfs:label xml:lang="en">Loan Account</rdfs:label>
+    </owl:Class>
+
+    <!-- ================ -->
+    <!-- Party Classes -->
+    <!-- ================ -->
+
+    <owl:Class rdf:about="#Party">
+        <rdfs:label xml:lang="en">Party</rdfs:label>
+        <rdfs:comment xml:lang="en">An individual or organization that can participate in financial transactions</rdfs:comment>
+        <owl:equivalentClass rdf:resource="fibo:FND/Parties/Parties/IndependentParty"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Customer">
+        <rdfs:subClassOf rdf:resource="#Party"/>
+        <rdfs:label xml:lang="en">Customer</rdfs:label>
+    </owl:Class>
+
+    <!-- ================ -->
+    <!-- Transaction Classes -->
+    <!-- ================ -->
+
+    <owl:Class rdf:about="#FinancialTransaction">
+        <rdfs:label xml:lang="en">Financial Transaction</rdfs:label>
+        <rdfs:comment xml:lang="en">A business activity involving monetary exchange</rdfs:comment>
+        <owl:equivalentClass rdf:resource="fibo:FND/TransactionsExt/REATransactions/Transaction"/>
+    </owl:Class>
+
+    <!-- ================ -->
+    <!-- Object Properties -->
+    <!-- ================ -->
+
+    <owl:ObjectProperty rdf:about="#hasAccount">
+        <rdfs:domain rdf:resource="#Party"/>
+        <rdfs:range rdf:resource="#FinancialAccount"/>
+        <rdfs:label xml:lang="en">has account</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#offersProduct">
+        <rdfs:domain rdf:resource="#FinancialInstitution"/>
+        <rdfs:range rdf:resource="#FinancialProduct"/>
+        <rdfs:label xml:lang="en">offers product</rdfs:label>
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:about="#participatesIn">
+        <rdfs:domain rdf:resource="#Party"/>
+        <rdfs:range rdf:resource="#FinancialTransaction"/>
+        <rdfs:label xml:lang="en">participates in</rdfs:label>
+    </owl:ObjectProperty>
+
+    <!-- ================ -->
+    <!-- Data Properties -->
+    <!-- ================ -->
+
+    <owl:DatatypeProperty rdf:about="#identifier">
+        <rdfs:domain rdf:resource="#BusinessEntity"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:label xml:lang="en">identifier</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#accountNumber">
+        <rdfs:domain rdf:resource="#FinancialAccount"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:label xml:lang="en">account number</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#balance">
+        <rdfs:domain rdf:resource="#FinancialAccount"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+        <rdfs:label xml:lang="en">balance</rdfs:label>
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:about="#transactionDate">
+        <rdfs:domain rdf:resource="#FinancialTransaction"/>
+        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+        <rdfs:label xml:lang="en">transaction date</rdfs:label>
+    </owl:DatatypeProperty>
+
+</rdf:RDF>
+
