@@ -139,6 +139,8 @@ knowledge_graph_system/
 ├── tests/                      # Test suite
 └── docker-compose.yml          # Docker configuration
 
+```
+
 ## Đóng góp
 
 Chúng tôi rất hoan nghênh mọi đóng góp! Hãy xem [CONTRIBUTING.md](CONTRIBUTING.md) để biết thêm chi tiết.
@@ -151,5 +153,3 @@ Dự án này được phân phối dưới giấy phép MIT. Xem file [LICENSE]
 
 - [Neo4j Documentation](https://neo4j.com/docs/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-```
-
