@@ -1,0 +1,133 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 88
+target-version = ['py39', 'py310']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pandas.*",
+    "neo4j.*",
+    "py2neo.*",
+    "transformers.*",
+    "sentence_transformers.*",
+    "celery.*",
+    "redis.*",
+    "boto3.*",
+    "s3fs.*",
+    "textract.*",
+    "PyPDF2.*",
+    "docx.*",
+    "nltk.*",
+    "spacy.*",
+    "torch.*"
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+python_classes = "Test*"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["*/tests/*", "*/migrations/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "pass",
+    "raise ImportError",
+]
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "invalid-name",
+    "too-few-public-methods",
+    "no-self-use",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-locals",
+    "duplicate-code",
+]
+
+[tool.pylint.format]
+max-line-length = 88
+
+[tool.setuptools]
+packages = ["app"]
+
+[project]
+name = "knowledge_graph_system"
+version = "0.1.0"
+description = "Knowledge Graph System for Banking Domain"
+readme = "README.md"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+license = {text = "MIT"}
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    "fastapi>=0.95.1",
+    "uvicorn[standard]>=0.21.1",
+    "pydantic>=1.10.7",
+    "supabase>=1.0.3",
+    "py2neo>=2021.2.3",
+    "python-jose[cryptography]>=3.3.0",
+    "celery>=5.2.7",
+    "redis>=4.5.4",
+    "spacy>=3.5.2",
+    "transformers>=4.28.1",
+    "pandas>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.3.1",
+    "black>=23.3.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.2.0",
+    "pre-commit>=3.2.2",
+]
+docs = [
+    "mkdocs>=1.4.2",
+    "mkdocs-material>=9.1.4",
+    "mkdocstrings>=0.21.2",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/knowledge-graph-system"
+"Bug Tracker" = "https://github.com/yourusername/knowledge-graph-system/issues"
+"Documentation" = "https://yourusername.github.io/knowledge-graph-system"
