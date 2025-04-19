@@ -1,153 +1,74 @@
-# Knowledge Graph System cho Ngành Ngân Hàng
+# Knowledge Graph System for Banking Industry
 
 <p align="center">
   <img src="docs/architecture/system_overview.png" alt="Knowledge Graph System Architecture" width="600"/>
 </p>
 
-## Giới thiệu
+## Introduction
 
-Knowledge Graph System là một hệ thống xây dựng và quản lý đồ thị tri thức bán tự động dành cho lĩnh vực ngân hàng tại Việt Nam. Hệ thống kết hợp các kỹ thuật xử lý ngôn ngữ tự nhiên, machine learning và graph database để tạo ra một cơ sở tri thức toàn diện từ nhiều nguồn dữ liệu khác nhau.
+Knowledge Graph System is a semi-automated platform for building and managing knowledge graphs specifically designed for the banking industry in Vietnam. The system combines natural language processing techniques, machine learning, and graph database technologies to create a comprehensive knowledge base from diverse data sources.
 
-### Tính năng chính
+By leveraging AI-powered entity extraction and relationship analysis, the system enables financial institutions to organize and extract insights from complex banking data.
 
-- **Thu thập và xử lý dữ liệu tự động** từ nhiều định dạng (văn bản, HTML, PDF, CSV, JSON)
-- **Trích xuất thực thể và mối quan hệ** sử dụng NLP và Machine Learning
-- **Tích hợp ontology ngành ngân hàng** để cấu trúc tri thức
-- **Giải quyết xung đột dữ liệu** với sự can thiệp của con người
-- **API linh hoạt** cho phép tích hợp với các hệ thống khác
-- **Giao diện trực quan hóa** đồ thị tri thức
-- **Quản lý người dùng và phân quyền** toàn diện
+### Key Features
 
-## Kiến trúc hệ thống
+- **Automated Data Collection and Processing** from multiple formats (text, HTML, PDF, CSV, JSON)
+- **Advanced Entity and Relationship Extraction** using OpenAI LLMs with Vietnamese language support
+- **Vector Embeddings** for semantic search and entity resolution
+- **Banking Domain Ontology Integration** for structured knowledge organization
+- **Conflict Resolution System** with human oversight
+- **Flexible API** for integration with external systems
+- **Interactive Visualization Interface** for knowledge graph exploration
+- **Comprehensive User Management and RBAC** for secure access control
 
-Hệ thống được chia thành 5 lớp chính:
+## System Architecture
 
-1. **Lớp Ứng Dụng**: Giao diện người dùng và tích hợp bên ngoài
-2. **Lớp API**: RESTful API cho các ứng dụng client
-3. **Lớp Logic Nghiệp Vụ**: Quản lý người dùng, tri thức, nguồn dữ liệu và pipeline
-4. **Lớp Xử Lý Dữ Liệu**: Trích xuất, chuyển đổi và làm giàu dữ liệu
-5. **Lớp Lưu Trữ Dữ Liệu**: Neo4j, PostgreSQL và AWS S3
+The system is organized into 5 main layers:
 
-## Công nghệ sử dụng
+1. **Application Layer**: User interfaces and external integrations
+2. **API Layer**: RESTful API for client applications
+3. **Business Logic Layer**: User, knowledge, data source, and pipeline management
+4. **Data Processing Layer**: Extraction, transformation, and enrichment
+5. **Data Storage Layer**: Neo4j, PostgreSQL, and AWS S3
+
+## Technology Stack
 
 ### Backend
-
-- **FastAPI**: Web framework hiệu năng cao
+- **FastAPI**: High-performance web framework
+- **OpenAI API**: For entity extraction, relation extraction, and embeddings
+- **Celery**: Distributed task queue for background processing
 
 ### Frontend
+- **React**: Single-page application framework
+- **TailwindCSS**: Utility-first CSS framework
 
-- **React**: SPA framework
-- **TailwindCSS**: Utility-first CSS
-
-### Database
-
-- **Neo4j**: Graph database
-- **PostgreSQL/Supabase**: Relational database
-- **AWS S3**: Lưu trữ đối tượng
+### Databases
+- **Neo4j**: Graph database for storing and querying the knowledge graph
+- **PostgreSQL/Supabase**: Relational database for user management and metadata
+- **AWS S3**: Object storage for source documents
 
 ### Infrastructure
+- **Docker/Docker Compose**: Container orchestration
+- **GitHub Actions**: Continuous Integration/Continuous Deployment
 
-- **Docker/Docker Compose**: Containerization
-- **GitHub Actions**: CI/CD
+## Installation
 
-## Cài đặt
-
-### Yêu cầu
-
-- Docker và Docker Compose
+### Requirements
+- Docker and Docker Compose
 - Python 3.9+
 - Node.js 14+
+- OpenAI API key
 
-### Sử dụng Docker
+### Using Docker
 
 ```bash
 # Clone repository
 git clone https://github.com/yourusername/knowledge-graph-system.git
 cd knowledge-graph-system
 
-# Tạo file .env từ mẫu
+# Create environment file from template
 cp .env.example .env
-# Chỉnh sửa file .env với thông tin cấu hình của bạn
+# Edit .env file with your configuration including OpenAI API key
 
-# Khởi chạy với Docker Compose
+# Start with Docker Compose
 docker-compose up -d
-```
-
-### Cài đặt thủ công
-
-#### Backend
-
-```bash
-# Tạo và kích hoạt môi trường ảo
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Cài đặt dependencies
-pip install -r requirements.txt
-
-# Chạy ứng dụng
-uvicorn main:app --reload
-```
-
-#### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## Sử dụng
-
-Sau khi cài đặt, bạn có thể truy cập:
-
-- **API Documentation**: http://localhost:8000/docs
-- **Admin Console**: http://localhost:3000/admin
-- **Consumer UI**: http://localhost:3000
-
-## Data Pipeline
-
-<p align="center">
-  <img src="docs/architecture/data_pipeline.png" alt="Data Pipeline" width="600"/>
-</p>
-
-Hệ thống xử lý cả dữ liệu có cấu trúc và phi cấu trúc:
-
-1. **Thu thập dữ liệu** từ nhiều nguồn
-2. **Trích xuất thực thể và mối quan hệ** bằng NLP
-3. **Entity Resolution** để hợp nhất các thực thể trùng lặp
-4. **Làm giàu dữ liệu** qua embedding và ontology
-5. **Lưu trữ** vào Neo4j và vector database
-
-## Cấu trúc dự án
-
-```
-knowledge_graph_system/
-├── app/                        # Main application package
-│   ├── api/                    # API endpoints
-│   ├── core/                   # Core configuration
-│   ├── schemas/                # Pydantic schemas
-│   ├── services/               # Business logic
-│   ├── tasks/                  # Background tasks
-│   ├── nlp/                    # NLP pipeline
-│   └── utils/                  # Utilities
-├── data/                       # Data files
-├── docs/                       # Documentation
-├── frontend/                   # React frontend
-├── tests/                      # Test suite
-└── docker-compose.yml          # Docker configuration
-
-```
-
-## Đóng góp
-
-Chúng tôi rất hoan nghênh mọi đóng góp! Hãy xem [CONTRIBUTING.md](CONTRIBUTING.md) để biết thêm chi tiết.
-
-## License
-
-Dự án này được phân phối dưới giấy phép MIT. Xem file [LICENSE](LICENSE) để biết thêm chi tiết.
-
-## Tài liệu tham khảo
-
-- [Neo4j Documentation](https://neo4j.com/docs/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
