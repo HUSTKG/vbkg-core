@@ -126,8 +126,6 @@ knowledge_graph_system/
 ├── app/                        # Main application package
 │   ├── api/                    # API endpoints
 │   ├── core/                   # Core configuration
-│   ├── db/                     # Database connections
-│   ├── models/                 # SQLAlchemy models
 │   ├── schemas/                # Pydantic schemas
 │   ├── services/               # Business logic
 │   ├── tasks/                  # Background tasks

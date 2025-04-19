@@ -1,7 +1,8 @@
 import os
 import secrets
 from typing import List, Union, Optional, Dict, Any
-from pydantic import BaseSettings, AnyHttpUrl, validator
+from pydantic import AnyHttpUrl, validator
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Knowledge Graph System"

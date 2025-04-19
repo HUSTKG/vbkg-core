@@ -180,7 +180,7 @@ def sanitize_input(value: str) -> str:
     
     return sanitized
 
-def validate_entity_type(entity_type: str, allowed_types: List[str] = None) -> Dict[str, Any]:
+def validate_entity_type(entity_type: str, allowed_types: List[str] | None = None) -> Dict[str, Any]:
     """
     Validate an entity type.
     
@@ -204,7 +204,7 @@ def validate_entity_type(entity_type: str, allowed_types: List[str] = None) -> D
         "errors": errors
     }
 
-def validate_relationship_type(relationship_type: str, allowed_types: List[str] = None) -> Dict[str, Any]:
+def validate_relationship_type(relationship_type: str, allowed_types: List[str] | None = None) -> Dict[str, Any]:
     """
     Validate a relationship type.
     
