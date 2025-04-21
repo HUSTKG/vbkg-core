@@ -1,9 +1,9 @@
-from typing import Any, List, Dict, Optional
+from typing import Annotated, Any, List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form, Query, Path
 from pydantic import parse_obj_as
 import json
 
-from app.api.deps import get_current_user, check_permission
+from app.api.deps import get_current_user, PermissionChecker 
 from app.schemas.datasource import (
     DataSource, 
     DataSourceCreate, 
@@ -16,11 +16,14 @@ from app.services.datasource import DataSourceService
 
 router = APIRouter()
 
+check_read_permission = PermissionChecker("datasource:read")
+check_write_permission = PermissionChecker("datasource:write")
+
 
 @router.post("/", response_model=DataSource, status_code=status.HTTP_201_CREATED)
 async def create_datasource(
     datasource_in: DataSourceCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:write"))
+    current_user: Annotated[Dict[str, Any], Depends(check_write_permission)],
 ) -> Any:
     """
     Create new data source.
@@ -38,7 +41,7 @@ async def read_datasources(
     limit: int = 100,
     source_type: Optional[SourceType] = None,
     is_active: Optional[bool] = None,
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve data sources with filtering options.
@@ -55,7 +58,7 @@ async def read_datasources(
 @router.get("/{datasource_id}", response_model=DataSource)
 async def read_datasource(
     datasource_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get specific data source by ID.
@@ -68,7 +71,7 @@ async def read_datasource(
 async def update_datasource(
     datasource_in: DataSourceUpdate,
     datasource_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Update a data source.
@@ -83,7 +86,7 @@ async def update_datasource(
 @router.delete("/{datasource_id}", response_model=Dict[str, Any])
 async def delete_datasource(
     datasource_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Delete a data source.
@@ -97,7 +100,7 @@ async def upload_file(
     file: UploadFile = File(...),
     metadata: Optional[str] = Form(None),
     datasource_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Upload a file to a data source.
@@ -130,7 +133,7 @@ async def read_file_uploads(
     processed: Optional[bool] = None,
     skip: int = 0,
     limit: int = 100,
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve file uploads with filtering options.
@@ -138,7 +141,6 @@ async def read_file_uploads(
     datasource_service = DataSourceService()
     return await datasource_service.get_file_uploads(
         data_source_id=datasource_id,
-        status=status.value if status else None,
         processed=processed,
         skip=skip,
         limit=limit
@@ -148,7 +150,7 @@ async def read_file_uploads(
 @router.get("/files/{file_id}", response_model=FileUpload)
 async def read_file_upload(
     file_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get specific file upload by ID.
@@ -163,7 +165,7 @@ async def update_file_status(
     processed: Optional[bool] = None,
     error_message: Optional[str] = None,
     file_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Update status of a file upload.
@@ -171,7 +173,7 @@ async def update_file_status(
     datasource_service = DataSourceService()
     return await datasource_service.update_file_status(
         file_upload_id=file_id,
-        status=status,
+        fileStatus=status,
         processed=processed,
         error_message=error_message
     )
@@ -180,7 +182,7 @@ async def update_file_status(
 @router.delete("/files/{file_id}", response_model=Dict[str, Any])
 async def delete_file_upload(
     file_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Delete a file upload.
@@ -192,7 +194,7 @@ async def delete_file_upload(
 @router.get("/files/{file_id}/content")
 async def get_file_content(
     file_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("datasource:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get the content of a file.

@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from datetime import datetime
-from pydantic import BaseModel, Field, validator, AnyHttpUrl
+from pydantic import UUID4, BaseModel, Field, validator, AnyHttpUrl
 
 
 class PipelineType(str, Enum):
@@ -37,7 +37,7 @@ class StepConfig(BaseModel):
 
 class FileReaderConfig(StepConfig):
     """Configuration for reading files from storage"""
-    file_id: str
+    file_id: UUID4 
     encoding: str = "utf-8"
     chunk_size: Optional[int] = None
 
@@ -122,7 +122,7 @@ class CustomPythonConfig(StepConfig):
 
 
 class PipelineStep(BaseModel):
-    id: str = Field(..., description="Unique ID for this step")
+    id: UUID4 = Field(..., description="Unique ID for this step")
     name: str = Field(..., description="Human-readable name for this step")
     type: PipelineStepType
     config: Union[
@@ -174,7 +174,7 @@ class PipelineBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     pipeline_type: PipelineType
-    steps: List[PipelineStep] = Field(..., min_items=1)
+    steps: List[PipelineStep]
     schedule: Optional[str] = None  # CRON expression
 
 
@@ -192,18 +192,18 @@ class PipelineUpdate(BaseModel):
 
 
 class Pipeline(PipelineBase):
-    id: str
+    id: UUID4 
     is_active: bool = True
     created_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PipelineRunBase(BaseModel):
-    pipeline_id: str
+    pipeline_id: UUID4 
     status: PipelineStatus = PipelineStatus.PENDING
     triggered_by: Optional[str] = None
 
@@ -213,7 +213,7 @@ class PipelineRunCreate(PipelineRunBase):
 
 
 class PipelineRun(PipelineRunBase):
-    id: str
+    id: UUID4 
     start_time: datetime
     end_time: Optional[datetime] = None
     duration: Optional[int] = None  # in seconds
@@ -223,11 +223,11 @@ class PipelineRun(PipelineRunBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PipelineStepResult(BaseModel):
-    step_id: str
+    step_id: UUID4 
     status: PipelineStatus
     output: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
@@ -246,7 +246,14 @@ class PipelineRunUpdate(BaseModel):
 
 
 class PipelineRunLog(BaseModel):
-    pipeline_id: str
+    pipeline_id: UUID4 
     run_id: str
     logs: List[Dict[str, Any]]
     step_results: Dict[str, PipelineStepResult]
+
+class PipelineRunStatus(BaseModel):
+    status: PipelineStatus
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    duration: Optional[int] = None  # in seconds
+    stats: Optional[Dict[str, Any]] = None

@@ -1,7 +1,7 @@
 from typing import Optional
 import logging
 import os
-from supabase import create_client, Client
+from supabase._async.client import AsyncClient as Client, create_client
 
 from app.core.config import settings
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 _supabase_client: Optional[Client] = None
 
-def get_supabase() -> Client:
+async def get_supabase() -> Client:
     """
     Get or create a Supabase client instance.
     
@@ -20,7 +20,7 @@ def get_supabase() -> Client:
     
     if _supabase_client is None:
         try:
-            _supabase_client = create_client(
+            _supabase_client = await create_client(
                 settings.SUPABASE_URL,
                 settings.SUPABASE_KEY
             )
@@ -39,7 +39,7 @@ async def test_supabase_connection() -> bool:
         True if connection is successful, False otherwise
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Try a simple query to check connection
         response = await supabase.table("roles").select("*").limit(1).execute()

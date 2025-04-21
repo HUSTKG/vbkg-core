@@ -165,7 +165,7 @@ def extract_entities_with_regex(text: str) -> List[Dict[str, Any]]:
     
     return entities
 
-def load_custom_entity_types(path: str = None) -> Dict[str, str]:
+def load_custom_entity_types(path: str | None = None) -> Dict[str, str]:
     """
     Load custom entity types from a configuration file.
     

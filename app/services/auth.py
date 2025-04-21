@@ -5,13 +5,11 @@ from app.schemas.user import UserLogin, UserCreate
 
 
 class AuthService:
-    def __init__(self):
-        self.supabase = get_supabase()
-
     async def login(self, user_data: UserLogin) -> Dict[str, Any]:
         """Authenticate user and return tokens"""
         try:
-            response = self.supabase.auth.sign_in_with_password({
+            supabase = await get_supabase()
+            response = await supabase.auth.sign_in_with_password({
                 "email": user_data.email,
                 "password": user_data.password
             })
@@ -49,6 +47,7 @@ class AuthService:
     async def register(self, user_data: UserCreate) -> Dict[str, Any]:
         """Register a new user"""
         try:
+            supabase = await get_supabase()
             # Check if user already exists
             user_exists = await self._check_user_exists(user_data.email)
             if user_exists:
@@ -58,7 +57,7 @@ class AuthService:
                 )
             
             # Register user in auth system
-            response = self.supabase.auth.sign_up({
+            response = await supabase.auth.sign_up({
                 "email": user_data.email,
                 "password": user_data.password,
                 "options": {
@@ -96,7 +95,8 @@ class AuthService:
     async def logout(self, _: str) -> Dict[str, Any]:
         """Logout a user"""
         try:
-            self.supabase.auth.sign_out()
+            supabase = await get_supabase()
+            await supabase.auth.sign_out()
             return {"detail": "Successfully logged out"}
         except Exception as e:
             raise HTTPException(
@@ -107,7 +107,8 @@ class AuthService:
     async def get_current_user(self, token: str) -> Dict[str, Any]:
         """Get current user from token"""
         try:
-            response = self.supabase.auth.get_user(token)
+            supabase = await get_supabase()
+            response = await supabase.auth.get_user(token)
             if not response:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -143,8 +144,9 @@ class AuthService:
     async def _check_user_exists(self, email: str) -> bool:
         """Check if a user with the given email exists"""
         try:
+            supabase = await get_supabase()
             # Query the profile to see if user exists
-            response = self.supabase.from_("profiles").select("id").eq("email", email).execute()
+            response = await supabase.from_("profiles").select("id").eq("email", email).execute()
             return len(response.data) > 0
         except Exception:
             return False
@@ -152,15 +154,16 @@ class AuthService:
     async def _assign_roles(self, user_id: str, role_names: List[str]) -> None:
         """Assign roles to a user"""
         try:
+            supabase = await get_supabase()
             # Get role IDs from role names
             for role_name in role_names:
-                response = self.supabase.from_("roles").select("id").eq("name", role_name).execute()
+                response = await supabase.from_("roles").select("id").eq("name", role_name).execute()
                 
                 if response.data and len(response.data) > 0:
                     role_id = response.data[0]["id"]
                     
                     # Assign role to user
-                    self.supabase.from_("user_roles").insert({
+                    await supabase.from_("user_roles").insert({
                         "user_id": user_id,
                         "role_id": role_id
                     }).execute()
@@ -170,7 +173,8 @@ class AuthService:
     async def _get_user_roles(self, user_id: str) -> List[str]:
         """Get roles for a user"""
         try:
-            response = self.supabase.from_("user_roles").select(
+            supabase = await get_supabase()
+            response = await supabase.from_("user_roles").select(
                 "role:role_id(name)"
             ).eq("user_id", user_id).execute()
             

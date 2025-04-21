@@ -24,8 +24,6 @@ from app.services.datasource import DataSourceService
 
 class FIBOService:
     def __init__(self):
-        self.supabase = get_supabase()
-        
         # Common namespaces for FIBO
         self.fibo = Namespace("https://spec.edmcouncil.org/fibo/ontology/")
         self.fibo_fbc = Namespace("https://spec.edmcouncil.org/fibo/ontology/FBC/")
@@ -35,7 +33,8 @@ class FIBOService:
     async def get_fibo_class(self, class_id: int) -> Dict[str, Any]:
         """Get a FIBO class by ID"""
         try:
-            response = self.supabase.from_("fibo_classes").select("*").eq("id", class_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("fibo_classes").select("*").eq("id", class_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -55,7 +54,8 @@ class FIBOService:
     async def get_fibo_class_by_uri(self, uri: str) -> Dict[str, Any]:
         """Get a FIBO class by URI"""
         try:
-            response = self.supabase.from_("fibo_classes").select("*").eq("uri", uri).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("fibo_classes").select("*").eq("uri", uri).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -75,6 +75,7 @@ class FIBOService:
     async def create_fibo_class(self, fibo_class_in: FIBOClassCreate) -> Dict[str, Any]:
         """Create a new FIBO class"""
         try:
+            supabase = await get_supabase()
             # Check if class already exists by URI
             try:
                 existing_class = await self.get_fibo_class_by_uri(fibo_class_in.uri)
@@ -96,7 +97,7 @@ class FIBOService:
             data = fibo_class_in.dict(exclude={"parent_class_uri"})
             data["parent_class_id"] = parent_class_id
             
-            response = self.supabase.from_("fibo_classes").insert(data).execute()
+            response = await supabase.from_("fibo_classes").insert(data).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -120,6 +121,7 @@ class FIBOService:
     ) -> Dict[str, Any]:
         """Update a FIBO class"""
         try:
+            supabase = await get_supabase()
             # Check if class exists
             await self.get_fibo_class(class_id)
             
@@ -138,7 +140,7 @@ class FIBOService:
                     data["parent_class_id"] = None
             
             # Update the class
-            response = self.supabase.from_("fibo_classes").update(data).eq("id", class_id).execute()
+            response = await supabase.from_("fibo_classes").update(data).eq("id", class_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -158,11 +160,12 @@ class FIBOService:
     async def delete_fibo_class(self, class_id: int) -> Dict[str, Any]:
         """Delete a FIBO class"""
         try:
+            supabase = await get_supabase()
             # Check if class exists
             await self.get_fibo_class(class_id)
             
             # Delete the class
-            self.supabase.from_("fibo_classes").delete().eq("id", class_id).execute()
+            await supabase.from_("fibo_classes").delete().eq("id", class_id).execute()
             
             return {"success": True, "message": "FIBO class deleted"}
         except HTTPException:
@@ -183,7 +186,8 @@ class FIBOService:
     ) -> List[Dict[str, Any]]:
         """Get FIBO classes with filtering and pagination"""
         try:
-            query = self.supabase.from_("fibo_classes").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("fibo_classes").select("*")
             
             if domain:
                 query = query.eq("domain", domain)
@@ -195,7 +199,7 @@ class FIBOService:
                 # Search in label and URI
                 query = query.or_(f"label.ilike.%{search}%,uri.ilike.%{search}%")
             
-            response = query.range(offset, offset + limit - 1).execute()
+            response = await query.range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -207,7 +211,8 @@ class FIBOService:
     async def get_fibo_property(self, property_id: int) -> Dict[str, Any]:
         """Get a FIBO property by ID"""
         try:
-            response = self.supabase.from_("fibo_properties").select("*").eq("id", property_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("fibo_properties").select("*").eq("id", property_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -227,7 +232,8 @@ class FIBOService:
     async def get_fibo_property_by_uri(self, uri: str) -> Dict[str, Any]:
         """Get a FIBO property by URI"""
         try:
-            response = self.supabase.from_("fibo_properties").select("*").eq("uri", uri).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("fibo_properties").select("*").eq("uri", uri).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -247,6 +253,7 @@ class FIBOService:
     async def create_fibo_property(self, fibo_property_in: FIBOPropertyCreate) -> Dict[str, Any]:
         """Create a new FIBO property"""
         try:
+            supabase = await get_supabase()
             # Check if property already exists by URI
             try:
                 existing_property = await self.get_fibo_property_by_uri(fibo_property_in.uri)
@@ -278,7 +285,7 @@ class FIBOService:
             data["domain_class_id"] = domain_class_id
             data["range_class_id"] = range_class_id
             
-            response = self.supabase.from_("fibo_properties").insert(data).execute()
+            response = await supabase.from_("fibo_properties").insert(data).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -302,6 +309,7 @@ class FIBOService:
     ) -> Dict[str, Any]:
         """Update a FIBO property"""
         try:
+            supabase = await get_supabase()
             # Check if property exists
             await self.get_fibo_property(property_id)
             
@@ -331,7 +339,7 @@ class FIBOService:
                     data["range_class_id"] = None
             
             # Update the property
-            response = self.supabase.from_("fibo_properties").update(data).eq("id", property_id).execute()
+            response = await supabase.from_("fibo_properties").update(data).eq("id", property_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -351,11 +359,12 @@ class FIBOService:
     async def delete_fibo_property(self, property_id: int) -> Dict[str, Any]:
         """Delete a FIBO property"""
         try:
+            supabase = await get_supabase()
             # Check if property exists
             await self.get_fibo_property(property_id)
             
             # Delete the property
-            self.supabase.from_("fibo_properties").delete().eq("id", property_id).execute()
+            await supabase.from_("fibo_properties").delete().eq("id", property_id).execute()
             
             return {"success": True, "message": "FIBO property deleted"}
         except HTTPException:
@@ -377,7 +386,8 @@ class FIBOService:
     ) -> List[Dict[str, Any]]:
         """Get FIBO properties with filtering and pagination"""
         try:
-            query = self.supabase.from_("fibo_properties").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("fibo_properties").select("*")
             
             if domain_class_id:
                 query = query.eq("domain_class_id", domain_class_id)
@@ -392,7 +402,7 @@ class FIBOService:
                 # Search in label and URI
                 query = query.or_(f"label.ilike.%{search}%,uri.ilike.%{search}%")
             
-            response = query.range(offset, offset + limit - 1).execute()
+            response = await query.range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -607,12 +617,13 @@ class FIBOService:
     ) -> List[Dict[str, Any]]:
         """Get entity mappings"""
         try:
-            query = self.supabase.from_("entity_mappings").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("entity_mappings").select("*")
             
             if verified_only:
                 query = query.eq("is_verified", True)
             
-            response = query.range(offset, offset + limit - 1).execute()
+            response = await query.range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -628,8 +639,9 @@ class FIBOService:
     ) -> Dict[str, Any]:
         """Create or update an entity mapping"""
         try:
+            supabase = await get_supabase()
             # Check if mapping already exists
-            response = self.supabase.from_("entity_mappings").select("*").eq("entity_type", mapping.entity_type).execute()
+            response = await supabase.from_("entity_mappings").select("*").eq("entity_type", mapping.entity_type).execute()
             
             if response.data and len(response.data) > 0:
                 # Update existing mapping
@@ -637,7 +649,7 @@ class FIBOService:
                 if user_id:
                     mapping_data["created_by"] = user_id
                 
-                update_response = self.supabase.from_("entity_mappings").update(mapping_data).eq("entity_type", mapping.entity_type).execute()
+                update_response = await supabase.from_("entity_mappings").update(mapping_data).eq("entity_type", mapping.entity_type).execute()
                 
                 return update_response.data[0]
             else:
@@ -646,7 +658,7 @@ class FIBOService:
                 if user_id:
                     mapping_data["created_by"] = user_id
                 
-                insert_response = self.supabase.from_("entity_mappings").insert(mapping_data).execute()
+                insert_response = await supabase.from_("entity_mappings").insert(mapping_data).execute()
                 
                 return insert_response.data[0]
         except Exception as e:
@@ -658,7 +670,8 @@ class FIBOService:
     async def delete_entity_mapping(self, entity_type: str) -> Dict[str, Any]:
         """Delete an entity mapping"""
         try:
-            self.supabase.from_("entity_mappings").delete().eq("entity_type", entity_type).execute()
+            supabase = await get_supabase()
+            await supabase.from_("entity_mappings").delete().eq("entity_type", entity_type).execute()
             
             return {"success": True, "message": "Entity mapping deleted"}
         except Exception as e:
@@ -675,12 +688,13 @@ class FIBOService:
     ) -> List[Dict[str, Any]]:
         """Get relationship mappings"""
         try:
-            query = self.supabase.from_("relationship_mappings").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("relationship_mappings").select("*")
             
             if verified_only:
                 query = query.eq("is_verified", True)
             
-            response = query.range(offset, offset + limit - 1).execute()
+            response = await query.range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -696,8 +710,9 @@ class FIBOService:
     ) -> Dict[str, Any]:
         """Create or update a relationship mapping"""
         try:
+            supabase = await get_supabase()
             # Check if mapping already exists
-            response = self.supabase.from_("relationship_mappings").select("*").eq("relationship_type", mapping.relationship_type).execute()
+            response = await supabase.from_("relationship_mappings").select("*").eq("relationship_type", mapping.relationship_type).execute()
             
             if response.data and len(response.data) > 0:
                 # Update existing mapping
@@ -705,7 +720,7 @@ class FIBOService:
                 if user_id:
                     mapping_data["created_by"] = user_id
                 
-                update_response = self.supabase.from_("relationship_mappings").update(mapping_data).eq("relationship_type", mapping.relationship_type).execute()
+                update_response = await supabase.from_("relationship_mappings").update(mapping_data).eq("relationship_type", mapping.relationship_type).execute()
                 
                 return update_response.data[0]
             else:
@@ -714,7 +729,7 @@ class FIBOService:
                 if user_id:
                     mapping_data["created_by"] = user_id
                 
-                insert_response = self.supabase.from_("relationship_mappings").insert(mapping_data).execute()
+                insert_response = await supabase.from_("relationship_mappings").insert(mapping_data).execute()
                 
                 return insert_response.data[0]
         except Exception as e:
@@ -726,7 +741,8 @@ class FIBOService:
     async def delete_relationship_mapping(self, relationship_type: str) -> Dict[str, Any]:
         """Delete a relationship mapping"""
         try:
-            self.supabase.from_("relationship_mappings").delete().eq("relationship_type", relationship_type).execute()
+            supabase = await get_supabase()
+            await supabase.from_("relationship_mappings").delete().eq("relationship_type", relationship_type).execute()
             
             return {"success": True, "message": "Relationship mapping deleted"}
         except Exception as e:
@@ -738,8 +754,9 @@ class FIBOService:
     async def get_entity_fibo_class(self, entity_type: str) -> Optional[Dict[str, Any]]:
         """Get FIBO class for an entity type using mappings"""
         try:
+            supabase = await get_supabase()
             # First check mapping table
-            response = self.supabase.from_("entity_mappings").select("*").eq("entity_type", entity_type).execute()
+            response = await supabase.from_("entity_mappings").select("*").eq("entity_type", entity_type).execute()
             
             if response.data and len(response.data) > 0:
                 mapping = response.data[0]
@@ -765,8 +782,9 @@ class FIBOService:
     async def get_relationship_fibo_property(self, relationship_type: str) -> Optional[Dict[str, Any]]:
         """Get FIBO property for a relationship type using mappings"""
         try:
+            supabase = await get_supabase()
             # First check mapping table
-            response = self.supabase.from_("relationship_mappings").select("*").eq("relationship_type", relationship_type).execute()
+            response = await supabase.from_("relationship_mappings").select("*").eq("relationship_type", relationship_type).execute()
             
             if response.data and len(response.data) > 0:
                 mapping = response.data[0]
@@ -853,6 +871,7 @@ class FIBOService:
     ) -> List[Dict[str, Any]]:
         """Suggest FIBO properties for a relationship based on entity types and relationship type"""
         try:
+            supabase = await get_supabase()
             # First try to get from mapping
             mapped_property = await self.get_relationship_fibo_property(relationship_type)
             
@@ -877,7 +896,7 @@ class FIBOService:
                 LIMIT {max_suggestions}
                 """
                 
-                response = self.supabase.rpc("exec_sql", {"sql_query": query}).execute()
+                response = await supabase.rpc("exec_sql", {"sql_query": query}).execute()
                 
                 if response.data:
                     suggestions.extend(response.data)
@@ -912,8 +931,9 @@ class FIBOService:
     ) -> Dict[str, Any]:
         """Verify an entity mapping"""
         try:
+            supabase = await get_supabase()
             # Check if mapping exists
-            response = self.supabase.from_("entity_mappings").select("*").eq("entity_type", entity_type).execute()
+            response = await supabase.from_("entity_mappings").select("*").eq("entity_type", entity_type).execute()
             
             if not response.data or len(response.data) == 0:
                 raise HTTPException(
@@ -928,7 +948,7 @@ class FIBOService:
                 "verified_at": datetime.utcnow().isoformat() if verified else None
             }
             
-            update_response = self.supabase.from_("entity_mappings").update(update_data).eq("entity_type", entity_type).execute()
+            update_response = await supabase.from_("entity_mappings").update(update_data).eq("entity_type", entity_type).execute()
             
             return update_response.data[0]
         except HTTPException:
@@ -947,8 +967,9 @@ class FIBOService:
     ) -> Dict[str, Any]:
         """Verify a relationship mapping"""
         try:
+            supabase = await get_supabase()
             # Check if mapping exists
-            response = self.supabase.from_("relationship_mappings").select("*").eq("relationship_type", relationship_type).execute()
+            response = await supabase.from_("relationship_mappings").select("*").eq("relationship_type", relationship_type).execute()
             
             if not response.data or len(response.data) == 0:
                 raise HTTPException(
@@ -963,7 +984,7 @@ class FIBOService:
                 "verified_at": datetime.utcnow().isoformat() if verified else None
             }
             
-            update_response = self.supabase.from_("relationship_mappings").update(update_data).eq("relationship_type", relationship_type).execute()
+            update_response = await supabase.from_("relationship_mappings").update(update_data).eq("relationship_type", relationship_type).execute()
             
             return update_response.data[0]
         except HTTPException:

@@ -7,6 +7,8 @@ import asyncio
 import json
 import traceback
 
+from pydantic import UUID4
+
 from app.core.supabase import get_supabase
 from app.schemas.pipeline import (
     PipelineCreate,
@@ -20,8 +22,7 @@ from app.schemas.pipeline import (
 
 
 class PipelineService:
-    def __init__(self):
-        self.supabase = get_supabase()
+    """ Service for managing pipelines and their execution."""
 
     async def create_pipeline(
         self,
@@ -30,17 +31,18 @@ class PipelineService:
     ) -> Dict[str, Any]:
         """Create a new pipeline"""
         try:
+            supabase = await get_supabase()
             # Generate IDs for steps if not provided
             steps = pipeline_in.steps
             for step in steps:
                 if not step.id or step.id == "":
-                    step.id = str(uuid.uuid4())
+                    step.id = uuid.uuid4()
             
             # Create pipeline data
             data = pipeline_in.dict()
             data["created_by"] = user_id
             
-            response = await self.supabase.from_("pipelines").insert(data).execute()
+            response = await supabase.from_("pipelines").insert(data).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -55,10 +57,11 @@ class PipelineService:
                 detail=f"Error creating pipeline: {str(e)}"
             )
 
-    async def get_pipeline(self, pipeline_id: str) -> Dict[str, Any]:
+    async def get_pipeline(self, pipeline_id: UUID4) -> Dict[str, Any]:
         """Get a pipeline by ID"""
         try:
-            response = await self.supabase.from_("pipelines").select("*").eq("id", pipeline_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("pipelines").select("*").eq("id", pipeline_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -77,18 +80,19 @@ class PipelineService:
 
     async def update_pipeline(
         self,
-        pipeline_id: str,
+        pipeline_id: UUID4,
         pipeline_in: PipelineUpdate
     ) -> Dict[str, Any]:
         """Update a pipeline"""
         try:
+            supabase = await get_supabase()
             # Check if pipeline exists
             await self.get_pipeline(pipeline_id)
             
             # Update pipeline
             data = pipeline_in.dict(exclude_unset=True)
             
-            response = await self.supabase.from_("pipelines").update(data).eq("id", pipeline_id).execute()
+            response = await supabase.from_("pipelines").update(data).eq("id", pipeline_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -105,14 +109,15 @@ class PipelineService:
                 detail=f"Error updating pipeline: {str(e)}"
             )
 
-    async def delete_pipeline(self, pipeline_id: str) -> Dict[str, Any]:
+    async def delete_pipeline(self, pipeline_id: UUID4) -> Dict[str, Any]:
         """Delete a pipeline"""
         try:
+            supabase = await get_supabase()
             # Check if pipeline exists
             await self.get_pipeline(pipeline_id)
             
             # Delete pipeline
-            await self.supabase.from_("pipelines").delete().eq("id", pipeline_id).execute()
+            await supabase.from_("pipelines").delete().eq("id", pipeline_id).execute()
             
             return {"success": True, "message": "Pipeline deleted"}
         except HTTPException:
@@ -133,7 +138,8 @@ class PipelineService:
     ) -> List[Dict[str, Any]]:
         """Get pipelines with filtering and pagination"""
         try:
-            query = self.supabase.from_("pipelines").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("pipelines").select("*")
             
             if pipeline_type:
                 query = query.eq("pipeline_type", pipeline_type)
@@ -144,7 +150,7 @@ class PipelineService:
             if created_by:
                 query = query.eq("created_by", created_by)
                 
-            response = await query.order("created_at", options={"ascending": False}).range(offset, offset + limit - 1).execute()
+            response = await query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -155,7 +161,7 @@ class PipelineService:
 
     async def execute_pipeline(
         self,
-        pipeline_id: str,
+        pipeline_id: UUID4,
         user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Execute a pipeline"""
@@ -190,7 +196,7 @@ class PipelineService:
                 detail=f"Error executing pipeline: {str(e)}"
             )
 
-    async def _execute_pipeline_async(self, pipeline_id: str, run_id: str) -> None:
+    async def _execute_pipeline_async(self, pipeline_id: UUID4, run_id: UUID4) -> None:
         """Execute pipeline steps asynchronously"""
         # Get pipeline and update run status to running
         try:
@@ -199,7 +205,6 @@ class PipelineService:
                 run_id,
                 PipelineRunUpdate(
                     status=PipelineStatus.RUNNING,
-                    start_time=datetime.utcnow().isoformat()
                 )
             )
             
@@ -227,7 +232,7 @@ class PipelineService:
                 
                 for step in steps:
                     step_id = step["id"]
-                    
+
                     # Skip steps that are already executed or disabled
                     if step_id in executed_steps or not step.get("enabled", True):
                         continue
@@ -279,7 +284,7 @@ class PipelineService:
                         run_id,
                         PipelineRunUpdate(
                             status=PipelineStatus.FAILED,
-                            end_time=datetime.utcnow().isoformat(),
+                            end_time=datetime.now()
                             error_message=error_message,
                             log=json.dumps(logs)
                         )
@@ -307,7 +312,7 @@ class PipelineService:
                 run_id,
                 PipelineRunUpdate(
                     status=final_status,
-                    end_time=datetime.utcnow().isoformat(),
+                    end_time=datetime.now(),
                     stats=stats,
                     log=json.dumps(logs)
                 )
@@ -323,7 +328,7 @@ class PipelineService:
                 run_id,
                 PipelineRunUpdate(
                     status=PipelineStatus.FAILED,
-                    end_time=datetime.utcnow().isoformat(),
+                    end_time=datetime.now(),
                     error_message=f"Pipeline execution error: {str(e)}",
                     log=error_detail
                 )
@@ -333,8 +338,8 @@ class PipelineService:
         self,
         step: Dict[str, Any],
         step_outputs: Dict[str, Any],
-        pipeline_id: str,
-        run_id: str
+        pipeline_id: UUID4,
+        run_id:UUID4 
     ) -> PipelineStepResult:
         """Execute a single pipeline step"""
         try:
@@ -402,6 +407,7 @@ class PipelineService:
     ) -> None:
         """Store detailed logs for a pipeline run"""
         try:
+            supabase = await get_supabase()
             # Convert step results to dictionaries
             step_results_dict = {
                 step_id: result.dict() for step_id, result in step_results.items()
@@ -415,7 +421,7 @@ class PipelineService:
                 "step_results": step_results_dict
             }
             
-            await self.supabase.from_("pipeline_run_logs").insert(log_data).execute()
+            await supabase.from_("pipeline_run_logs").insert(log_data).execute()
         except Exception as e:
             print(f"Error storing pipeline run logs: {e}")
 
@@ -425,10 +431,11 @@ class PipelineService:
     ) -> Dict[str, Any]:
         """Create a new pipeline run"""
         try:
+            supabase = await get_supabase()
             data = run_in.dict()
             data["start_time"] = datetime.utcnow().isoformat()
             
-            response = await self.supabase.from_("pipeline_runs").insert(data).execute()
+            response = await supabase.from_("pipeline_runs").insert(data).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -443,10 +450,11 @@ class PipelineService:
                 detail=f"Error creating pipeline run: {str(e)}"
             )
 
-    async def get_pipeline_run(self, run_id: str) -> Dict[str, Any]:
+    async def get_pipeline_run(self, run_id: UUID4) -> Dict[str, Any]:
         """Get a pipeline run by ID"""
         try:
-            response = await self.supabase.from_("pipeline_runs").select("*").eq("id", run_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("pipeline_runs").select("*").eq("id", run_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -465,11 +473,12 @@ class PipelineService:
 
     async def update_pipeline_run(
         self,
-        run_id: str,
+        run_id: UUID4,
         run_update: PipelineRunUpdate
     ) -> Dict[str, Any]:
         """Update a pipeline run"""
         try:
+            supabase = await get_supabase()
             # Check if run exists
             await self.get_pipeline_run(run_id)
             
@@ -480,10 +489,10 @@ class PipelineService:
             if run_update.status in [PipelineStatus.COMPLETED, PipelineStatus.FAILED] and run_update.end_time and not run_update.duration:
                 run = await self.get_pipeline_run(run_id)
                 start_time = datetime.fromisoformat(run["start_time"])
-                end_time = datetime.fromisoformat(run_update.end_time)
+                end_time = datetime.fromisoformat(str(run_update.end_time))
                 data["duration"] = int((end_time - start_time).total_seconds())
             
-            response = await self.supabase.from_("pipeline_runs").update(data).eq("id", run_id).execute()
+            response = await supabase.from_("pipeline_runs").update(data).eq("id", run_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -503,25 +512,26 @@ class PipelineService:
     async def get_pipeline_runs(
         self,
         pipeline_id: Optional[str] = None,
-        status: Optional[str] = None,
+        _status: Optional[str] = None,
         triggered_by: Optional[str] = None,
         limit: int = 100,
         offset: int = 0
     ) -> List[Dict[str, Any]]:
         """Get pipeline runs with filtering and pagination"""
         try:
-            query = self.supabase.from_("pipeline_runs").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("pipeline_runs").select("*")
             
             if pipeline_id:
                 query = query.eq("pipeline_id", pipeline_id)
                 
-            if status:
-                query = query.eq("status", status)
+            if _status:
+                query = query.eq("status", _status)
                 
             if triggered_by:
                 query = query.eq("triggered_by", triggered_by)
                 
-            response = await query.order("created_at", options={"ascending": False}).range(offset, offset + limit - 1).execute()
+            response = await query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -533,7 +543,8 @@ class PipelineService:
     async def get_pipeline_run_logs(self, run_id: str) -> Dict[str, Any]:
         """Get detailed logs for a pipeline run"""
         try:
-            response = await self.supabase.from_("pipeline_run_logs").select("*").eq("run_id", run_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("pipeline_run_logs").select("*").eq("run_id", run_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -1155,10 +1166,10 @@ class PipelineService:
                 batch = input_entities[i:i+batch_size]
                 
                 for entity in batch:
-                    try:
-                        entity_text = entity.get("text")
-                        entity_type = entity.get("type")
+                    entity_text = entity.get("text")
+                    entity_type = entity.get("type")
                         
+                    try:
                         if not entity_text or not entity_type:
                             continue
                         
@@ -1197,8 +1208,8 @@ class PipelineService:
             created_relationships = []
             
             for relationship in input_relationships:
+                rel_type = relationship.get("type")
                 try:
-                    rel_type = relationship.get("type")
                     source = relationship.get("source", {})
                     target = relationship.get("target", {})
                     
@@ -1368,7 +1379,7 @@ class PipelineService:
             
             # Map inputs to variables
             globals_dict = {}
-            locals_dict = {"inputs": inputs}
+            locals_dict: dict[str, Any] = {"inputs": inputs}
             
             for var_name, input_path in input_mapping.items():
                 parts = input_path.split(".")

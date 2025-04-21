@@ -18,8 +18,6 @@ from app.schemas.visualization import (
 
 class VisualizationService:
     def __init__(self):
-        self.supabase = get_supabase()
-        
         # Connect to Neo4j for data querying
         from py2neo import Graph
         self.graph = Graph(
@@ -34,6 +32,7 @@ class VisualizationService:
     ) -> Dict[str, Any]:
         """Create a new visualization"""
         try:
+            supabase = await get_supabase()
             # Validate that at least one data source is provided
             if not visualization_in.query_id and not visualization_in.cypher_query and not visualization_in.entity_id:
                 raise HTTPException(
@@ -46,7 +45,7 @@ class VisualizationService:
             data["created_by"] = user_id
             
             # Insert into database
-            response = await self.supabase.from_("visualizations").insert(data).execute()
+            response = await supabase.from_("visualizations").insert(data).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -66,7 +65,8 @@ class VisualizationService:
     async def get_visualization(self, visualization_id: str) -> Dict[str, Any]:
         """Get a visualization by ID"""
         try:
-            response = await self.supabase.from_("visualizations").select("*").eq("id", visualization_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("visualizations").select("*").eq("id", visualization_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -90,13 +90,14 @@ class VisualizationService:
     ) -> Dict[str, Any]:
         """Update a visualization"""
         try:
+            supabase = await get_supabase()
             # Check if visualization exists
             await self.get_visualization(visualization_id)
             
             # Update visualization
             data = visualization_in.dict(exclude_unset=True)
             
-            response = await self.supabase.from_("visualizations").update(data).eq("id", visualization_id).execute()
+            response = await supabase.from_("visualizations").update(data).eq("id", visualization_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -118,11 +119,12 @@ class VisualizationService:
     async def delete_visualization(self, visualization_id: str) -> Dict[str, Any]:
         """Delete a visualization"""
         try:
+            supabase = await get_supabase()
             # Check if visualization exists
             await self.get_visualization(visualization_id)
             
             # Delete visualization
-            await self.supabase.from_("visualizations").delete().eq("id", visualization_id).execute()
+            await supabase.from_("visualizations").delete().eq("id", visualization_id).execute()
             
             return {"success": True, "message": "Visualization deleted"}
         except HTTPException:
@@ -143,7 +145,8 @@ class VisualizationService:
     ) -> List[Dict[str, Any]]:
         """Get visualizations with filtering and pagination"""
         try:
-            query = self.supabase.from_("visualizations").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("visualizations").select("*")
             
             # Apply filters
             if user_id:
@@ -156,7 +159,7 @@ class VisualizationService:
                 query = query.eq("is_public", is_public)
                 
             # Apply pagination and order
-            response = await query.order("created_at", options={"ascending": False}).range(offset, offset + limit - 1).execute()
+            response = await query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -315,7 +318,7 @@ class VisualizationService:
         """Create a node object for visualization"""
         # Get node properties
         node_props = dict(node)
-        node_id = node.get("id", str(node.identity) if hasattr(node, "identity") else str(uuid.uuid4()))
+        node_id = node.get("id", str(node['identity']) if hasattr(node, "identity") else str(uuid.uuid4()))
         
         # Get label field
         label_field = config.get("label_field", "text")
@@ -323,7 +326,7 @@ class VisualizationService:
         
         # Get node type/label
         if hasattr(node, "labels"):
-            node_type = next(iter(node.labels), "Unknown")
+            node_type = next(iter(node['labels']), "Unknown")
         else:
             node_type = node_props.get("type", "Unknown")
         
@@ -390,7 +393,7 @@ class VisualizationService:
         """Create an edge object for visualization"""
         # Get relationship properties
         rel_props = dict(rel)
-        rel_id = rel.get("id", str(rel.identity) if hasattr(rel, "identity") else str(uuid.uuid4()))
+        rel_id = rel.get("id", str(rel['identity']) if hasattr(rel, "identity") else str(uuid.uuid4()))
         
         # Get relationship type
         if hasattr(rel, "__class__"):
@@ -608,13 +611,15 @@ class VisualizationService:
         parts = field.split('.')
         
         value = record
+
+
         for part in parts:
             if isinstance(value, dict) and part in value:
                 value = value[part]
             elif hasattr(value, part):
                 # For Neo4j Node objects
                 value = getattr(value, part)
-            elif hasattr(value, "get") and callable(value.get) and value.get(part) is not None:
+            elif value is not None and hasattr(value, "get") and callable(value.get) and value.get(part) is not None:
                 # For dictionary-like objects
                 value = value.get(part)
             else:

@@ -1,889 +1,666 @@
-from typing import List, Optional, Dict, Any, Tuple
-from uuid import UUID
-import logging
-from datetime import datetime
+from typing import List, Dict, Any, Optional, Union
+from fastapi import HTTPException, status
+from py2neo import Graph, Node, Relationship, NodeMatcher
+import uuid
 
-from app.core.supabase import get_supabase
-from app.utils.neo4j import get_neo4j_driver
+from app.core.config import settings
 
-logger = logging.getLogger(__name__)
 
-# Entity Management
-
-async def get_entities(
-    skip: int = 0,
-    limit: int = 100,
-    entity_type: Optional[str] = None,
-    is_verified: Optional[bool] = None,
-    source_document_id: Optional[UUID] = None
-) -> List[Dict[str, Any]]:
-    """
-    Retrieve entities with optional filtering.
-    """
-    try:
-        supabase = get_supabase()
-        query = supabase.table("kg_entities").select("*")
-        
-        if entity_type:
-            query = query.eq("entity_type", entity_type)
-        
-        if is_verified is not None:
-            query = query.eq("is_verified", is_verified)
-        
-        if source_document_id:
-            query = query.eq("source_document_id", str(source_document_id))
-        
-        response = await query.range(skip, skip + limit - 1).order("created_at", desc=True).execute()
-        return response.data
-    
-    except Exception as e:
-        logger.error(f"Error getting entities: {e}")
-        return []
-
-async def get_entity(entity_id: UUID) -> Optional[Dict[str, Any]]:
-    """
-    Get a specific entity by ID.
-    """
-    try:
-        supabase = get_supabase()
-        response = await supabase.table("kg_entities").select("*").eq("id", str(entity_id)).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error getting entity {entity_id}: {e}")
-        return None
-
-async def create_entity(
-    entity_in: Dict[str, Any],
-    created_by: Optional[UUID] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Create a new entity.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Map to FIBO class if appropriate
-        fibo_class_id = None
-        if "entity_type" in entity_in:
-            fibo_class = await get_entity_type_mapping(entity_in["entity_type"])
-            if fibo_class:
-                fibo_class_id = fibo_class["fibo_class_id"]
-        
-        data = {
-            "entity_text": entity_in["entity_text"],
-            "entity_type": entity_in["entity_type"],
-            "source_document_id": str(entity_in["source_document_id"]) if entity_in.get("source_document_id") else None,
-            "fibo_class_id": fibo_class_id,
-            "properties": entity_in.get("properties", {}),
-            "confidence": entity_in.get("confidence", 1.0),
-            "is_verified": entity_in.get("is_verified", False),
-            "verification_notes": entity_in.get("verification_notes"),
-            "verified_by": str(created_by) if entity_in.get("is_verified") and created_by else None
-        }
-        
-        response = await supabase.table("kg_entities").insert(data).execute()
-        
-        if not response.data:
-            return None
-        
-        entity = response.data[0]
-        
-        # Create in Neo4j if entity was created successfully
-        neo4j_id = await create_entity_in_neo4j(entity)
-        
-        if neo4j_id:
-            # Update the Neo4j ID
-            await supabase.table("kg_entities").update({"neo4j_id": str(neo4j_id)}).eq("id", entity["id"]).execute()
-            entity["neo4j_id"] = str(neo4j_id)
-        
-        return entity
-    
-    except Exception as e:
-        logger.error(f"Error creating entity: {e}")
-        return None
-
-async def update_entity(
-    entity_id: UUID,
-    entity_in: Dict[str, Any],
-    updated_by: Optional[UUID] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Update an existing entity.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Get the current entity
-        entity = await get_entity(entity_id)
-        if not entity:
-            return None
-        
-        # Prepare update data
-        data = {}
-        
-        if "entity_text" in entity_in:
-            data["entity_text"] = entity_in["entity_text"]
-        
-        if "entity_type" in entity_in:
-            data["entity_type"] = entity_in["entity_type"]
-            
-            # Update FIBO class if entity type changed
-            fibo_class = await get_entity_type_mapping(entity_in["entity_type"])
-            if fibo_class:
-                data["fibo_class_id"] = fibo_class["fibo_class_id"]
-        
-        if "properties" in entity_in:
-            data["properties"] = entity_in["properties"]
-        
-        if "confidence" in entity_in:
-            data["confidence"] = entity_in["confidence"]
-        
-        if "is_verified" in entity_in:
-            data["is_verified"] = entity_in["is_verified"]
-            
-            if entity_in["is_verified"] and updated_by:
-                data["verified_by"] = str(updated_by)
-        
-        if "verification_notes" in entity_in:
-            data["verification_notes"] = entity_in["verification_notes"]
-        
-        if not data:
-            # Nothing to update
-            return entity
-        
-        response = await supabase.table("kg_entities").update(data).eq("id", str(entity_id)).execute()
-        
-        if not response.data:
-            return None
-        
-        updated_entity = response.data[0]
-        
-        # Update in Neo4j if Neo4j ID exists
-        if updated_entity.get("neo4j_id"):
-            await update_entity_in_neo4j(updated_entity)
-        
-        return updated_entity
-    
-    except Exception as e:
-        logger.error(f"Error updating entity {entity_id}: {e}")
-        return None
-
-async def delete_entity(entity_id: UUID) -> Optional[Dict[str, Any]]:
-    """
-    Delete an entity.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Get the entity first
-        entity = await get_entity(entity_id)
-        if not entity:
-            return None
-        
-        # Delete from Neo4j if Neo4j ID exists
-        if entity.get("neo4j_id"):
-            await delete_entity_from_neo4j(entity["neo4j_id"])
-        
-        # Delete the entity from Supabase
-        response = await supabase.table("kg_entities").delete().eq("id", str(entity_id)).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error deleting entity {entity_id}: {e}")
-        return None
-
-# Relationship Management
-
-async def get_relationships(
-    skip: int = 0,
-    limit: int = 100,
-    relationship_type: Optional[str] = None,
-    source_entity_id: Optional[UUID] = None,
-    target_entity_id: Optional[UUID] = None,
-    is_verified: Optional[bool] = None
-) -> List[Dict[str, Any]]:
-    """
-    Retrieve relationships with optional filtering.
-    """
-    try:
-        supabase = get_supabase()
-        query = supabase.table("kg_relationships").select("*")
-        
-        if relationship_type:
-            query = query.eq("relationship_type", relationship_type)
-        
-        if source_entity_id:
-            query = query.eq("source_entity_id", str(source_entity_id))
-        
-        if target_entity_id:
-            query = query.eq("target_entity_id", str(target_entity_id))
-        
-        if is_verified is not None:
-            query = query.eq("is_verified", is_verified)
-        
-        response = await query.range(skip, skip + limit - 1).order("created_at", desc=True).execute()
-        return response.data
-    
-    except Exception as e:
-        logger.error(f"Error getting relationships: {e}")
-        return []
-
-async def get_relationship(relationship_id: UUID) -> Optional[Dict[str, Any]]:
-    """
-    Get a specific relationship by ID.
-    """
-    try:
-        supabase = get_supabase()
-        response = await supabase.table("kg_relationships").select("*").eq("id", str(relationship_id)).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error getting relationship {relationship_id}: {e}")
-        return None
-
-async def create_relationship(
-    relationship_in: Dict[str, Any],
-    created_by: Optional[UUID] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Create a new relationship.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Map to FIBO property if appropriate
-        fibo_property_id = None
-        if "relationship_type" in relationship_in:
-            fibo_relation = await get_relationship_type_mapping(relationship_in["relationship_type"])
-            if fibo_relation:
-                fibo_property_id = fibo_relation["fibo_property_id"]
-        
-        data = {
-            "source_entity_id": str(relationship_in["source_entity_id"]),
-            "target_entity_id": str(relationship_in["target_entity_id"]),
-            "relationship_type": relationship_in["relationship_type"],
-            "source_document_id": str(relationship_in["source_document_id"]) if relationship_in.get("source_document_id") else None,
-            "fibo_property_id": fibo_property_id,
-            "properties": relationship_in.get("properties", {}),
-            "confidence": relationship_in.get("confidence", 1.0),
-            "is_verified": relationship_in.get("is_verified", False),
-            "verification_notes": relationship_in.get("verification_notes"),
-            "verified_by": str(created_by) if relationship_in.get("is_verified") and created_by else None
-        }
-        
-        response = await supabase.table("kg_relationships").insert(data).execute()
-        
-        if not response.data:
-            return None
-        
-        relationship = response.data[0]
-        
-        # Create in Neo4j if relationship was created successfully
-        neo4j_id = await create_relationship_in_neo4j(relationship)
-        
-        if neo4j_id:
-            # Update the Neo4j ID
-            await supabase.table("kg_relationships").update({"neo4j_id": str(neo4j_id)}).eq("id", relationship["id"]).execute()
-            relationship["neo4j_id"] = str(neo4j_id)
-        
-        return relationship
-    
-    except Exception as e:
-        logger.error(f"Error creating relationship: {e}")
-        return None
-
-async def update_relationship(
-    relationship_id: UUID,
-    relationship_in: Dict[str, Any],
-    updated_by: Optional[UUID] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Update an existing relationship.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Get the current relationship
-        relationship = await get_relationship(relationship_id)
-        if not relationship:
-            return None
-        
-        # Prepare update data
-        data = {}
-        
-        if "relationship_type" in relationship_in:
-            data["relationship_type"] = relationship_in["relationship_type"]
-            
-            # Update FIBO property if relationship type changed
-            fibo_relation = await get_relationship_type_mapping(relationship_in["relationship_type"])
-            if fibo_relation:
-                data["fibo_property_id"] = fibo_relation["fibo_property_id"]
-        
-        if "properties" in relationship_in:
-            data["properties"] = relationship_in["properties"]
-        
-        if "confidence" in relationship_in:
-            data["confidence"] = relationship_in["confidence"]
-        
-        if "is_verified" in relationship_in:
-            data["is_verified"] = relationship_in["is_verified"]
-            
-            if relationship_in["is_verified"] and updated_by:
-                data["verified_by"] = str(updated_by)
-        
-        if "verification_notes" in relationship_in:
-            data["verification_notes"] = relationship_in["verification_notes"]
-        
-        if not data:
-            # Nothing to update
-            return relationship
-        
-        response = await supabase.table("kg_relationships").update(data).eq("id", str(relationship_id)).execute()
-        
-        if not response.data:
-            return None
-        
-        updated_relationship = response.data[0]
-        
-        # Update in Neo4j if Neo4j ID exists
-        if updated_relationship.get("neo4j_id"):
-            await update_relationship_in_neo4j(updated_relationship)
-        
-        return updated_relationship
-    
-    except Exception as e:
-        logger.error(f"Error updating relationship {relationship_id}: {e}")
-        return None
-
-async def delete_relationship(relationship_id: UUID) -> Optional[Dict[str, Any]]:
-    """
-    Delete a relationship.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Get the relationship first
-        relationship = await get_relationship(relationship_id)
-        if not relationship:
-            return None
-        
-        # Delete from Neo4j if Neo4j ID exists
-        if relationship.get("neo4j_id"):
-            await delete_relationship_from_neo4j(relationship["neo4j_id"])
-        
-        # Delete the relationship from Supabase
-        response = await supabase.table("kg_relationships").delete().eq("id", str(relationship_id)).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error deleting relationship {relationship_id}: {e}")
-        return None
-
-# Search and Query
-
-async def search_entities(
-    query_text: str,
-    entity_type: Optional[str] = None,
-    limit: int = 10
-) -> List[Dict[str, Any]]:
-    """
-    Search entities by text.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Basic search using PostgreSQL's text search capabilities
-        query = supabase.table("kg_entities").select("*")
-        
-        # Add entity_text search condition
-        query = query.ilike("entity_text", f"%{query_text}%")
-        
-        if entity_type:
-            query = query.eq("entity_type", entity_type)
-        
-        response = await query.limit(limit).execute()
-        return response.data
-    
-    except Exception as e:
-        logger.error(f"Error searching entities: {e}")
-        return []
-
-async def get_entity_conflicts(
-    skip: int = 0,
-    limit: int = 100,
-    status: Optional[str] = "pending"
-) -> List[Dict[str, Any]]:
-    """
-    Retrieve entity conflicts that need resolution.
-    """
-    try:
-        supabase = get_supabase()
-        query = supabase.table("entity_conflicts").select("*, entity_id_1(*), entity_id_2(*)")
-        
-        if status:
-            query = query.eq("status", status)
-        
-        response = await query.range(skip, skip + limit - 1).order("created_at", desc=True).execute()
-        return response.data
-    
-    except Exception as e:
-        logger.error(f"Error getting entity conflicts: {e}")
-        return []
-
-async def execute_knowledge_query(
-    query_text: str,
-    query_type: str,
-    parameters: Optional[Dict[str, Any]] = None,
-    user_id: Optional[UUID] = None
-) -> Dict[str, Any]:
-    """
-    Execute a knowledge graph query.
-    """
-    try:
-        # Record the query in history
-        await record_query_execution(
-            query_text=query_text,
-            query_type=query_type,
-            parameters=parameters,
-            user_id=user_id
+class KnowledgeGraphService:
+    def __init__(self):
+        # Connect to Neo4j database
+        self.graph = Graph(
+            settings.NEO4J_URI,
+            auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
         )
-        
-        # Execute based on query type
-        if query_type == "cypher":
-            return await execute_cypher_query(query_text, parameters)
-        
-        elif query_type == "natural_language":
-            # This would typically use an LLM to convert natural language to Cypher
-            converted_query = await convert_nl_to_cypher(query_text)
-            return await execute_cypher_query(converted_query, parameters)
-        
-        else:
-            return {
-                "error": f"Unsupported query type: {query_type}",
-                "results": []
+        self.node_matcher = NodeMatcher(self.graph)
+
+    async def create_entity(
+        self,
+        entity_text: str,
+        entity_type: str,
+        properties: Dict[str, Any],
+        fibo_class: Optional[str] = None,
+        source_document_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create a new entity in the knowledge graph"""
+        try:
+            # Create a unique ID for the entity
+            entity_id = str(uuid.uuid4())
+            
+            # Prepare properties
+            entity_properties = {
+                "id": entity_id,
+                "text": entity_text,
+                "type": entity_type
             }
-    
-    except Exception as e:
-        logger.error(f"Error executing knowledge query: {e}")
-        
-        return {
-            "error": str(e),
-            "results": []
-        }
-
-async def record_query_execution(
-    query_text: str,
-    query_type: str,
-    parameters: Optional[Dict[str, Any]] = None,
-    user_id: Optional[UUID] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Record a query execution in the history.
-    """
-    try:
-        supabase = get_supabase()
-        
-        data = {
-            "query_text": query_text,
-            "parameters": parameters or {},
-            "executed_by": str(user_id) if user_id else None,
-            "status": "completed",  # Will be updated later
-            "execution_time": None,  # Will be updated later
-            "result_count": None  # Will be updated later
-        }
-        
-        response = await supabase.table("query_history").insert(data).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error recording query execution: {e}")
-        return None
-
-async def update_query_execution(
-    query_id: UUID,
-    execution_time: int,
-    result_count: int,
-    status: str,
-    error_message: Optional[str] = None
-) -> Optional[Dict[str, Any]]:
-    """
-    Update a query execution record.
-    """
-    try:
-        supabase = get_supabase()
-        
-        data = {
-            "execution_time": execution_time,
-            "result_count": result_count,
-            "status": status
-        }
-        
-        if error_message:
-            data["error_message"] = error_message
-        
-        response = await supabase.table("query_history").update(data).eq("id", str(query_id)).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error updating query execution {query_id}: {e}")
-        return None
-
-# Neo4j Operations
-
-async def create_entity_in_neo4j(entity: Dict[str, Any]) -> Optional[int]:
-    """
-    Create an entity in Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        
-        async with neo4j_driver.session() as session:
-            result = await session.run("""
-                CREATE (e:`Entity`:`{}` {{
-                    entity_id: $entity_id,
-                    entity_text: $entity_text,
-                    properties: $properties
-                }})
-                RETURN id(e) as neo4j_id
-            """.format(entity["entity_type"]), {
-                "entity_id": entity["id"],
-                "entity_text": entity["entity_text"],
-                "properties": entity.get("properties", {})
-            })
             
-            record = await result.single()
-            if record:
-                return record["neo4j_id"]
-            return None
-    
-    except Exception as e:
-        logger.error(f"Error creating entity in Neo4j: {e}")
-        return None
-
-async def update_entity_in_neo4j(entity: Dict[str, Any]) -> bool:
-    """
-    Update an entity in Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        
-        async with neo4j_driver.session() as session:
-            result = await session.run("""
-                MATCH (e)
-                WHERE id(e) = $neo4j_id
-                SET e:`{}`,
-                    e.entity_text = $entity_text,
-                    e.properties = $properties
-                RETURN e
-            """.format(entity["entity_type"]), {
-                "neo4j_id": int(entity["neo4j_id"]),
-                "entity_text": entity["entity_text"],
-                "properties": entity.get("properties", {})
-            })
+            # Add optional properties
+            if fibo_class:
+                entity_properties["fibo_class"] = fibo_class
+                
+            if source_document_id:
+                entity_properties["source_document_id"] = source_document_id
+                
+            # Add custom properties
+            entity_properties.update(properties)
             
-            return True
-    
-    except Exception as e:
-        logger.error(f"Error updating entity in Neo4j: {e}")
-        return False
-
-async def delete_entity_from_neo4j(neo4j_id: str) -> bool:
-    """
-    Delete an entity from Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        
-        async with neo4j_driver.session() as session:
-            await session.run("""
-                MATCH (e)
-                WHERE id(e) = $neo4j_id
-                DETACH DELETE e
-            """, {
-                "neo4j_id": int(neo4j_id)
-            })
+            # Create node in Neo4j
+            tx = self.graph.begin()
+            node = Node(entity_type, **entity_properties)
+            tx.create(node)
+            tx.commit()
             
-            return True
-    
-    except Exception as e:
-        logger.error(f"Error deleting entity from Neo4j: {e}")
-        return False
-
-async def create_relationship_in_neo4j(relationship: Dict[str, Any]) -> Optional[int]:
-    """
-    Create a relationship in Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        
-        # Get source and target entities
-        supabase = get_supabase()
-        source_response = await supabase.table("kg_entities").select("neo4j_id").eq("id", relationship["source_entity_id"]).execute()
-        target_response = await supabase.table("kg_entities").select("neo4j_id").eq("id", relationship["target_entity_id"]).execute()
-        
-        if not source_response.data or not target_response.data:
-            return None
-        
-        source_neo4j_id = source_response.data[0].get("neo4j_id")
-        target_neo4j_id = target_response.data[0].get("neo4j_id")
-        
-        if not source_neo4j_id or not target_neo4j_id:
-            return None
-        
-        async with neo4j_driver.session() as session:
-            result = await session.run("""
-                MATCH (source), (target)
-                WHERE id(source) = $source_id AND id(target) = $target_id
-                CREATE (source)-[r:`{}`  {{
-                    relationship_id: $relationship_id,
-                    properties: $properties
-                }}]->(target)
-                RETURN id(r) as neo4j_id
-            """.format(relationship["relationship_type"]), {
-                "source_id": int(source_neo4j_id),
-                "target_id": int(target_neo4j_id),
-                "relationship_id": relationship["id"],
-                "properties": relationship.get("properties", {})
-            })
-            
-            record = await result.single()
-            if record:
-                return record["neo4j_id"]
-            return None
-    
-    except Exception as e:
-        logger.error(f"Error creating relationship in Neo4j: {e}")
-        return None
-
-async def update_relationship_in_neo4j(relationship: Dict[str, Any]) -> bool:
-    """
-    Update a relationship in Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        
-        async with neo4j_driver.session() as session:
-            result = await session.run("""
-                MATCH ()-[r]->()
-                WHERE id(r) = $neo4j_id
-                SET r.properties = $properties
-                RETURN r
-            """, {
-                "neo4j_id": int(relationship["neo4j_id"]),
-                "properties": relationship.get("properties", {})
-            })
-            
-            return True
-    
-    except Exception as e:
-        logger.error(f"Error updating relationship in Neo4j: {e}")
-        return False
-
-async def delete_relationship_from_neo4j(neo4j_id: str) -> bool:
-    """
-    Delete a relationship from Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        
-        async with neo4j_driver.session() as session:
-            await session.run("""
-                MATCH ()-[r]->()
-                WHERE id(r) = $neo4j_id
-                DELETE r
-            """, {
-                "neo4j_id": int(neo4j_id)
-            })
-            
-            return True
-    
-    except Exception as e:
-        logger.error(f"Error deleting relationship from Neo4j: {e}")
-        return False
-
-async def execute_cypher_query(
-    query: str,
-    parameters: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
-    """
-    Execute a Cypher query against Neo4j.
-    """
-    try:
-        neo4j_driver = get_neo4j_driver()
-        start_time = datetime.now()
-        
-        async with neo4j_driver.session() as session:
-            result = await session.run(query, parameters or {})
-            
-            records = []
-            async for record in result:
-                records.append(record.data())
-            
-            # Get query summary
-            summary = await result.consume()
-            
-            end_time = datetime.now()
-            execution_time = int((end_time - start_time).total_seconds() * 1000)  # in milliseconds
+            # Register entity in Supabase for tracking
+            await self._register_entity_in_supabase(
+                entity_id=entity_id,
+                entity_text=entity_text,
+                entity_type=entity_type,
+                neo4j_id=str(node.identity),
+                fibo_class=fibo_class,
+                source_document_id=source_document_id,
+                properties=properties
+            )
             
             return {
-                "results": records,
-                "count": len(records),
-                "execution_time_ms": execution_time,
-                "counters": {
-                    "nodes_created": summary.counters.nodes_created,
-                    "nodes_deleted": summary.counters.nodes_deleted,
-                    "relationships_created": summary.counters.relationships_created,
-                    "relationships_deleted": summary.counters.relationships_deleted,
-                    "properties_set": summary.counters.properties_set
-                }
+                "id": entity_id,
+                "neo4j_id": str(node.identity),
+                "text": entity_text,
+                "type": entity_type,
+                "fibo_class": fibo_class,
+                "properties": properties
             }
-    
-    except Exception as e:
-        logger.error(f"Error executing Cypher query: {e}")
-        
-        end_time = datetime.now()
-        execution_time = int((end_time - start_time).total_seconds() * 1000) if 'start_time' in locals() else 0
-        
-        return {
-            "error": str(e),
-            "results": [],
-            "count": 0,
-            "execution_time_ms": execution_time
-        }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating entity: {str(e)}"
+            )
 
-# Ontology and Mapping
-
-async def get_entity_type_mapping(entity_type: str) -> Optional[Dict[str, Any]]:
-    """
-    Get FIBO class mapping for an entity type.
-    """
-    try:
-        supabase = get_supabase()
-        response = await supabase.table("entity_mappings").select("*").eq("entity_type", entity_type).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error getting entity type mapping: {e}")
-        return None
-
-async def get_relationship_type_mapping(relationship_type: str) -> Optional[Dict[str, Any]]:
-    """
-    Get FIBO property mapping for a relationship type.
-    """
-    try:
-        supabase = get_supabase()
-        response = await supabase.table("relationship_mappings").select("*").eq("relationship_type", relationship_type).execute()
-        
-        if response.data:
-            return response.data[0]
-        return None
-    
-    except Exception as e:
-        logger.error(f"Error getting relationship type mapping: {e}")
-        return None
-
-async def sync_entities_to_neo4j() -> int:
-    """
-    Synchronize entities from Supabase to Neo4j.
-    Only sync entities that don't have a Neo4j ID yet.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Get entities without Neo4j ID
-        response = await supabase.table("kg_entities").select("*").is_("neo4j_id", "null").execute()
-        entities = response.data
-        
-        count = 0
-        for entity in entities:
-            neo4j_id = await create_entity_in_neo4j(entity)
+    async def create_or_merge_entity(
+        self,
+        entity_text: str,
+        entity_type: str,
+        properties: Dict[str, Any],
+        fibo_class: Optional[str] = None,
+        source_document_id: Optional[str] = None
+    ) -> str:
+        """Create a new entity or merge with existing one if found"""
+        try:
+            # Try to find existing entity
+            existing_entity = self.node_matcher.match(entity_type).where(
+                f"_.text = '{entity_text}'"
+            ).first()
             
-            if neo4j_id:
-                # Update the Neo4j ID
-                await supabase.table("kg_entities").update({"neo4j_id": str(neo4j_id)}).eq("id", entity["id"]).execute()
-                count += 1
-        
-        return count
-    
-    except Exception as e:
-        logger.error(f"Error syncing entities to Neo4j: {e}")
-        return 0
+            if existing_entity:
+                # Update properties of existing entity
+                existing_entity.update(properties)
+                
+                # Update FIBO class if provided
+                if fibo_class and not existing_entity.get("fibo_class"):
+                    existing_entity["fibo_class"] = fibo_class
+                
+                # Update in Neo4j
+                self.graph.push(existing_entity)
+                
+                return existing_entity["id"]
+            else:
+                # Create new entity
+                result = await self.create_entity(
+                    entity_text=entity_text,
+                    entity_type=entity_type,
+                    properties=properties,
+                    fibo_class=fibo_class,
+                    source_document_id=source_document_id
+                )
+                return result["id"]
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating or merging entity: {str(e)}"
+            )
 
-async def sync_relationships_to_neo4j() -> int:
-    """
-    Synchronize relationships from Supabase to Neo4j.
-    Only sync relationships that don't have a Neo4j ID yet.
-    """
-    try:
-        supabase = get_supabase()
-        
-        # Get relationships without Neo4j ID
-        response = await supabase.table("kg_relationships").select("*").is_("neo4j_id", "null").execute()
-        relationships = response.data
-        
-        count = 0
-        for relationship in relationships:
-            neo4j_id = await create_relationship_in_neo4j(relationship)
+    async def create_relationship(
+        self,
+        source_id: str,
+        target_id: str,
+        relationship_type: str,
+        properties: Dict[str, Any],
+        fibo_property: Optional[str] = None,
+        source_document_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Create a relationship between two entities"""
+        try:
+            # Get the source and target nodes
+            source_node = self.node_matcher.match().where(f"_.id = '{source_id}'").first()
+            target_node = self.node_matcher.match().where(f"_.id = '{target_id}'").first()
             
-            if neo4j_id:
-                # Update the Neo4j ID
-                await supabase.table("kg_relationships").update({"neo4j_id": str(neo4j_id)}).eq("id", relationship["id"]).execute()
-                count += 1
-        
-        return count
-    
-    except Exception as e:
-        logger.error(f"Error syncing relationships to Neo4j: {e}")
-        return 0
+            if not source_node:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Source entity not found: {source_id}"
+                )
+                
+            if not target_node:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Target entity not found: {target_id}"
+                )
+            
+            # Prepare properties
+            rel_properties = {
+                "id": str(uuid.uuid4())
+            }
+            
+            # Add optional properties
+            if fibo_property:
+                rel_properties["fibo_property"] = fibo_property
+                
+            if source_document_id:
+                rel_properties["source_document_id"] = source_document_id
+                
+            # Add custom properties
+            rel_properties.update(properties)
+            
+            # Create relationship in Neo4j
+            tx = self.graph.begin()
+            relationship = Relationship(source_node, relationship_type, target_node, **rel_properties)
+            tx.create(relationship)
+            tx.commit()
+            
+            # Register relationship in Supabase for tracking
+            await self._register_relationship_in_supabase(
+                relationship_id=rel_properties["id"],
+                source_entity_id=source_id,
+                target_entity_id=target_id,
+                relationship_type=relationship_type,
+                neo4j_id=str(relationship.identity),
+                fibo_property=fibo_property,
+                source_document_id=source_document_id,
+                properties=properties
+            )
+            
+            return {
+                "id": rel_properties["id"],
+                "neo4j_id": str(relationship.identity),
+                "source_id": source_id,
+                "target_id": target_id,
+                "type": relationship_type,
+                "fibo_property": fibo_property,
+                "properties": properties
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating relationship: {str(e)}"
+            )
 
-async def convert_nl_to_cypher(query_text: str) -> str:
-    """
-    Convert natural language query to Cypher.
-    This is a placeholder - in a real system, this would use an LLM or similar.
-    """
-    # This is a very simple implementation for demonstration
-    # In a real system, you would use a more sophisticated approach
-    
-    lower_query = query_text.lower()
-    
-    if "list all" in lower_query or "show all" in lower_query or "get all" in lower_query:
-        entity_type = None
+    async def get_entity(self, entity_id: str) -> Dict[str, Any]:
+        """Get an entity by ID"""
+        try:
+            # Find entity in Neo4j
+            entity = self.node_matcher.match().where(f"_.id = '{entity_id}'").first()
+            
+            if not entity:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Entity not found: {entity_id}"
+                )
+            
+            # Convert to dict
+            entity_dict = dict(entity)
+            
+            # Add labels
+            entity_dict["labels"] = list(entity.labels)
+            
+            return entity_dict
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving entity: {str(e)}"
+            )
+
+    async def get_entity_relationships(
+        self, 
+        entity_id: str,
+        direction: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get all relationships for an entity"""
+        try:
+            # Get relationships based on direction
+            if direction == "outgoing":
+                query = """
+                MATCH (s)-[r]->(t)
+                WHERE s.id = $entity_id
+                RETURN r, s, t
+                """
+            elif direction == "incoming":
+                query = """
+                MATCH (s)<-[r]-(t)
+                WHERE s.id = $entity_id
+                RETURN r, t, s
+                """
+            else:
+                # Both directions
+                query = """
+                MATCH (n)-[r]-(m)
+                WHERE n.id = $entity_id
+                RETURN r, n, m
+                """
+            
+            # Execute query
+            results = self.graph.run(query, entity_id=entity_id).data()
+            
+            # Process results
+            relationships = []
+            for record in results:
+                r = record["r"]
+                
+                # Determine source and target based on direction
+                if direction == "outgoing":
+                    source = record["s"]
+                    target = record["t"]
+                elif direction == "incoming":
+                    source = record["t"]
+                    target = record["s"]
+                else:
+                    # For bidirectional, determine which node is our entity
+                    if record["n"]["id"] == entity_id:
+                        source = record["n"]
+                        target = record["m"]
+                    else:
+                        source = record["m"]
+                        target = record["n"]
+                
+                # Convert relationship to dict
+                rel_dict = dict(r)
+                rel_dict["source_id"] = source["id"]
+                rel_dict["target_id"] = target["id"]
+                rel_dict["source_text"] = source["text"]
+                rel_dict["target_text"] = target["text"]
+                rel_dict["type"] = type(r).__name__
+                rel_dict["neo4j_id"] = str(r.identity)
+                
+                relationships.append(rel_dict)
+            
+            return relationships
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving entity relationships: {str(e)}"
+            )
+
+    async def search_entities(
+        self,
+        query: str,
+        entity_type: Optional[str] = None,
+        fibo_class: Optional[str] = None,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Search for entities by text"""
+        try:
+            # Build Cypher query
+            cypher = """
+            MATCH (n)
+            WHERE toLower(n.text) CONTAINS toLower($query)
+            """
+            
+            # Add filters
+            if entity_type:
+                cypher += f" AND n:{entity_type}"
+                
+            if fibo_class:
+                cypher += f" AND n.fibo_class = '{fibo_class}'"
+            
+            # Add return and limit
+            cypher += f"""
+            RETURN n
+            LIMIT {limit}
+            """
+            
+            # Execute query
+            results = self.graph.run(cypher, query=query).data()
+            
+            # Process results
+            entities = []
+            for record in results:
+                node = record["n"]
+                entity_dict = dict(node)
+                entity_dict["labels"] = list(node.labels)
+                entity_dict["neo4j_id"] = str(node.identity)
+                entities.append(entity_dict)
+            
+            return entities
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error searching entities: {str(e)}"
+            )
+
+    async def update_entity(
+        self,
+        entity_id: str,
+        properties: Dict[str, Any],
+        fibo_class: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Update an entity's properties"""
+        try:
+            # Find entity in Neo4j
+            entity = self.node_matcher.match().where(f"_.id = '{entity_id}'").first()
+            
+            if not entity:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Entity not found: {entity_id}"
+                )
+            
+            # Update properties
+            for key, value in properties.items():
+                entity[key] = value
+                
+            # Update FIBO class if provided
+            if fibo_class:
+                entity["fibo_class"] = fibo_class
+            
+            # Push changes to Neo4j
+            self.graph.push(entity)
+            
+            # Update in Supabase
+            await self._update_entity_in_supabase(
+                entity_id=entity_id,
+                properties=properties,
+                fibo_class=fibo_class
+            )
+            
+            # Return updated entity
+            return await self.get_entity(entity_id)
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error updating entity: {str(e)}"
+            )
+
+    async def delete_entity(self, entity_id: str) -> Dict[str, Any]:
+        """Delete an entity and all its relationships"""
+        try:
+            # Find entity in Neo4j
+            entity = self.node_matcher.match().where(f"_.id = '{entity_id}'").first()
+            
+            if not entity:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Entity not found: {entity_id}"
+                )
+            
+            # Delete entity and all its relationships
+            cypher = """
+            MATCH (n)
+            WHERE n.id = $entity_id
+            DETACH DELETE n
+            """
+            
+            self.graph.run(cypher, entity_id=entity_id)
+            
+            # Delete from Supabase
+            await self._delete_entity_from_supabase(entity_id)
+            
+            return {"success": True, "message": "Entity deleted"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deleting entity: {str(e)}"
+            )
+
+    async def execute_query(
+        self,
+        query: str,
+        parameters: Dict[str, Any] | None = None
+    ) -> List[Dict[str, Any]]:
+        """Execute a Cypher query against the knowledge graph"""
+        try:
+            # Execute query
+            results = self.graph.run(query, **(parameters or {})).data()
+            return results
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Error executing query: {str(e)}"
+            )
+
+    async def get_entity_stats(self) -> Dict[str, Any]:
+        """Get statistics about the knowledge graph entities"""
+        try:
+            # Get entity counts by type
+            query = """
+            MATCH (n)
+            RETURN labels(n) AS type, count(n) AS count
+            """
+            
+            results = self.graph.run(query).data()
+            
+            # Process results
+            stats = {
+                "total_entities": 0,
+                "by_type": {},
+                "by_fibo_class": {}
+            }
+            
+            for record in results:
+                entity_type = record["type"][0] if record["type"] else "unknown"
+                count = record["count"]
+                stats["by_type"][entity_type] = count
+                stats["total_entities"] += count
+            
+            # Get counts by FIBO class
+            query = """
+            MATCH (n)
+            WHERE n.fibo_class IS NOT NULL
+            RETURN n.fibo_class AS fibo_class, count(n) AS count
+            """
+            
+            results = self.graph.run(query).data()
+            
+            for record in results:
+                fibo_class = record["fibo_class"]
+                count = record["count"]
+                stats["by_fibo_class"][fibo_class] = count
+            
+            return stats
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error getting entity statistics: {str(e)}"
+            )
+    async def sync_entities_to_neo4j(
+        self,
+        entities: List[Dict[str, Any]],
+        source_document_id: Optional[str] = None
+    ) -> None:
+        """Sync entities to Neo4j"""
+        try:
+            for entity in entities:
+                # Create or merge entity
+                await self.create_or_merge_entity(
+                    entity_text=entity["text"],
+                    entity_type=entity["type"],
+                    properties=entity.get("properties", {}),
+                    fibo_class=entity.get("fibo_class"),
+                    source_document_id=source_document_id
+                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error syncing entities to Neo4j: {str(e)}"
+            )
+
+    async def sync_relationships_to_neo4j(
+        self,
+        relationships: List[Dict[str, Any]],
+        source_document_id: Optional[str] = None
+    ) -> None:
+        """Sync relationships to Neo4j"""
+        try:
+            for relationship in relationships:
+                # Create relationship
+                await self.create_relationship(
+                    source_id=relationship["source_id"],
+                    target_id=relationship["target_id"],
+                    relationship_type=relationship["type"],
+                    properties=relationship.get("properties", {}),
+                    fibo_property=relationship.get("fibo_property"),
+                    source_document_id=source_document_id
+                )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error syncing relationships to Neo4j: {str(e)}"
+            )
+
+    async def _register_entity_in_supabase(
+        self,
+        entity_id: str,
+        entity_text: str,
+        entity_type: str,
+        neo4j_id: str,
+        fibo_class: Optional[str] = None,
+        source_document_id: Optional[str] = None,
+        properties: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Register an entity in Supabase for tracking"""
+        from app.core.supabase import get_supabase
         
-        # Try to detect entity type
-        for common_type in ["bank", "customer", "account", "transaction", "product"]:
-            if common_type in lower_query:
-                entity_type = common_type.capitalize()
-                break
+        try:
+            supabase = await get_supabase()
+            
+            data = {
+                "id": entity_id,
+                "neo4j_id": neo4j_id,
+                "entity_text": entity_text,
+                "entity_type": entity_type,
+                "is_verified": False
+            }
+            
+            if fibo_class:
+                data["fibo_class_id"] = await self._get_fibo_class_id(fibo_class)
+                
+            if source_document_id:
+                data["source_document_id"] = source_document_id
+                
+            if properties:
+                data["properties"] = properties
+            
+            await supabase.from_("kg_entities").insert(data).execute()
+        except Exception as e:
+            # Log error but don't fail the operation
+            print(f"Error registering entity in Supabase: {e}")
+
+    async def _register_relationship_in_supabase(
+        self,
+        relationship_id: str,
+        source_entity_id: str,
+        target_entity_id: str,
+        relationship_type: str,
+        neo4j_id: str,
+        fibo_property: Optional[str] = None,
+        source_document_id: Optional[str] = None,
+        properties: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """Register a relationship in Supabase for tracking"""
+        from app.core.supabase import get_supabase
         
-        if entity_type:
-            return f"MATCH (e:{entity_type}) RETURN e LIMIT 100"
-        else:
-            return "MATCH (e) RETURN e LIMIT 100"
-    
-    elif "relationship" in lower_query or "connected to" in lower_query or "related to" in lower_query:
-        return "MATCH (a)-[r]->(b) RETURN a, r, b LIMIT 100"
-    
-    # Default query
-    return "MATCH (n) RETURN n LIMIT 10"
+        try:
+            supabase = await get_supabase()
+            
+            data = {
+                "id": relationship_id,
+                "neo4j_id": neo4j_id,
+                "source_entity_id": source_entity_id,
+                "target_entity_id": target_entity_id,
+                "relationship_type": relationship_type,
+                "is_verified": False
+            }
+            
+            if fibo_property:
+                data["fibo_property_id"] = await self._get_fibo_property_id(fibo_property)
+                
+            if source_document_id:
+                data["source_document_id"] = source_document_id
+                
+            if properties:
+                data["properties"] = properties
+            
+            await supabase.from_("kg_relationships").insert(data).execute()
+        except Exception as e:
+            # Log error but don't fail the operation
+            print(f"Error registering relationship in Supabase: {e}")
+
+    async def _update_entity_in_supabase(
+        self,
+        entity_id: str,
+        properties: Dict[str, Any],
+        fibo_class: Optional[str] = None
+    ) -> None:
+        """Update entity in Supabase"""
+        from app.core.supabase import get_supabase
+        
+        try:
+            supabase = await get_supabase()
+            
+            data = {
+                "properties": properties,
+                "updated_at": "now()"
+            }
+            
+            if fibo_class:
+                data["fibo_class_id"] = await self._get_fibo_class_id(fibo_class)
+            
+            await supabase.from_("kg_entities").update(data).eq("id", entity_id).execute()
+        except Exception as e:
+            # Log error but don't fail the operation
+            print(f"Error updating entity in Supabase: {e}")
+
+    async def _delete_entity_from_supabase(self, entity_id: str) -> None:
+        """Delete entity from Supabase"""
+        from app.core.supabase import get_supabase
+        
+        try:
+            supabase = await get_supabase()
+            await supabase.from_("kg_entities").delete().eq("id", entity_id).execute()
+        except Exception as e:
+            # Log error but don't fail the operation
+            print(f"Error deleting entity from Supabase: {e}")
+
+    async def _get_fibo_class_id(self, fibo_class_uri: str) -> Optional[int]:
+        """Get FIBO class ID from URI"""
+        from app.core.supabase import get_supabase
+        
+        try:
+            supabase = await get_supabase()
+            response = await supabase.from_("fibo_classes").select("id").eq("uri", fibo_class_uri).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]["id"]
+            return None
+        except Exception:
+            return None
+
+    async def _get_fibo_property_id(self, fibo_property_uri: str) -> Optional[int]:
+        """Get FIBO property ID from URI"""
+        from app.core.supabase import get_supabase
+        
+        try:
+            supabase = await get_supabase()
+            response = await supabase.from_("fibo_properties").select("id").eq("uri", fibo_property_uri).execute()
+            
+            if response.data and len(response.data) > 0:
+                return response.data[0]["id"]
+            return None
+        except Exception:
+            return None

@@ -108,7 +108,7 @@ async def enrich_entities_with_embeddings(
         }
 
 async def sync_entities_to_neo4j(
-    entity_ids: List[UUID] = None,
+    entity_ids: List[UUID] | None = None,
     batch_size: int = 100
 ) -> Dict[str, Any]:
     """
@@ -124,6 +124,8 @@ async def sync_entities_to_neo4j(
     try:
         supabase = get_supabase()
         neo4j_driver = get_neo4j_driver()
+
+        response: Any = None
         
         # Get entities to process
         if entity_ids:
@@ -132,10 +134,10 @@ async def sync_entities_to_neo4j(
             
             for i in range(0, len(entity_ids), 50):  # Process in chunks to avoid URI too long
                 batch_ids = [str(id) for id in entity_ids[i:i+50]]
-                response = await query.in_("id", batch_ids).execute()
+                response = query.in_("id", batch_ids).execute()
         else:
             # Process all entities without Neo4j ID
-            response = await supabase.table("kg_entities").select("*").is_("neo4j_id", "null").limit(batch_size).execute()
+            response = supabase.table("kg_entities").select("*").is_("neo4j_id", "null").limit(batch_size).execute()
         
         entities = response.data
         

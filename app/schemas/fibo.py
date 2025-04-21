@@ -1,7 +1,6 @@
-# app/schemas/fibo.py
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class FIBOClassBase(BaseModel):
@@ -32,7 +31,7 @@ class FIBOClass(FIBOClassBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FIBOPropertyBase(BaseModel):
@@ -65,7 +64,7 @@ class FIBOProperty(FIBOPropertyBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class EntityMapping(BaseModel):
@@ -87,14 +86,14 @@ class OntologyImportRequest(BaseModel):
     url: Optional[str] = None
     format: str = "rdf"  # rdf, owl, ttl
     
-    @validator('format')
+    @field_validator('format')
     def validate_format(cls, v):
         valid_formats = ['rdf', 'owl', 'ttl']
         if v not in valid_formats:
             raise ValueError(f"Format must be one of {valid_formats}")
         return v
     
-    @validator('file_id', 'url')
+    @field_validator('file_id', 'url')
     def validate_source(cls, v, values):
         # Ensure either file_id or url is provided
         if 'file_id' not in values and 'url' not in values:

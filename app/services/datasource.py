@@ -1,14 +1,17 @@
-from typing import List, Dict, Any, Optional
-from fastapi import HTTPException, status, UploadFile
+from typing import Any, Dict, List, Optional
 import uuid
 
-from app.core.supabase import get_supabase
-from app.schemas.datasource import DataSourceCreate, DataSourceUpdate, FileUploadCreate, FileUploadStatus
+from fastapi import HTTPException, UploadFile, status
 
+from app.core.supabase import get_supabase
+from app.schemas.datasource import (
+    DataSourceCreate,
+    DataSourceUpdate,
+    FileUploadCreate,
+    FileUploadStatus,
+)
 
 class DataSourceService:
-    def __init__(self):
-        self.supabase = get_supabase()
 
     async def create_datasource(
         self, 
@@ -17,6 +20,7 @@ class DataSourceService:
     ) -> Dict[str, Any]:
         """Create a new data source"""
         try:
+            supabase = await get_supabase()
             data = datasource_in.dict()
             data["created_by"] = user_id
             
@@ -28,7 +32,7 @@ class DataSourceService:
                 # In a real implementation, you might want to encrypt this
                 pass
             
-            response = self.supabase.from_("data_sources").insert(data).execute()
+            response = await supabase.from_("data_sources").insert(data).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -46,7 +50,8 @@ class DataSourceService:
     async def get_datasource(self, datasource_id: str) -> Dict[str, Any]:
         """Get a data source by ID"""
         try:
-            response = self.supabase.from_("data_sources").select("*").eq("id", datasource_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("data_sources").select("*").eq("id", datasource_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -70,6 +75,7 @@ class DataSourceService:
     ) -> Dict[str, Any]:
         """Update a data source"""
         try:
+            supabase = await get_supabase()
             # First check if data source exists
             await self.get_datasource(datasource_id)
             
@@ -80,7 +86,7 @@ class DataSourceService:
             if "source_type" in data:
                 data["source_type"] = str(data["source_type"])
             
-            response = self.supabase.from_("data_sources").update(data).eq("id", datasource_id).execute()
+            response = await supabase.from_("data_sources").update(data).eq("id", datasource_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -100,11 +106,12 @@ class DataSourceService:
     async def delete_datasource(self, datasource_id: str) -> Dict[str, Any]:
         """Delete a data source"""
         try:
+            supabase = await get_supabase()
             # First check if data source exists
             await self.get_datasource(datasource_id)
             
             # Delete the data source
-            self.supabase.from_("data_sources").delete().eq("id", datasource_id).execute()
+            await supabase.from_("data_sources").delete().eq("id", datasource_id).execute()
             
             return {"success": True, "message": "Data source deleted"}
         except HTTPException:
@@ -124,7 +131,8 @@ class DataSourceService:
     ) -> List[Dict[str, Any]]:
         """Get all data sources with filtering and pagination"""
         try:
-            query = self.supabase.from_("data_sources").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("data_sources").select("*")
             
             if source_type:
                 query = query.eq("source_type", source_type)
@@ -132,7 +140,7 @@ class DataSourceService:
             if is_active is not None:
                 query = query.eq("is_active", is_active)
                 
-            response = query.order("created_at", desc=False).range(skip, skip + limit - 1).execute()
+            response = await query.order("created_at", desc=False).range(skip, skip + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -150,6 +158,7 @@ class DataSourceService:
     ) -> Dict[str, Any]:
         """Upload a file to Supabase storage and register it in the database"""
         try:
+            supabase = await get_supabase()
             # First check if data source exists
             datasource = await self.get_datasource(data_source_id)
             
@@ -173,7 +182,7 @@ class DataSourceService:
             file_content = await file.read()
             
             # Upload to Supabase Storage
-            storage_response = self.supabase.storage.from_("documents").upload(
+            storage_response = await supabase.storage.from_("documents").upload(
                 storage_path,
                 file_content
             )
@@ -197,11 +206,11 @@ class DataSourceService:
             upload_data = file_upload.dict()
             upload_data["uploaded_by"] = user_id
             
-            response = self.supabase.from_("file_uploads").insert(upload_data).execute()
+            response = await supabase.from_("file_uploads").insert(upload_data).execute()
             
             if not response.data:
                 # If database insert fails, try to delete from storage
-                self.supabase.storage.from_("documents").remove([storage_path])
+                await supabase.storage.from_("documents").remove([storage_path])
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to register file upload"
@@ -226,7 +235,8 @@ class DataSourceService:
     ) -> List[Dict[str, Any]]:
         """Get file uploads with filtering and pagination"""
         try:
-            query = self.supabase.from_("file_uploads").select("*")
+            supabase = await get_supabase()
+            query = supabase.from_("file_uploads").select("*")
             
             if data_source_id:
                 query = query.eq("data_source_id", data_source_id)
@@ -237,7 +247,7 @@ class DataSourceService:
             if processed is not None:
                 query = query.eq("processed", processed)
                 
-            response = query.order("uploaded_at", desc=True).range(skip, skip + limit - 1).execute()
+            response = await query.order("uploaded_at", desc=True).range(skip, skip + limit - 1).execute()
             
             return response.data or []
         except Exception as e:
@@ -249,7 +259,8 @@ class DataSourceService:
     async def get_file_upload(self, file_upload_id: str) -> Dict[str, Any]:
         """Get a file upload by ID"""
         try:
-            response = self.supabase.from_("file_uploads").select("*").eq("id", file_upload_id).single().execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("file_uploads").select("*").eq("id", file_upload_id).single().execute()
             
             if not response.data:
                 raise HTTPException(
@@ -275,6 +286,7 @@ class DataSourceService:
     ) -> Dict[str, Any]:
         """Update a file upload status"""
         try:
+            supabase = await get_supabase()
             # First check if file upload exists
             await self.get_file_upload(file_upload_id)
             
@@ -290,7 +302,7 @@ class DataSourceService:
                 metadata["error_message"] = error_message
                 data["metadata"] = metadata
             
-            response = self.supabase.from_("file_uploads").update(data).eq("id", file_upload_id).execute()
+            response = await supabase.from_("file_uploads").update(data).eq("id", file_upload_id).execute()
             
             if not response.data:
                 raise HTTPException(
@@ -310,6 +322,7 @@ class DataSourceService:
     async def delete_file_upload(self, file_upload_id: str) -> Dict[str, Any]:
         """Delete a file upload and remove from storage"""
         try:
+            supabase = await get_supabase()
             # First get the file upload to get storage path
             file_upload = await self.get_file_upload(file_upload_id)
             storage_path = file_upload.get("storage_path")
@@ -317,13 +330,13 @@ class DataSourceService:
             # Delete from storage if path exists
             if storage_path:
                 try:
-                    self.supabase.storage.from_("documents").remove([storage_path])
+                    await supabase.storage.from_("documents").remove([storage_path])
                 except Exception as e:
                     # Log error but continue with deletion from database
                     print(f"Error removing file from storage: {e}")
             
             # Delete from database
-            self.supabase.from_("file_uploads").delete().eq("id", file_upload_id).execute()
+            await supabase.from_("file_uploads").delete().eq("id", file_upload_id).execute()
             
             return {"success": True, "message": "File upload deleted"}
         except HTTPException:
@@ -337,6 +350,7 @@ class DataSourceService:
     async def get_file_content(self, file_upload_id: str) -> bytes:
         """Get the content of a file from storage"""
         try:
+            supabase = await get_supabase()
             # Get the file upload to get storage path
             file_upload = await self.get_file_upload(file_upload_id)
             storage_path = file_upload.get("storage_path")
@@ -349,7 +363,7 @@ class DataSourceService:
             
             # Get from storage
             try:
-                response = self.supabase.storage.from_("documents").download(storage_path)
+                response = await supabase.storage.from_("documents").download(storage_path)
                 return response
             except Exception as e:
                 raise HTTPException(

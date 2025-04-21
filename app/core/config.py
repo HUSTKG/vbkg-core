@@ -6,12 +6,14 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Knowledge Graph System"
+    PROJECT_DESCRIPTION: str = "A system for managing and querying knowledge graphs."
+    PROJECT_VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
     
     # CORS settings
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    CORS_ORIGINS: Union[str, List[AnyHttpUrl]] = [] 
     
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
+    @validator("CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
@@ -56,7 +58,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "paraphrase-multilingual-MiniLM-L12-v2"
     
     class Config:
-        case_sensitive = True
         env_file = ".env"
+        from_attributes = True 
 
 settings = Settings()

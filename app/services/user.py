@@ -6,14 +6,14 @@ from app.schemas.user import UserUpdate
 
 
 class UserService:
-    def __init__(self):
-        self.supabase = get_supabase()
+    """Service for managing users and their roles."""
 
     async def get_user_by_id(self, user_id: str) -> Dict[str, Any]:
         """Get a user by ID"""
         try:
+            supabase = await get_supabase()
             # Get profile from profiles table
-            profile_response = await self.supabase.from_("profiles").select("*").eq("id", user_id).single().execute()
+            profile_response = await supabase.from_("profiles").select("*").eq("id", user_id).single().execute()
             
             if not profile_response.data:
                 raise HTTPException(
@@ -49,11 +49,12 @@ class UserService:
     async def update_user(self, user_id: str, user_data: UserUpdate) -> Dict[str, Any]:
         """Update a user's information"""
         try:
+            supabase = await get_supabase()
             # Update profile data
             update_data = user_data.dict(exclude_unset=True, exclude={"roles"})
             
             if update_data:
-                await self.supabase.from_("profiles").update(update_data).eq("id", user_id).execute()
+                await supabase.from_("profiles").update(update_data).eq("id", user_id).execute()
             
             # Update roles if provided
             if user_data.roles is not None:
@@ -70,8 +71,9 @@ class UserService:
     async def get_users(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
         """Get a list of users with pagination"""
         try:
+            supabase = await get_supabase()
             # Get profiles with pagination
-            response = await self.supabase.from_("profiles").select("*").range(skip, skip + limit - 1).execute()
+            response = await supabase.from_("profiles").select("*").range(skip, skip + limit - 1).execute()
             
             if not response.data:
                 return []
@@ -104,11 +106,12 @@ class UserService:
     async def delete_user(self, user_id: str) -> Dict[str, Any]:
         """Delete a user"""
         try:
+            supabase = await get_supabase()
             # Check if user exists
             user = await self.get_user_by_id(user_id)
             
             # Delete user in auth system (will cascade to profile)
-            await self.supabase.auth.admin.delete_user(user_id)
+            await supabase.auth.admin.delete_user(user_id)
             
             return {"detail": "User successfully deleted"}
         except HTTPException:
@@ -122,7 +125,8 @@ class UserService:
     async def _get_user_roles(self, user_id: str) -> List[str]:
         """Get roles for a user"""
         try:
-            response = await self.supabase.from_("user_roles").select(
+            supabase = await get_supabase()
+            response = await supabase.from_("user_roles").select(
                 "role:role_id(name)"
             ).eq("user_id", user_id).execute()
             
@@ -134,20 +138,21 @@ class UserService:
     async def _update_user_roles(self, user_id: str, role_names: List[str]) -> None:
         """Update roles for a user"""
         try:
+            supabase = await get_supabase()
             # Get current user roles
             current_roles = await self._get_user_roles(user_id)
             
             # Delete all current roles
-            await self.supabase.from_("user_roles").delete().eq("user_id", user_id).execute()
+            await supabase.from_("user_roles").delete().eq("user_id", user_id).execute()
             
             # Add new roles
             for role_name in role_names:
-                role_response = await self.supabase.from_("roles").select("id").eq("name", role_name).execute()
+                role_response = await supabase.from_("roles").select("id").eq("name", role_name).execute()
                 
                 if role_response.data and len(role_response.data) > 0:
                     role_id = role_response.data[0]["id"]
                     
-                    await self.supabase.from_("user_roles").insert({
+                    await supabase.from_("user_roles").insert({
                         "user_id": user_id,
                         "role_id": role_id
                     }).execute()
@@ -160,8 +165,9 @@ class UserService:
     async def check_permission(self, user_id: str, permission: str) -> bool:
         """Check if user has a specific permission"""
         try:
+            supabase = await get_supabase()
             # Call the database function to check permission
-            response = await self.supabase.rpc(
+            response = await supabase.rpc(
                 "check_user_permission",
                 {"user_id": user_id, "permission_name": permission}
             ).execute()
@@ -174,7 +180,8 @@ class UserService:
     async def get_all_roles(self) -> List[Dict[str, Any]]:
         """Get all available roles"""
         try:
-            response = await self.supabase.from_("roles").select("*").execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("roles").select("*").execute()
             return response.data
         except Exception as e:
             raise HTTPException(
@@ -185,7 +192,8 @@ class UserService:
     async def get_all_permissions(self) -> List[Dict[str, Any]]:
         """Get all available permissions"""
         try:
-            response = await self.supabase.from_("permissions").select("*").execute()
+            supabase = await get_supabase()
+            response = await supabase.from_("permissions").select("*").execute()
             return response.data
         except Exception as e:
             raise HTTPException(

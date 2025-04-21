@@ -30,7 +30,7 @@ class Notification(NotificationBase):
     created_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class NotificationInDB(Notification):
     """Model for notification stored in database."""

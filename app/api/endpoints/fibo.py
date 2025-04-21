@@ -4,22 +4,25 @@ from typing import Any, List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body, UploadFile, File, Form
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user, check_permission
+from app.api.deps import get_current_user, PermissionChecker 
 from app.services.fibo import FIBOService
 from app.schemas.fibo import (
     FIBOClass, 
     FIBOClassCreate, 
     FIBOClassUpdate,
-    FIBOProperty,
-    FIBOPropertyCreate,
     FIBOPropertyUpdate,
     EntityMapping,
+    FIBOProperty,
+    FIBOPropertyCreate,
     RelationshipMapping,
     OntologyImportRequest,
     OntologyImportResponse
 )
 
 router = APIRouter()
+
+check_read_permission = PermissionChecker("knowledge:read")
+check_write_permission = PermissionChecker("knowledge:write")
 
 
 @router.get("/classes", response_model=List[FIBOClass])
@@ -29,7 +32,7 @@ async def read_fibo_classes(
     is_custom: Optional[bool] = None,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve FIBO classes with filtering options.
@@ -47,7 +50,7 @@ async def read_fibo_classes(
 @router.get("/classes/{class_id}", response_model=FIBOClass)
 async def read_fibo_class(
     class_id: int = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get a specific FIBO class by ID.
@@ -59,7 +62,7 @@ async def read_fibo_class(
 @router.post("/classes", response_model=FIBOClass, status_code=status.HTTP_201_CREATED)
 async def create_fibo_class(
     fibo_class_in: FIBOClassCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create a new FIBO class.
@@ -72,7 +75,7 @@ async def create_fibo_class(
 async def update_fibo_class(
     fibo_class_in: FIBOClassUpdate,
     class_id: int = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Update a FIBO class.
@@ -87,7 +90,7 @@ async def update_fibo_class(
 @router.delete("/classes/{class_id}", response_model=Dict[str, Any])
 async def delete_fibo_class(
     class_id: int = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Delete a FIBO class.
@@ -104,7 +107,7 @@ async def read_fibo_properties(
     is_custom: Optional[bool] = None,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve FIBO properties with filtering options.
@@ -123,7 +126,7 @@ async def read_fibo_properties(
 @router.get("/properties/{property_id}", response_model=FIBOProperty)
 async def read_fibo_property(
     property_id: int = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get a specific FIBO property by ID.
@@ -135,7 +138,7 @@ async def read_fibo_property(
 @router.post("/properties", response_model=FIBOProperty, status_code=status.HTTP_201_CREATED)
 async def create_fibo_property(
     fibo_property_in: FIBOPropertyCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create a new FIBO property.
@@ -148,7 +151,7 @@ async def create_fibo_property(
 async def update_fibo_property(
     fibo_property_in: FIBOPropertyUpdate,
     property_id: int = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Update a FIBO property.
@@ -163,7 +166,7 @@ async def update_fibo_property(
 @router.delete("/properties/{property_id}", response_model=Dict[str, Any])
 async def delete_fibo_property(
     property_id: int = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Delete a FIBO property.
@@ -175,7 +178,7 @@ async def delete_fibo_property(
 @router.post("/import", response_model=OntologyImportResponse)
 async def import_ontology(
     import_request: OntologyImportRequest,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Import FIBO ontology from a file or URL.
@@ -201,7 +204,7 @@ async def read_entity_mappings(
     verified_only: bool = False,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve entity mappings.
@@ -217,7 +220,7 @@ async def read_entity_mappings(
 @router.post("/entity-mappings", response_model=Dict[str, Any])
 async def create_entity_mapping(
     mapping: EntityMapping,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create or update an entity mapping.
@@ -232,7 +235,7 @@ async def create_entity_mapping(
 @router.delete("/entity-mappings/{entity_type}", response_model=Dict[str, Any])
 async def delete_entity_mapping(
     entity_type: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Delete an entity mapping.
@@ -245,7 +248,7 @@ async def delete_entity_mapping(
 async def verify_entity_mapping(
     entity_type: str = Path(...),
     verified: bool = True,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Verify an entity mapping.
@@ -263,7 +266,7 @@ async def read_relationship_mappings(
     verified_only: bool = False,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve relationship mappings.
@@ -279,7 +282,7 @@ async def read_relationship_mappings(
 @router.post("/relationship-mappings", response_model=Dict[str, Any])
 async def create_relationship_mapping(
     mapping: RelationshipMapping,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create or update a relationship mapping.
@@ -294,7 +297,7 @@ async def create_relationship_mapping(
 @router.delete("/relationship-mappings/{relationship_type}", response_model=Dict[str, Any])
 async def delete_relationship_mapping(
     relationship_type: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Delete a relationship mapping.
@@ -307,7 +310,7 @@ async def delete_relationship_mapping(
 async def verify_relationship_mapping(
     relationship_type: str = Path(...),
     verified: bool = True,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Verify a relationship mapping.
@@ -325,7 +328,7 @@ async def suggest_fibo_classes(
     entity_text: str,
     entity_type: str,
     max_suggestions: int = Query(5, ge=1, le=20),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Suggest FIBO classes for an entity.
@@ -344,7 +347,7 @@ async def suggest_fibo_properties(
     source_entity_type: str,
     target_entity_type: str,
     max_suggestions: int = Query(5, ge=1, le=20),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Suggest FIBO properties for a relationship.

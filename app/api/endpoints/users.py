@@ -1,222 +1,112 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Any, List, Optional
+from typing import Any, List, Dict, Optional
 
-from app.schemas.user import User, UserCreate, UserUpdate, UserWithRoles
-from app.schemas.auth import RoleCreate, Role, RoleUpdate, Permission
-from app.services.user import (
-    get_users, get_user, update_user, delete_user,
-    get_roles, create_role, update_role, delete_role,
-    assign_role_to_user, remove_role_from_user,
-    get_permissions, assign_permission_to_role, remove_permission_from_role
-)
-from app.api.deps import get_current_active_user, get_current_admin_user
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.security import OAuth2PasswordBearer
+
+from app.core.config import settings
+from app.api.deps import get_current_user, get_current_active_admin
+from app.schemas.user import User, UserUpdate
+from app.services.user import UserService
 
 router = APIRouter()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
-# User management endpoints
+
 @router.get("/", response_model=List[User])
 async def read_users(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_admin_user),
+    current_user: Dict[str, Any] = Depends(get_current_active_admin)
 ) -> Any:
     """
-    Retrieve users.
+    Retrieve users. Only admins can access this endpoint.
     """
-    users = await get_users(skip=skip, limit=limit)
-    return users
+    user_service = UserService()
+    return await user_service.get_users(skip=skip, limit=limit)
 
-@router.get("/me", response_model=UserWithRoles)
+
+@router.get("/me", response_model=User)
 async def read_user_me(
-    current_user: User = Depends(get_current_active_user),
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ) -> Any:
     """
     Get current user.
     """
     return current_user
 
-@router.get("/{user_id}", response_model=UserWithRoles)
+
+@router.patch("/me", response_model=User)
+async def update_user_me(
+    user_in: UserUpdate,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Any:
+    """
+    Update current user information.
+    """
+    user_service = UserService()
+    # Prevent a user from changing their own roles
+    if hasattr(user_in, "roles") and user_in.roles is not None:
+        user_in.roles = None
+    
+    return await user_service.update_user(current_user["id"], user_in)
+
+
+@router.get("/{user_id}", response_model=User)
 async def read_user(
     user_id: str,
-    current_user: User = Depends(get_current_admin_user),
+    current_user: Dict[str, Any] = Depends(get_current_active_admin)
 ) -> Any:
     """
-    Get a specific user by id.
+    Get a specific user by id. Only admins can access this endpoint.
     """
-    user = await get_user(user_id=user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found",
-        )
+    user_service = UserService()
+    user = await user_service.get_user_by_id(user_id)
     return user
 
-@router.put("/{user_id}", response_model=User)
-async def update_user_endpoint(
+
+@router.patch("/{user_id}", response_model=User)
+async def update_user(
     user_id: str,
     user_in: UserUpdate,
-    current_user: User = Depends(get_current_admin_user),
+    current_user: Dict[str, Any] = Depends(get_current_active_admin)
 ) -> Any:
     """
-    Update a user.
+    Update a user. Only admins can access this endpoint.
     """
-    user = await get_user(user_id=user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found",
-        )
-    user = await update_user(user_id=user_id, user_in=user_in)
+    user_service = UserService()
+    user = await user_service.update_user(user_id, user_in)
     return user
 
-@router.delete("/{user_id}", response_model=User)
-async def delete_user_endpoint(
+
+@router.delete("/{user_id}")
+async def delete_user(
     user_id: str,
-    current_user: User = Depends(get_current_admin_user),
+    current_user: Dict[str, Any] = Depends(get_current_active_admin)
 ) -> Any:
     """
-    Delete a user.
+    Delete a user. Only admins can access this endpoint.
     """
-    user = await get_user(user_id=user_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found",
-        )
-    user = await delete_user(user_id=user_id)
-    return user
+    user_service = UserService()
+    return await user_service.delete_user(user_id)
 
-# Role management endpoints
-@router.get("/roles/", response_model=List[Role])
+
+@router.get("/roles", response_model=List[Dict[str, Any]])
 async def read_roles(
-    current_user: User = Depends(get_current_admin_user),
+    current_user: Dict[str, Any] = Depends(get_current_active_admin)
 ) -> Any:
     """
-    Retrieve roles.
+    Get all available roles. Only admins can access this endpoint.
     """
-    roles = await get_roles()
-    return roles
+    user_service = UserService()
+    return await user_service.get_all_roles()
 
-@router.post("/roles/", response_model=Role)
-async def create_role_endpoint(
-    role_in: RoleCreate,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Create new role.
-    """
-    role = await create_role(role_in=role_in)
-    return role
 
-@router.put("/roles/{role_id}", response_model=Role)
-async def update_role_endpoint(
-    role_id: int,
-    role_in: RoleUpdate,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Update a role.
-    """
-    role = await update_role(role_id=role_id, role_in=role_in)
-    if not role:
-        raise HTTPException(
-            status_code=404,
-            detail="Role not found",
-        )
-    return role
-
-@router.delete("/roles/{role_id}", response_model=Role)
-async def delete_role_endpoint(
-    role_id: int,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Delete a role.
-    """
-    role = await delete_role(role_id=role_id)
-    if not role:
-        raise HTTPException(
-            status_code=404,
-            detail="Role not found",
-        )
-    return role
-
-# User-role assignments
-@router.post("/{user_id}/roles/{role_id}", response_model=UserWithRoles)
-async def assign_role(
-    user_id: str,
-    role_id: int,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Assign a role to a user.
-    """
-    user = await assign_role_to_user(user_id=user_id, role_id=role_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User or role not found",
-        )
-    return user
-
-@router.delete("/{user_id}/roles/{role_id}", response_model=UserWithRoles)
-async def remove_role(
-    user_id: str,
-    role_id: int,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Remove a role from a user.
-    """
-    user = await remove_role_from_user(user_id=user_id, role_id=role_id)
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="User or role not found",
-        )
-    return user
-
-# Permission management
-@router.get("/permissions/", response_model=List[Permission])
+@router.get("/permissions", response_model=List[Dict[str, Any]])
 async def read_permissions(
-    current_user: User = Depends(get_current_admin_user),
+    current_user: Dict[str, Any] = Depends(get_current_active_admin)
 ) -> Any:
     """
-    Retrieve permissions.
+    Get all available permissions. Only admins can access this endpoint.
     """
-    permissions = await get_permissions()
-    return permissions
-
-@router.post("/roles/{role_id}/permissions/{permission_id}")
-async def assign_permission(
-    role_id: int,
-    permission_id: int,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Assign a permission to a role.
-    """
-    success = await assign_permission_to_role(role_id=role_id, permission_id=permission_id)
-    if not success:
-        raise HTTPException(
-            status_code=404,
-            detail="Role or permission not found",
-        )
-    return {"message": "Permission assigned successfully"}
-
-@router.delete("/roles/{role_id}/permissions/{permission_id}")
-async def remove_permission(
-    role_id: int,
-    permission_id: int,
-    current_user: User = Depends(get_current_admin_user),
-) -> Any:
-    """
-    Remove a permission from a role.
-    """
-    success = await remove_permission_from_role(role_id=role_id, permission_id=permission_id)
-    if not success:
-        raise HTTPException(
-            status_code=404,
-            detail="Role or permission not found",
-        )
-    return {"message": "Permission removed successfully"}
+    user_service = UserService()
+    return await user_service.get_all_permissions()

@@ -3,10 +3,13 @@ from typing import Any, List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user, check_permission
+from app.api.deps import get_current_user, PermissionChecker 
 from app.services.knowledge_graph import KnowledgeGraphService
 
 router = APIRouter()
+
+check_read_permission = PermissionChecker("knowledge:read")
+check_write_permission = PermissionChecker("knowledge:write")
 
 
 class EntityCreate(BaseModel):
@@ -39,7 +42,7 @@ class CypherQuery(BaseModel):
 @router.post("/entities", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def create_entity(
     entity_in: EntityCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Create a new entity in the knowledge graph.
@@ -57,7 +60,7 @@ async def create_entity(
 @router.get("/entities/{entity_id}", response_model=Dict[str, Any])
 async def read_entity(
     entity_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get a specific entity by ID.
@@ -70,7 +73,7 @@ async def read_entity(
 async def read_entity_relationships(
     entity_id: str = Path(...),
     direction: Optional[str] = Query(None, enum=["incoming", "outgoing"]),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get all relationships for an entity.
@@ -86,7 +89,7 @@ async def read_entity_relationships(
 async def update_entity(
     entity_in: EntityUpdate,
     entity_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Update an entity's properties.
@@ -102,7 +105,7 @@ async def update_entity(
 @router.delete("/entities/{entity_id}", response_model=Dict[str, Any])
 async def delete_entity(
     entity_id: str = Path(...),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Delete an entity and all its relationships.
@@ -117,7 +120,7 @@ async def search_entities(
     entity_type: Optional[str] = None,
     fibo_class: Optional[str] = None,
     limit: int = Query(20, ge=1, le=100),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Search for entities by text.
@@ -134,7 +137,7 @@ async def search_entities(
 @router.post("/relationships", response_model=Dict[str, Any], status_code=status.HTTP_201_CREATED)
 async def create_relationship(
     relationship_in: RelationshipCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create a relationship between two entities.
@@ -153,7 +156,7 @@ async def create_relationship(
 @router.post("/query", response_model=List[Dict[str, Any]])
 async def execute_query(
     query_in: CypherQuery,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Execute a Cypher query against the knowledge graph.
@@ -167,7 +170,7 @@ async def execute_query(
 
 @router.get("/stats", response_model=Dict[str, Any])
 async def get_knowledge_graph_stats(
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get statistics about the knowledge graph entities.
@@ -179,7 +182,7 @@ async def get_knowledge_graph_stats(
 @router.post("/entities/merge", response_model=str)
 async def create_or_merge_entity(
     entity_in: EntityCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create a new entity or merge with existing one if found.

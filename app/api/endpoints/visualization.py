@@ -1,10 +1,11 @@
 # app/api/endpoints/visualization.py
-from typing import Any, List, Dict, Optional
+from typing import Annotated, Any, List, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body, Request
 from pydantic import BaseModel, Field
 
-from app.api.deps import get_current_user, check_permission
+from app.api.deps import get_current_user, PermissionChecker 
+from app.services.user import UserService
 from app.services.visualization import VisualizationService
 from app.schemas.visualization import (
     Visualization,
@@ -16,11 +17,14 @@ from app.schemas.visualization import (
 
 router = APIRouter()
 
+check_read_permission = PermissionChecker("knowledge:read")
+check_write_permission = PermissionChecker("knowledge:write")
+
 
 @router.post("/", response_model=Visualization, status_code=status.HTTP_201_CREATED)
 async def create_visualization(
     visualization_in: VisualizationCreate,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create a new visualization.
@@ -38,7 +42,7 @@ async def read_visualizations(
     is_public: Optional[bool] = None,
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Retrieve visualizations with filtering options.
@@ -154,23 +158,28 @@ async def delete_visualization(
     return await visualization_service.delete_visualization(visualization_id=visualization_id)
 
 
-@router.get("/{visualization_id}/data", response_model=VisualizationData)
+@router.get("/{visualization_id}/data", response_model=Dict[str, Any])
 async def get_visualization_data(
-    visualization_id: str = Path(...),
-    params: Dict[str, Any] = Query(None),
-    current_user: Dict[str, Any] = Depends(get_current_user)
+    visualization_id: Annotated[str, Path(...)],
+    request: Request,
+    current_user: Annotated[Dict[str, Any], Depends(get_current_user)]
 ) -> Any:
     """
     Get data for a visualization.
     """
+    params = request.query_params if request else {}
     visualization_service = VisualizationService()
+    user_service = UserService()
     
     # Check if visualization is public or if user is the creator
     visualization = await visualization_service.get_visualization(visualization_id=visualization_id)
     
     if not visualization["is_public"] and visualization["created_by"] != current_user["id"]:
         # Check if user has read permission
-        has_read_perm = await check_permission("knowledge:read", current_user)
+        has_read_perm = await user_service.check_permission(
+            user_id=current_user["id"],
+            permission="knowledge:read"
+        )
         
         if not has_read_perm:
             raise HTTPException(
@@ -195,7 +204,7 @@ class DefaultVisualizationRequest(BaseModel):
 @router.post("/default", response_model=Visualization)
 async def create_default_visualization(
     request: DefaultVisualizationRequest,
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:write"))
+    current_user: Dict[str, Any] = Depends(check_write_permission)
 ) -> Any:
     """
     Create a default visualization for an entity.
@@ -328,7 +337,7 @@ async def create_default_visualization(
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
 async def get_visualization_templates(
-    current_user: Dict[str, Any] = Depends(check_permission("knowledge:read"))
+    current_user: Dict[str, Any] = Depends(check_read_permission)
 ) -> Any:
     """
     Get visualization templates.

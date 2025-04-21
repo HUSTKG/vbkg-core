@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any, List
 from enum import Enum
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 
@@ -61,7 +61,7 @@ class DataSourceBase(BaseModel):
     source_type: SourceType
     connection_details: Dict[str, Any] = Field(..., description="Connection details specific to the source type")
     
-    @validator('connection_details')
+    @field_validator('connection_details')
     def validate_connection_details(cls, v, values):
         source_type = values.get('source_type')
         if source_type == SourceType.FILE:
@@ -95,7 +95,7 @@ class DataSource(DataSourceBase):
     updated_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class FileUploadBase(BaseModel):
@@ -126,4 +126,4 @@ class FileUpload(FileUploadBase):
     uploaded_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True

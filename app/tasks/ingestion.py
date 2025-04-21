@@ -38,7 +38,7 @@ async def ingest_file(
         File record or None if ingestion failed
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Check if data source exists
         response = await supabase.table("data_sources").select("*").eq("id", str(datasource_id)).execute()
@@ -128,7 +128,7 @@ async def ingest_api_data(
     try:
         import httpx
         
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Check if data source exists
         response = await supabase.table("data_sources").select("*").eq("id", str(datasource_id)).execute()
@@ -227,7 +227,7 @@ async def ingest_database_data(
         import pandas as pd
         from sqlalchemy import create_engine, text
         
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Check if data source exists
         response = await supabase.table("data_sources").select("*").eq("id", str(datasource_id)).execute()

@@ -1,14 +1,13 @@
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field
 
-
 class UserBase(BaseModel):
+    """Base model for user data."""
     email: EmailStr
     full_name: Optional[str] = None
     department: Optional[str] = None
     position: Optional[str] = None
     bio: Optional[str] = None
-
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
@@ -30,13 +29,14 @@ class UserLogin(BaseModel):
 
 
 class User(UserBase):
+    """Complete user model returned from API."""
     id: str
     is_active: bool = True
     roles: List[str] = []
     avatar_url: Optional[str] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class Token(BaseModel):

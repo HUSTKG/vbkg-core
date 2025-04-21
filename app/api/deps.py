@@ -1,4 +1,4 @@
-from typing import Dict, Any, Generator
+from typing import Annotated, Dict, Any, Generator
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -27,7 +27,7 @@ async def get_current_active_user(current_user: Dict[str, Any] = Depends(get_cur
     return current_user
 
 
-async def get_current_active_admin(current_user: Dict[str, Any] = Depends(get_current_active_user)) -> Dict[str, Any]:
+async def get_current_active_admin(current_user: Annotated[Dict[str, Any], Depends(get_current_active_user)]) -> Dict[str, Any]:
     """
     Get current active admin.
     """
@@ -38,21 +38,21 @@ async def get_current_active_admin(current_user: Dict[str, Any] = Depends(get_cu
         )
     return current_user
 
+class PermissionChecker:
+    """
+    Dependency to check if the user has a specific permission.
+    """
+    def __init__(self, permission: str):
+        self.permission = permission
 
-async def check_permission(
-    permission: str,
-    current_user: Dict[str, Any] = Depends(get_current_active_user)
-) -> Dict[str, Any]:
-    """
-    Check if current user has a specific permission.
-    """
-    user_service = UserService()
-    has_permission = await user_service.check_permission(current_user["id"], permission)
-    
-    if not has_permission:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"User doesn't have the required permission: {permission}"
-        )
-    
-    return current_user
+    async def __call__(self, current_user: Dict[str, Any] = Depends(get_current_active_user)) -> Dict[str, Any]:
+        user_service = UserService()
+        has_permission = await user_service.check_permission(current_user["id"], self.permission)
+        
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"User doesn't have the required permission: {self.permission}"
+            )
+        
+        return current_user
