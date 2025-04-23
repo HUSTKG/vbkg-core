@@ -5,6 +5,8 @@ import time
 import uuid
 import json
 
+from postgrest.base_request_builder import APIResponse
+
 from app.core.config import settings
 from app.core.supabase import get_supabase
 from app.schemas.visualization import (
@@ -141,8 +143,8 @@ class VisualizationService:
         type: Optional[VisualizationType] = None,
         is_public: Optional[bool] = None,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        skip: int = 0
+    ) -> APIResponse[Dict[str, Any]]:
         """Get visualizations with filtering and pagination"""
         try:
             supabase = await get_supabase()
@@ -159,9 +161,9 @@ class VisualizationService:
                 query = query.eq("is_public", is_public)
                 
             # Apply pagination and order
-            response = await query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            response = await query.order("created_at", desc=True).range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

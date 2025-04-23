@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import Any, List, Optional, Dict
 from pydantic import UUID4
 
+from app.schemas.api import ApiResponse, PaginatedResponse
 from app.schemas.pipeline import (
     Pipeline, PipelineCreate, PipelineStatus, PipelineUpdate,
     PipelineRun, PipelineRunCreate, PipelineRunStatus
@@ -17,33 +18,41 @@ check_read_permission = PermissionChecker("pipeline:read")
 check_write_permission = PermissionChecker("pipeline:write")
 
 
-@router.get("/", response_model=List[Pipeline])
+@router.get("/", response_model=PaginatedResponse[List[Pipeline]])
 async def read_pipelines(
     skip: int = 0,
     limit: int = 100,
     pipeline_type: Optional[str] = None,
     is_active: Optional[bool] = None,
     current_user: User = Depends(check_read_permission),
-) -> Any:
+) -> PaginatedResponse[List[Pipeline]]:
     """
     Retrieve pipelines.
     """
-    from app.services.data_extraction import DataExtractionService
     data_extraction_service = DataExtractionService()
-    
+
     pipelines = await data_extraction_service.get_pipelines(
         skip=skip,
         limit=limit,
         pipeline_type=pipeline_type,
         is_active=is_active
     )
-    return pipelines
+    return PaginatedResponse( 
+        data=pipelines.data,
+        meta={
+            "total": pipelines.count,
+            "skip": skip,
+            "limit": limit,
+        },
+        status=status.HTTP_200_OK,
+        message="Pipelines retrieved successfully"
+    )
 
-@router.post("/", response_model=Pipeline)
+@router.post("/", response_model=ApiResponse[Pipeline])
 async def create_pipeline(
     pipeline_in: PipelineCreate,
     current_user: User = Depends(check_write_permission),
-) -> Any:
+) -> ApiResponse[Pipeline]:
     """
     Create new pipeline.
     """
@@ -54,13 +63,17 @@ async def create_pipeline(
         pipeline_in=pipeline_in,
         created_by=UUID(current_user.id)
     )
-    return pipeline
+    return ApiResponse( 
+        data=pipeline,
+        status=status.HTTP_201_CREATED,
+        message="Pipeline created successfully"
+    )
 
-@router.get("/{pipeline_id}", response_model=Pipeline)
+@router.get("/{pipeline_id}", response_model=ApiResponse[Pipeline])
 async def read_pipeline(
     pipeline_id: UUID4,
     current_user: User = Depends(check_read_permission),
-) -> Any:
+) -> ApiResponse[Pipeline]:
     """
     Get a specific pipeline.
     """
@@ -73,14 +86,18 @@ async def read_pipeline(
             status_code=404,
             detail="Pipeline not found",
         )
-    return pipeline
+    return ApiResponse(
+        data=pipeline,
+        status=status.HTTP_200_OK,
+        message="Pipeline retrieved successfully"
+    )
 
-@router.put("/{pipeline_id}", response_model=Pipeline)
+@router.put("/{pipeline_id}", response_model=ApiResponse[Pipeline])
 async def update_pipeline(
     pipeline_id: UUID4,
     pipeline_in: PipelineUpdate,
     current_user: User = Depends(check_write_permission),
-) -> Any:
+) -> ApiResponse[Pipeline]:
     """
     Update a pipeline.
     """
@@ -98,13 +115,17 @@ async def update_pipeline(
         pipeline_id=pipeline_id,
         pipeline_in=pipeline_in
     )
-    return pipeline
+    return ApiResponse( 
+        data=pipeline,
+        status=status.HTTP_200_OK,
+        message="Pipeline updated successfully"
+    )
 
-@router.delete("/{pipeline_id}", response_model=Pipeline)
+@router.delete("/{pipeline_id}", response_model=ApiResponse[Pipeline])
 async def delete_pipeline(
     pipeline_id: UUID4,
     current_user: User = Depends(check_write_permission),
-) -> Any:
+) -> ApiResponse[Pipeline]:
     """
     Delete a pipeline.
     """
@@ -119,15 +140,19 @@ async def delete_pipeline(
         )
     
     pipeline = await delete_pipeline(pipeline_id=pipeline_id)
-    return pipeline
+    return ApiResponse( 
+        data=pipeline,
+        status=status.HTTP_200_OK,
+        message="Pipeline deleted successfully"
+    )
 
-@router.post("/{pipeline_id}/run", response_model=PipelineRun)
+@router.post("/{pipeline_id}/run", response_model=ApiResponse[PipelineRun])
 async def run_pipeline_endpoint(
     pipeline_id: UUID4,
     background_tasks: BackgroundTasks,
     params: Optional[Dict[str, Any]] = None,
     current_user: User = Depends(check_write_permission),
-) -> Any:
+) -> ApiResponse[PipelineRun]:
     """
     Run a pipeline.
     """
@@ -164,16 +189,20 @@ async def run_pipeline_endpoint(
         params=params
     )
     
-    return pipeline_run
+    return ApiResponse( 
+        data=pipeline_run,
+        status=status.HTTP_201_CREATED,
+        message="Pipeline run started successfully"
+    )
 
-@router.get("/runs/", response_model=List[PipelineRun])
+@router.get("/runs", response_model=PaginatedResponse[PipelineRun])
 async def read_pipeline_runs(
     skip: int = 0,
     limit: int = 100,
     pipeline_id: Optional[UUID4] = None,
     status: Optional[str] = None,
     current_user: User = Depends(check_read_permission),
-) -> Any:
+) -> PaginatedResponse[PipelineRun]:
     """
     Retrieve pipeline runs.
     """
@@ -188,11 +217,11 @@ async def read_pipeline_runs(
     )
     return pipeline_runs
 
-@router.get("/runs/{run_id}", response_model=PipelineRun)
+@router.get("/runs/{run_id}", response_model=ApiResponse[PipelineRun])
 async def read_pipeline_run(
     run_id: UUID4,
     current_user: User = Depends(check_read_permission),
-) -> Any:
+) -> ApiResponse[PipelineRun]:
     """
     Get a specific pipeline run.
     """
@@ -205,13 +234,17 @@ async def read_pipeline_run(
             status_code=404,
             detail="Pipeline run not found",
         )
-    return pipeline_run
+    return ApiResponse( 
+        data=pipeline_run,
+        status=status.HTTP_200_OK,
+        message="Pipeline run retrieved successfully"
+    )
 
-@router.get("/runs/{run_id}/status", response_model=PipelineRunStatus)
+@router.get("/runs/{run_id}/status", response_model=ApiResponse[PipelineRunStatus])
 async def get_pipeline_run_status(
     run_id: UUID4,
     current_user: User = Depends(check_read_permission),
-) -> Any:
+) -> ApiResponse[PipelineRunStatus]:
     """
     Get the status of a pipeline run.
     """
@@ -225,7 +258,7 @@ async def get_pipeline_run_status(
             detail="Pipeline run not found",
         )
     
-    return {
+    pipeline_run_status =  {
         "status": pipeline_run["status"],
         "start_time": pipeline_run["start_time"],
         "end_time": pipeline_run["end_time"],
@@ -233,11 +266,17 @@ async def get_pipeline_run_status(
         "stats": pipeline_run["stats"]
     }
 
-@router.post("/runs/{run_id}/cancel")
+    return ApiResponse(
+        data=pipeline_run_status,
+        status=status.HTTP_200_OK,
+        message="Pipeline run status retrieved successfully"
+    )
+
+@router.post("/runs/{run_id}/cancel", response_model=ApiResponse[None])
 async def cancel_pipeline_run(
     run_id: UUID4,
     current_user: User = Depends(check_write_permission),
-) -> Any:
+) -> ApiResponse[None]:
     """
     Cancel a running pipeline.
     """
@@ -264,4 +303,8 @@ async def cancel_pipeline_run(
             detail="Failed to cancel pipeline run",
         )
     
-    return {"message": "Pipeline run cancelled successfully"}
+    return ApiResponse( 
+        data=None,
+        status=status.HTTP_200_OK,
+        message="Pipeline run cancelled successfully"
+    )

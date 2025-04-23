@@ -5,10 +5,13 @@ from fastapi import APIRouter, Depends, HTTPException, status, Path, Query, Body
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user, PermissionChecker 
+from app.schemas.api import ApiResponse, PaginatedResponse
 from app.services.user import UserService
 from app.services.visualization import VisualizationService
 from app.schemas.visualization import (
+    DefaultVisualizationRequest,
     Visualization,
+    VisualizationConfig,
     VisualizationCreate,
     VisualizationUpdate,
     VisualizationType,
@@ -21,67 +24,91 @@ check_read_permission = PermissionChecker("knowledge:read")
 check_write_permission = PermissionChecker("knowledge:write")
 
 
-@router.post("/", response_model=Visualization, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ApiResponse[Visualization], status_code=status.HTTP_201_CREATED)
 async def create_visualization(
     visualization_in: VisualizationCreate,
     current_user: Dict[str, Any] = Depends(check_write_permission)
-) -> Any:
+) -> ApiResponse[Visualization]:
     """
     Create a new visualization.
     """
     visualization_service = VisualizationService()
-    return await visualization_service.create_visualization(
+    response = await visualization_service.create_visualization(
         visualization_in=visualization_in,
         user_id=current_user["id"]
     )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_201_CREATED,
+        message="Visualization created successfully"
+    )
 
-
-@router.get("/", response_model=List[Visualization])
+@router.get("/", response_model=PaginatedResponse[Visualization])
 async def read_visualizations(
     type: Optional[VisualizationType] = None,
     is_public: Optional[bool] = None,
     limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    skip: int = Query(0, ge=0),
     current_user: Dict[str, Any] = Depends(check_read_permission)
-) -> Any:
+) -> PaginatedResponse[Visualization]:
     """
     Retrieve visualizations with filtering options.
     """
     visualization_service = VisualizationService()
     
     # Get visualizations for the current user or public ones
-    return await visualization_service.get_visualizations(
+    response = await visualization_service.get_visualizations(
         user_id=current_user["id"],
         type=type,
         is_public=is_public,
         limit=limit,
-        offset=offset
+        skip=skip
+    )
+    return PaginatedResponse(
+        data=response.data,
+        meta={
+            "total": response.count,
+            "skip": skip,
+            "limit": limit,
+        },
+        status=status.HTTP_200_OK,
+        message="Visualizations retrieved successfully"
     )
 
 
-@router.get("/public", response_model=List[Visualization])
+@router.get("/public", response_model=PaginatedResponse[Visualization])
 async def read_public_visualizations(
     type: Optional[VisualizationType] = None,
     limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0)
-) -> Any:
+    skip: int = Query(0, ge=0)
+) -> PaginatedResponse[Visualization]:
     """
     Retrieve public visualizations.
     """
     visualization_service = VisualizationService()
-    return await visualization_service.get_visualizations(
+    response = await visualization_service.get_visualizations(
         is_public=True,
         type=type,
         limit=limit,
-        offset=offset
+        skip=skip
+    )
+    return PaginatedResponse(
+        data=response.data,
+        meta={
+            "total": response.count,
+            "skip": skip,
+            "limit": limit,
+        },
+        status=status.HTTP_200_OK,
+        message="Public visualizations retrieved successfully"
     )
 
 
-@router.get("/{visualization_id}", response_model=Visualization)
+@router.get("/{visualization_id}", response_model=ApiResponse[Visualization])
 async def read_visualization(
     visualization_id: str = Path(...),
     current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Any:
+) -> ApiResponse[Visualization]:
     """
     Get a specific visualization by ID.
     """
@@ -99,15 +126,18 @@ async def read_visualization(
                 detail="Not enough permissions to access this visualization"
             )
     
-    return visualization
+    return ApiResponse(
+        data=visualization,
+        status=status.HTTP_200_OK,
+        message="Visualization retrieved successfully"
+    )
 
-
-@router.patch("/{visualization_id}", response_model=Visualization)
+@router.patch("/{visualization_id}", response_model=ApiResponse[Visualization])
 async def update_visualization(
     visualization_in: VisualizationUpdate,
     visualization_id: str = Path(...),
     current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Any:
+) -> ApiResponse[Visualization]:
     """
     Update a visualization.
     """
@@ -126,17 +156,22 @@ async def update_visualization(
                 detail="Not enough permissions to update this visualization"
             )
     
-    return await visualization_service.update_visualization(
+    response = await visualization_service.update_visualization(
         visualization_id=visualization_id,
         visualization_in=visualization_in
     )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_200_OK,
+        message="Visualization updated successfully"
+    )
 
 
-@router.delete("/{visualization_id}", response_model=Dict[str, Any])
+@router.delete("/{visualization_id}", response_model=ApiResponse[Dict[str, Any]])
 async def delete_visualization(
     visualization_id: str = Path(...),
     current_user: Dict[str, Any] = Depends(get_current_user)
-) -> Any:
+) -> ApiResponse[Dict[str, Any]]:
     """
     Delete a visualization.
     """
@@ -155,15 +190,20 @@ async def delete_visualization(
                 detail="Not enough permissions to delete this visualization"
             )
     
-    return await visualization_service.delete_visualization(visualization_id=visualization_id)
+    reponse = await visualization_service.delete_visualization(visualization_id=visualization_id)
+    return ApiResponse(
+        data=reponse,
+        status=status.HTTP_200_OK,
+        message="Visualization deleted successfully"
+    )
 
 
-@router.get("/{visualization_id}/data", response_model=Dict[str, Any])
+@router.get("/{visualization_id}/data", response_model=ApiResponse[Dict[str, Any]])
 async def get_visualization_data(
     visualization_id: Annotated[str, Path(...)],
     request: Request,
     current_user: Annotated[Dict[str, Any], Depends(get_current_user)]
-) -> Any:
+) -> ApiResponse[Dict[str, Any]]:
     """
     Get data for a visualization.
     """
@@ -187,25 +227,23 @@ async def get_visualization_data(
                 detail="Not enough permissions to access this visualization data"
             )
     
-    return await visualization_service.get_visualization_data(
+    response = await visualization_service.get_visualization_data(
         visualization_id=visualization_id,
         params=params
     )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_200_OK,
+        message="Visualization data retrieved successfully"
+    )
 
 
-class DefaultVisualizationRequest(BaseModel):
-    entity_id: str
-    visualization_type: VisualizationType = VisualizationType.GRAPH
-    title: Optional[str] = None
-    description: Optional[str] = None
-    is_public: bool = False
 
-
-@router.post("/default", response_model=Visualization)
+@router.post("/default", response_model=ApiResponse[Visualization])
 async def create_default_visualization(
     request: DefaultVisualizationRequest,
     current_user: Dict[str, Any] = Depends(check_write_permission)
-) -> Any:
+) -> ApiResponse[Visualization]:
     """
     Create a default visualization for an entity.
     """
@@ -215,7 +253,7 @@ async def create_default_visualization(
     title = request.title or f"{request.visualization_type.capitalize()} visualization for entity {request.entity_id}"
     
     # Create configuration based on visualization type
-    config = None
+    config: Any = None
     
     if request.visualization_type == VisualizationType.GRAPH:
         config = {
@@ -329,16 +367,20 @@ async def create_default_visualization(
         config=config
     )
     
-    return await visualization_service.create_visualization(
+    response = await visualization_service.create_visualization(
         visualization_in=visualization_in,
         user_id=current_user["id"]
     )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_201_CREATED,
+        message="Default visualization created successfully"
+    )
 
-
-@router.get("/templates", response_model=List[Dict[str, Any]])
+@router.get("/templates", response_model=ApiResponse[List[Dict[str, Any]]])
 async def get_visualization_templates(
     current_user: Dict[str, Any] = Depends(check_read_permission)
-) -> Any:
+) -> ApiResponse[List[Dict[str, Any]]]:
     """
     Get visualization templates.
     """
@@ -460,4 +502,8 @@ async def get_visualization_templates(
         }
     ]
     
-    return templates
+    return ApiResponse(
+        data=templates,
+        status=status.HTTP_200_OK,
+        message="Visualization templates retrieved successfully"
+    )

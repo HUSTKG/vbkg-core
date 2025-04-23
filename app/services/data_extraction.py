@@ -3,6 +3,10 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+from fastapi import HTTPException, status
+
+from postgrest.base_request_builder import APIResponse
+from postgrest.types import CountMethod
 
 from app.core.supabase import get_supabase
 from app.nlp.entity_extraction import extract_entities
@@ -380,13 +384,13 @@ class DataExtractionService:
         limit: int = 100,
         pipeline_type: Optional[str] = None,
         is_active: Optional[bool] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> APIResponse[Dict[str, Any]]:
         """
         Get list of pipelines with optional filtering.
         """
         try:
             supabase = await get_supabase() 
-            query = supabase.table("pipelines").select("*")
+            query = supabase.table("pipelines").select("*", count=CountMethod.exact)
             
             if pipeline_type:
                 query = query.eq("pipeline_type", pipeline_type)
@@ -395,11 +399,14 @@ class DataExtractionService:
                 query = query.eq("is_active", is_active)
             
             response = await query.range(skip, skip + limit - 1).order("created_at", desc=True).execute()
-            return response.data
+            return response
         
         except Exception as e:
             logger.error(f"Error getting pipelines: {e}")
-            return []
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error getting pipelines: {str(e)}"
+            )
 
     async def get_pipeline(self,pipeline_id: UUID) -> Optional[Dict[str, Any]]:
         """

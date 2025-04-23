@@ -209,3 +209,11 @@ class VisualizationData(BaseModel):
     rows: Optional[List[Dict[str, Any]]] = None
     chart_data: Optional[List[Dict[str, Any]]] = None
     metadata: Optional[Dict[str, Any]] = None
+
+class DefaultVisualizationRequest(BaseModel):
+    entity_id: str
+    visualization_type: VisualizationType = VisualizationType.GRAPH
+    title: Optional[str] = None
+    description: Optional[str] = None
+    is_public: bool = False
+

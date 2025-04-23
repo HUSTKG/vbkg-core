@@ -1,5 +1,7 @@
 from typing import List, Dict, Any, Optional
 from fastapi import HTTPException, status
+from postgrest.base_request_builder import APIResponse
+from postgrest.types import CountMethod
 
 from app.core.supabase import get_supabase
 from app.schemas.user import UserUpdate
@@ -68,15 +70,18 @@ class UserService:
                 detail=f"Could not update user: {str(e)}"
             )
 
-    async def get_users(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    async def get_users(self, skip: int = 0, limit: int = 100) -> APIResponse[Dict[str, Any]]:
         """Get a list of users with pagination"""
         try:
             supabase = await get_supabase()
             # Get profiles with pagination
-            response = await supabase.from_("profiles").select("*").range(skip, skip + limit - 1).execute()
+            response = await supabase.from_("profiles").select("*", count=CountMethod.exact).range(skip, skip + limit - 1).execute()
             
             if not response.data:
-                return []
+                return APIResponse( 
+                    data=[],
+                    count=0,
+                )
             
             # Get roles for each user
             users = []
@@ -96,7 +101,10 @@ class UserService:
                     "roles": roles
                 })
             
-            return users
+            return APIResponse( 
+                data=users,
+                count=response.count,
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

@@ -1,6 +1,6 @@
 # app/services/search.py
 from typing import List, Dict, Any, Optional, Tuple
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Path, Query, status
 import time
 from datetime import datetime
 import numpy as np
@@ -10,6 +10,7 @@ import json
 
 from app.core.config import settings
 from app.schemas.search import (
+    GraphSearchQuery,
     SearchType,
     SearchFilter,
     RelationshipFilter,
@@ -177,7 +178,7 @@ class SearchService:
         
         # Execute count query
         count_result = self.graph.run(count_query).data()
-        total = count_result[0]["total"] if count_result else 0
+        total: Any = count_result[0]["total"] if count_result else 0
         
         # Execute search query
         results = self.graph.run(cypher_query).data()
@@ -185,7 +186,7 @@ class SearchService:
         # Transform to EntitySearchResult
         entity_results = []
         for item in results:
-            node = item["n"]
+            node: Any = item["n"]
             
             # Extract properties
             properties = dict(node)
@@ -223,7 +224,7 @@ class SearchService:
         try:
             # Check if apoc.text.fuzzyMatch is available
             check_query = "CALL dbms.procedures() YIELD name WHERE name = 'apoc.text.fuzzyMatch' RETURN count(*) as count"
-            check_result = self.graph.run(check_query).data()
+            check_result: Any = self.graph.run(check_query).data()
             apoc_available = check_result[0]["count"] > 0 if check_result else False
             
             if apoc_available:
@@ -271,7 +272,7 @@ class SearchService:
                 count_query += "RETURN COUNT(n) as total"
                 
                 count_result = self.graph.run(count_query, query=query, threshold=0.5).data()
-                total = count_result[0]["total"] if count_result else 0
+                total: Any = count_result[0]["total"] if count_result else 0
             else:
                 # Fallback to a simpler fuzzy search using CONTAINS
                 # This is less effective but works without APOC
@@ -280,8 +281,8 @@ class SearchService:
             # Transform to EntitySearchResult
             entity_results = []
             for item in results:
-                node = item["n"]
-                score = item.get("score", 0.5)  # Default score if not available
+                node: Any = item["n"]
+                score: Any = item.get("score", 0.5)  # Default score if not available
                 
                 # Extract properties
                 properties = dict(node)
@@ -333,7 +334,7 @@ class SearchService:
             # This requires the Neo4j Vector Index plugin
             try:
                 check_query = "CALL dbms.procedures() YIELD name WHERE name CONTAINS 'vector' RETURN count(*) as count"
-                check_result = self.graph.run(check_query).data()
+                check_result: Any = self.graph.run(check_query).data()
                 vector_plugin_available = check_result[0]["count"] > 0 if check_result else False
                 
                 if vector_plugin_available:
@@ -386,7 +387,7 @@ class SearchService:
                     # Calculate similarity for each node
                     results = []
                     for node_data in nodes:
-                        node = node_data["n"]
+                        node: Any = node_data["n"]
                         
                         # Get node embedding
                         node_embedding_str = node.get("embedding")
@@ -423,7 +424,7 @@ class SearchService:
             entity_results = []
             for item in results:
                 node = item["n"]
-                score = item.get("score", 0.0)
+                score: Any = item.get("score", 0.0)
                 
                 # Extract properties
                 properties = dict(node)
@@ -526,8 +527,8 @@ class SearchService:
             
             # Process outgoing relationships
             for item in outgoing_results:
-                rel = item["r"]
-                target = item["m"]
+                rel: Any = item["r"]
+                target: Any = item["m"]
                 
                 rel_data = {
                     "id": rel.get("id", str(rel.identity)),
@@ -543,8 +544,8 @@ class SearchService:
             
             # Process incoming relationships
             for item in incoming_results:
-                rel = item["r"]
-                source = item["m"]
+                rel: Any = item["r"]
+                source: Any = item["m"]
                 
                 rel_data = {
                     "id": rel.get("id", str(rel.identity)),
@@ -581,7 +582,7 @@ class SearchService:
             RETURN n
             """
             
-            entity_result = self.graph.run(entity_query).data()
+            entity_result: Any = self.graph.run(entity_query).data()
             
             if not entity_result:
                 return []
@@ -612,7 +613,7 @@ class SearchService:
             # Check if Neo4j has vector capabilities
             try:
                 check_query = "CALL dbms.procedures() YIELD name WHERE name CONTAINS 'vector' RETURN count(*) as count"
-                check_result = self.graph.run(check_query).data()
+                check_result: Any = self.graph.run(check_query).data()
                 vector_plugin_available = check_result[0]["count"] > 0 if check_result else False
                 
                 similar_entities = []
@@ -649,7 +650,7 @@ class SearchService:
                     
                     # Process results
                     for item in similar_results:
-                        node = item["m"]
+                        node: Any = item["m"]
                         score = item.get("score", 0.0)
                         
                         similar_entity = {
@@ -821,19 +822,19 @@ class SearchService:
                 detail=f"Error finding similar entities: {str(e)}"
             )
 
-    async def graph_search(self, query: Dict[str, Any]) -> Dict[str, Any]:
+    async def graph_search(self, query: GraphSearchQuery) -> Dict[str, Any]:
         """Perform graph traversal search"""
         try:
             start_time = time.time()
             
             # Extract parameters
-            start_entity_id = query.get("start_entity_id")
-            start_entity_type = query.get("start_entity_type")
-            start_entity_text = query.get("start_entity_text")
-            relationship_path = query.get("relationship_path", [])
-            end_entity_type = query.get("end_entity_type")
-            max_depth = query.get("max_depth", 3)
-            limit = query.get("limit", 20)
+            start_entity_id = query.start_entity_id
+            start_entity_type = query.start_entity_type
+            start_entity_text = query.start_entity_text
+            relationship_path = query.relationship_path
+            end_entity_type = query.end_entity_type
+            max_depth = query.max_depth
+            limit = query.limit
             
             # Find start entity if ID not provided
             if not start_entity_id and start_entity_type and start_entity_text:
@@ -853,7 +854,9 @@ class SearchService:
                     }
                 
                 start_entity = start_entity_result[0]["n"]
-                start_entity_id = start_entity.get("id", str(start_entity.identity))
+                if not start_entity:
+                    raise ValueError("Start entity not found")
+                start_entity_id = start_entity.get("id", str(start_entity["identity"]))
             
             if not start_entity_id:
                 raise ValueError("Start entity not found")
@@ -895,7 +898,7 @@ class SearchService:
             # Process results
             paths = []
             for item in results:
-                path = item["path"]
+                path: Any = item["path"]
                 
                 # Convert path to a list of nodes and relationships
                 path_data = {
@@ -942,6 +945,84 @@ class SearchService:
                 detail=f"Error in graph search: {str(e)}"
             )
 
+    async def create_entity_embedding(self, entity_id: str = Path(...), model: Optional[str] = None,) -> Dict[str, Any]:
+        """Create embedding for a new entity"""
+        if not self.openai_available:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="OpenAI API is not configured"
+            )
+        
+        try:
+            # Get entity
+            entity_query = f"""
+            MATCH (n {{id: '{entity_id}'}})
+            RETURN n
+            """
+            
+            entity_result = self.graph.run(entity_query).data()
+            
+            if not entity_result:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Entity not found"
+                )
+            
+            entity = entity_result[0]["n"]
+            if not entity:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Entity not found"
+                )
+            entity_text = entity.get("text", "")
+            
+            if not entity_text:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Entity has no text to embed"
+                )
+            
+            # Generate embedding
+            embedding = await self._generate_embedding(entity_text, model)
+            
+            # Update entity
+            update_query = f"""
+            MATCH (n {{id: '{entity_id}'}})
+            SET n.embedding = '{json.dumps(embedding)}'
+            RETURN n
+            """
+            
+            update_result = self.graph.run(update_query).data()
+            
+            if not update_result:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create entity embedding"
+                )
+            
+            updated_entity: Any = update_result[0]["n"]
+
+            if not updated_entity:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create entity embedding"
+                )
+            
+            return {
+                "id": updated_entity.get("id", str(updated_entity["identity"])),
+                "text": updated_entity.get("text", ""),
+                "type": next(iter(updated_entity["labels"]), "Unknown"),
+                "embedding_created": True,
+                "vector_size": len(embedding)
+            }
+        except HTTPException:
+            raise 
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating entity embedding: {str(e)}"
+            )
+
     async def update_entity_embedding(self, entity_id: str) -> Dict[str, Any]:
         """Update embedding for an entity"""
         if not self.openai_available:
@@ -966,6 +1047,11 @@ class SearchService:
                 )
             
             entity = entity_result[0]["n"]
+            if not entity:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Entity not found"
+                )
             entity_text = entity.get("text", "")
             
             if not entity_text:
@@ -992,12 +1078,18 @@ class SearchService:
                     detail="Failed to update entity embedding"
                 )
             
-            updated_entity = update_result[0]["n"]
+            updated_entity: Any = update_result[0]["n"]
+
+            if not updated_entity:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update entity embedding"
+                )
             
             return {
-                "id": updated_entity.get("id", str(updated_entity.identity)),
+                "id": updated_entity.get("id", str(updated_entity["identity"])),
                 "text": updated_entity.get("text", ""),
-                "type": next(iter(updated_entity.labels), "Unknown"),
+                "type": next(iter(updated_entity["labels"]), "Unknown"),
                 "embedding_updated": True,
                 "vector_size": len(embedding)
             }
@@ -1009,3 +1101,85 @@ class SearchService:
                 detail=f"Error updating entity embedding: {str(e)}"
             )
                     
+    async def update_entity_embeddings_batch(
+        self,
+        entity_type: Optional[str] = None,
+        limit: int = Query(100, ge=1, le=1000),
+        model: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Update embeddings for a batch of entities"""
+        if not self.openai_available:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="OpenAI API is not configured"
+            )
+        
+        try:
+            # Build Cypher query
+            cypher_query = "MATCH (n) "
+            
+            if entity_type:
+                cypher_query += f"WHERE n:{entity_type} "
+            
+            cypher_query += "RETURN n LIMIT $limit"
+            
+            # Execute query
+            results = self.graph.run(cypher_query, limit=limit).data()
+            
+            if not results:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No entities found to update"
+                )
+            
+            updated_entities = []
+            
+            for item in results:
+                node: Any = item["n"]
+                
+                # Get entity ID and text
+                entity_id = node.get("id", str(node.identity))
+                entity_text = node.get("text", "")
+                
+                if not entity_text:
+                    continue
+                
+                # Generate embedding
+                embedding = await self._generate_embedding(entity_text, model)
+                
+                # Update entity
+                update_query = f"""
+                MATCH (n {{id: '{entity_id}'}})
+                SET n.embedding = '{json.dumps(embedding)}'
+                RETURN n
+                """
+                
+                update_result = self.graph.run(update_query).data()
+                
+                if not update_result:
+                    continue
+                
+                updated_entity: Any = update_result[0]["n"]
+
+                if not updated_entity:
+                    continue
+                
+                updated_entities.append({
+                    "id": updated_entity.get("id", str(updated_entity["identity"])),
+                    "text": updated_entity.get("text", ""),
+                    "type": next(iter(updated_entity["labels"]), "Unknown"),
+                    "embedding_updated": True,
+                    "vector_size": len(embedding)
+                })
+            
+            return {
+                "updated_entities": updated_entities,
+                "total_updated": len(updated_entities)
+            }
+        except HTTPException:
+            raise 
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error updating entity embeddings: {str(e)}"
+            )

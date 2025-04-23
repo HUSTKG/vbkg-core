@@ -1,4 +1,3 @@
-# app/schemas/search.py
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from datetime import datetime

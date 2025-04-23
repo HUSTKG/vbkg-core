@@ -2,6 +2,8 @@ from typing import Any, Dict, List, Optional
 import uuid
 
 from fastapi import HTTPException, UploadFile, status
+from postgrest.base_request_builder import APIResponse
+from postgrest.types import CountMethod
 
 from app.core.supabase import get_supabase
 from app.schemas.datasource import (
@@ -128,11 +130,11 @@ class DataSourceService:
         limit: int = 100, 
         source_type: Optional[str] = None,
         is_active: Optional[bool] = None
-    ) -> List[Dict[str, Any]]:
+    ) -> APIResponse[Dict[str, Any]]:
         """Get all data sources with filtering and pagination"""
         try:
             supabase = await get_supabase()
-            query = supabase.from_("data_sources").select("*")
+            query = supabase.from_("data_sources").select("*", count=CountMethod.exact)
             
             if source_type:
                 query = query.eq("source_type", source_type)
@@ -142,7 +144,7 @@ class DataSourceService:
                 
             response = await query.order("created_at", desc=False).range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -232,11 +234,11 @@ class DataSourceService:
         processed: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100
-    ) -> List[Dict[str, Any]]:
+    ) -> APIResponse[Dict[str, Any]]:
         """Get file uploads with filtering and pagination"""
         try:
             supabase = await get_supabase()
-            query = supabase.from_("file_uploads").select("*")
+            query = supabase.from_("file_uploads").select("*", count=CountMethod.exact)
             
             if data_source_id:
                 query = query.eq("data_source_id", data_source_id)
@@ -249,7 +251,7 @@ class DataSourceService:
                 
             response = await query.order("uploaded_at", desc=True).range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

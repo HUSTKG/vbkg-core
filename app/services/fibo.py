@@ -1,6 +1,8 @@
 # app/services/fibo.py
 from typing import List, Dict, Any, Optional, Tuple
 from fastapi import HTTPException, status, UploadFile
+from postgrest.base_request_builder import APIResponse
+from postgrest.types import CountMethod
 import rdflib
 from rdflib import Graph, Namespace, URIRef, Literal
 from rdflib.namespace import RDF, RDFS, OWL
@@ -182,12 +184,12 @@ class FIBOService:
         search: Optional[str] = None,
         is_custom: Optional[bool] = None,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        skip: int = 0
+    ) -> APIResponse[Dict[str, Any]]:
         """Get FIBO classes with filtering and pagination"""
         try:
             supabase = await get_supabase()
-            query = supabase.from_("fibo_classes").select("*")
+            query = supabase.from_("fibo_classes").select("*", count=CountMethod.exact)
             
             if domain:
                 query = query.eq("domain", domain)
@@ -199,9 +201,9 @@ class FIBOService:
                 # Search in label and URI
                 query = query.or_(f"label.ilike.%{search}%,uri.ilike.%{search}%")
             
-            response = await query.range(offset, offset + limit - 1).execute()
+            response = await query.range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -382,12 +384,12 @@ class FIBOService:
         search: Optional[str] = None,
         is_custom: Optional[bool] = None,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        skip: int = 0
+    ) -> APIResponse[Dict[str, Any]]:
         """Get FIBO properties with filtering and pagination"""
         try:
             supabase = await get_supabase()
-            query = supabase.from_("fibo_properties").select("*")
+            query = supabase.from_("fibo_properties").select("*", count=CountMethod.exact)
             
             if domain_class_id:
                 query = query.eq("domain_class_id", domain_class_id)
@@ -402,9 +404,9 @@ class FIBOService:
                 # Search in label and URI
                 query = query.or_(f"label.ilike.%{search}%,uri.ilike.%{search}%")
             
-            response = await query.range(offset, offset + limit - 1).execute()
+            response = await query.range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -613,19 +615,19 @@ class FIBOService:
         self,
         verified_only: bool = False,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        skip: int = 0
+    ) -> APIResponse[Dict[str, Any]]:
         """Get entity mappings"""
         try:
             supabase = await get_supabase()
-            query = supabase.from_("entity_mappings").select("*")
+            query = supabase.from_("entity_mappings").select("*", count=CountMethod.exact)
             
             if verified_only:
                 query = query.eq("is_verified", True)
             
-            response = await query.range(offset, offset + limit - 1).execute()
+            response = await query.range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -684,19 +686,19 @@ class FIBOService:
         self,
         verified_only: bool = False,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        skip: int = 0
+    ) -> APIResponse[Dict[str, Any]]:
         """Get relationship mappings"""
         try:
             supabase = await get_supabase()
-            query = supabase.from_("relationship_mappings").select("*")
+            query = supabase.from_("relationship_mappings").select("*", count=CountMethod.exact)
             
             if verified_only:
                 query = query.eq("is_verified", True)
             
-            response = await query.range(offset, offset + limit - 1).execute()
+            response = await query.range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

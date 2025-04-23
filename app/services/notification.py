@@ -2,6 +2,7 @@ from typing import List, Dict, Any, Optional
 from fastapi import HTTPException, status
 from datetime import datetime
 
+from postgrest.base_request_builder import APIResponse
 from postgrest.types import CountMethod
 
 from app.core.supabase import get_supabase
@@ -56,7 +57,7 @@ class NotificationService:
         unread_only: bool = False,
         skip: int = 0,
         limit: int = 50
-    ) -> List[Dict[str, Any]]:
+    ) -> APIResponse[Dict[str, Any]]:
         """Get notifications for a user"""
         try:
             supabase = await get_supabase()
@@ -67,7 +68,7 @@ class NotificationService:
                 
             response = await query.order("created_at", desc=True).range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
