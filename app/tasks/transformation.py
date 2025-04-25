@@ -1,18 +1,15 @@
 import logging
-from typing import Dict, Any, List, Optional, Union
+from typing import Any, Dict, List
 from uuid import UUID
-import os
-import json
-from datetime import datetime
 
 from app.core.supabase import get_supabase
+from app.nlp.embeddings import get_entity_embedding, get_text_embedding
 from app.utils.neo4j import get_neo4j_driver
-from app.nlp.embeddings import get_text_embedding, get_entity_embedding
 
 logger = logging.getLogger(__name__)
 
 async def enrich_entities_with_embeddings(
-    entity_ids: List[UUID] = None,
+    entity_ids: List[UUID] | None = None,
     batch_size: int = 100,
     force_update: bool = False
 ) -> Dict[str, Any]:
@@ -28,7 +25,9 @@ async def enrich_entities_with_embeddings(
         Dictionary with statistics about the operation
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
+
+        response: Any = None
         
         # Get entities to process
         if entity_ids:
@@ -37,7 +36,7 @@ async def enrich_entities_with_embeddings(
             
             for i in range(0, len(entity_ids), 50):  # Process in chunks to avoid URI too long
                 batch_ids = [str(id) for id in entity_ids[i:i+50]]
-                response = await query.in_("id", batch_ids)
+                response = query.in_("id", batch_ids)
                 
                 if force_update:
                     response = await response.execute()
@@ -122,7 +121,7 @@ async def sync_entities_to_neo4j(
         Dictionary with statistics about the operation
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         neo4j_driver = get_neo4j_driver()
 
         response: Any = None
@@ -169,11 +168,14 @@ async def sync_entities_to_neo4j(
                                 properties: $properties
                             }})
                             RETURN id(e) as neo4j_id
-                        """.format(entity["entity_type"]), {
-                            "entity_id": entity["id"],
-                            "entity_text": entity["entity_text"],
-                            "properties": entity.get("properties", {})
-                        })
+                            """.format(entity["entity_type"]),
+                            {
+                                "entity_id": entity["id"],
+                                "entity_text": entity["entity_text"],
+                                "properties": entity.get("properties", {})
+                            }
+                        )
+
                         
                         record = await result.single()
                         
@@ -212,7 +214,7 @@ async def sync_entities_to_neo4j(
         }
 
 async def sync_relationships_to_neo4j(
-    relationship_ids: List[UUID] = None,
+    relationship_ids: List[UUID] | None = None,
     batch_size: int = 100
 ) -> Dict[str, Any]:
     """
@@ -226,8 +228,10 @@ async def sync_relationships_to_neo4j(
         Dictionary with statistics about the operation
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         neo4j_driver = get_neo4j_driver()
+
+        response: Any = None
         
         # Get relationships to process
         if relationship_ids:
@@ -337,7 +341,7 @@ async def sync_relationships_to_neo4j(
 async def detect_entity_conflicts(
     threshold: float = 0.75,
     batch_size: int = 100,
-    entity_types: List[str] = None
+    entity_types: List[str] | None = None
 ) -> Dict[str, Any]:
     """
     Detect conflicts between entities.
@@ -353,7 +357,7 @@ async def detect_entity_conflicts(
     from app.services.entity_resolution import find_entity_conflicts, create_entity_conflict
     
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Get entities to process
         query = supabase.table("kg_entities").select("id, entity_text, entity_type")

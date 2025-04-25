@@ -24,7 +24,7 @@ async def process_file(file_id: UUID) -> bool:
         True if processing was successful, False otherwise
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Get file information
         response = await supabase.table("file_uploads").select("*").eq("id", str(file_id)).execute()
@@ -126,7 +126,7 @@ async def process_file(file_id: UUID) -> bool:
         
         # Update file status to failed
         try:
-            supabase = get_supabase()
+            supabase = await get_supabase()
             response = await supabase.table("file_uploads").select("metadata").eq("id", str(file_id)).execute()
             
             if response.data:
@@ -165,7 +165,7 @@ async def save_extraction_results(
         True if saving was successful, False otherwise
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Create extraction result record
         extraction_result = {
@@ -203,7 +203,7 @@ async def sync_extraction_results_to_graph(extraction_result_id: UUID) -> bool:
         True if syncing was successful, False otherwise
     """
     try:
-        supabase = get_supabase()
+        supabase = await get_supabase()
         
         # Get extraction result
         response = await supabase.table("extraction_results").select("*").eq("id", str(extraction_result_id)).execute()

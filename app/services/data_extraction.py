@@ -1,8 +1,9 @@
 from datetime import datetime
+import json
 import logging
 import os
 from typing import Any, Dict, List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import HTTPException, status
 
 from postgrest.base_request_builder import APIResponse
@@ -12,7 +13,7 @@ from app.core.supabase import get_supabase
 from app.nlp.entity_extraction import extract_entities
 from app.nlp.relation_extraction import extract_relationships
 from app.nlp.text_chunking import chunk_text
-from app.schemas.pipeline import PipelineCreate, PipelineRunCreate, PipelineUpdate
+from app.schemas.pipeline import PipelineCreate, PipelineRunCreate, PipelineStep, PipelineStepType, PipelineUpdate, StepConfig
 from app.utils.file_handler import get_file_type, parse_file_content
 from app.utils.s3 import download_file_from_s3
 
@@ -434,12 +435,27 @@ class DataExtractionService:
         """
         try:
             supabase = await get_supabase() 
+
+            steps = [] 
+
+            # assign id to step 
+            for _, step in enumerate(pipeline_in.steps):
+                config = step.config.model_dump()
+                config["file_id"] = str(config["file_id"]) if config.get("file_id") else None 
+                steps.append({
+                    "id":str(uuid4()),
+                    "name":step.name,
+                    "type":step.type.value,
+                    "config":config,
+                })
+
+            print(steps)
             
             data = {
                 "name": pipeline_in.name,
                 "description": pipeline_in.description,
                 "pipeline_type": pipeline_in.pipeline_type,
-                "steps": pipeline_in.steps,
+                "steps": steps,
                 "schedule": pipeline_in.schedule,
                 "created_by": str(created_by) if created_by else None
             }
@@ -538,7 +554,7 @@ class DataExtractionService:
             now = datetime.utcnow().isoformat()
             
             data = {
-                "pipeline_id": pipeline_run_in.pipeline_id,
+                "pipeline_id": str(pipeline_run_in.pipeline_id),
                 "status": pipeline_run_in.status,
                 "start_time": now,
                 "triggered_by": pipeline_run_in.triggered_by if pipeline_run_in.triggered_by else None,
@@ -673,30 +689,32 @@ class DataExtractionService:
                 for i, step in enumerate(steps):
                     step_start = datetime.utcnow()
                     step_type = step["type"]
-                    step_config = step["config"]
+                    step_config = json.loads(step["config"])
+
+                    print(type(step_config))
                     
                     log_entries.append(f"[{step_start.isoformat()}] Starting step {i+1}/{len(steps)}: {step_type}")
                     
                     # Execute the step based on type
-                    if step_type == "extract_from_datasource":
+                    if step_type == PipelineStepType.DATABASE_EXTRACTOR.value:
                         datasource_id = step_config["datasource_id"]
                         result = await self.extract_from_datasource(datasource_id, step_config)
                         stats[f"step_{i+1}_entities"] = result["entity_count"]
                         stats[f"step_{i+1}_relationships"] = result["relationship_count"]
                     
-                    elif step_type == "extract_from_file":
+                    elif step_type == PipelineStepType.FILE_READER.value:
                         file_id = step_config["file_id"]
-                        result = await self.extract_from_file(file_id, step_config)
+                        result = await self.extract_from_file(UUID(file_id), step_config)
                         stats[f"step_{i+1}_entities"] = result["entity_count"]
                         stats[f"step_{i+1}_relationships"] = result["relationship_count"]
                     
-                    elif step_type == "entity_resolution":
+                    elif step_type == PipelineStepType.ENTITY_RESOLUTION.value:
                         threshold = step_config.get("threshold", 0.8)
                         entity_types = step_config.get("entity_types", [])
                         result = await self.run_entity_resolution(threshold, entity_types)
                         stats[f"step_{i+1}_conflicts"] = result["conflict_count"]
                     
-                    elif step_type == "update_graph":
+                    elif step_type == PipelineStepType.KNOWLEDGE_GRAPH_WRITER.value:
                         result = await self.update_knowledge_graph()
                         stats[f"step_{i+1}_updated_entities"] = result["updated_entities"]
                         stats[f"step_{i+1}_updated_relationships"] = result["updated_relationships"]
@@ -894,6 +912,7 @@ class DataExtractionService:
         """
         Extract entities and relationships from a specific file.
         """
+        print(file_id)
         # Process the file
         await self.process_file_upload(file_id)
         

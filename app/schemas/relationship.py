@@ -55,7 +55,7 @@ class Relationship(RelationshipBase):
     target_entity: Optional[Dict[str, Any]] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class RelationshipInDB(Relationship):
     """Model for relationship stored in database."""

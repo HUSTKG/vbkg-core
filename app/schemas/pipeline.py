@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 from datetime import datetime
-from pydantic import UUID4, BaseModel, Field, validator, AnyHttpUrl
+from pydantic import UUID4, BaseModel, Field, field_validator, AnyHttpUrl
 
 
 class PipelineType(str, Enum):
@@ -120,29 +120,53 @@ class CustomPythonConfig(StepConfig):
     output_mapping: Dict[str, str] = {}
     timeout: int = 60  # seconds
 
+class PipelineStepCreate(BaseModel):
+    name: str = Field(..., description="Human-readable name for this step")
+    type: PipelineStepType
+    config: Dict[str, Any] = Field(..., description="Configuration for this step") 
+    inputs: Optional[List[str]] = None  # IDs of steps that feed into this step
+    enabled: bool = True
+
+    @field_validator('config')
+    def validate_config(cls, v, values):
+        step_type = values.data.get('type')
+        
+        if not step_type:
+            return v
+        
+        if isinstance(v, dict):
+            if step_type == PipelineStepType.FILE_READER:
+                return FileReaderConfig(**v)
+            elif step_type == PipelineStepType.API_FETCHER:
+                return ApiFetcherConfig(**v)
+            elif step_type == PipelineStepType.DATABASE_EXTRACTOR:
+                return DatabaseExtractorConfig(**v)
+            elif step_type == PipelineStepType.TEXT_EXTRACTOR:
+                return TextExtractorConfig(**v)
+            elif step_type == PipelineStepType.LLM_ENTITY_EXTRACTOR:
+                return LlmEntityExtractorConfig(**v)
+            elif step_type == PipelineStepType.FIBO_MAPPER:
+                return FiboMapperConfig(**v)
+            elif step_type == PipelineStepType.ENTITY_RESOLUTION:
+                return EntityResolutionConfig(**v)
+            elif step_type == PipelineStepType.KNOWLEDGE_GRAPH_WRITER:
+                return KnowledgeGraphWriterConfig(**v)
+            elif step_type == PipelineStepType.CUSTOM_PYTHON:
+                return CustomPythonConfig(**v)
+        
+        return v
 
 class PipelineStep(BaseModel):
     id: UUID4 = Field(..., description="Unique ID for this step")
     name: str = Field(..., description="Human-readable name for this step")
     type: PipelineStepType
-    config: Union[
-        FileReaderConfig,
-        ApiFetcherConfig,
-        DatabaseExtractorConfig,
-        TextExtractorConfig,
-        LlmEntityExtractorConfig,
-        FiboMapperConfig,
-        EntityResolutionConfig,
-        KnowledgeGraphWriterConfig,
-        CustomPythonConfig,
-        Dict[str, Any]
-    ] = Field(default_factory=dict)
+    config: Dict[str, Any] = Field(..., description="Configuration for this step") 
     inputs: Optional[List[str]] = None  # IDs of steps that feed into this step
     enabled: bool = True
     
-    @validator('config', pre=True)
+    @field_validator('config')
     def validate_config(cls, v, values):
-        step_type = values.get('type')
+        step_type = values.data.get('type')
         
         if not step_type:
             return v
@@ -178,8 +202,13 @@ class PipelineBase(BaseModel):
     schedule: Optional[str] = None  # CRON expression
 
 
-class PipelineCreate(PipelineBase):
-    pass
+class PipelineCreate(BaseModel):
+    """Model for creating a new pipeline."""
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    pipeline_type: PipelineType
+    steps: List[PipelineStepCreate]
+    schedule: Optional[str] = None  # CRON expression
 
 
 class PipelineUpdate(BaseModel):

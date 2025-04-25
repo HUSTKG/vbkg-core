@@ -33,8 +33,10 @@ class AuthService:
                 "token_type": "bearer",
                 "user": {
                     "id": response.user.id,
+                    "roles": await self._get_user_roles(response.user.id), 
                     "email": response.user.email,
-                    "is_active": response.user.confirmed_at is not None
+                    "is_active": response.user.confirmed_at is not None,
+                    "full_name": response.user.user_metadata.get("full_name"),
                 }
             }
         except Exception as _:
@@ -157,13 +159,13 @@ class AuthService:
             supabase = await get_supabase()
             # Get role IDs from role names
             for role_name in role_names:
-                response = await supabase.from_("roles").select("id").eq("name", role_name).execute()
+                response = await supabase.table("roles").select("id").eq("name", role_name).execute()
                 
                 if response.data and len(response.data) > 0:
                     role_id = response.data[0]["id"]
                     
                     # Assign role to user
-                    await supabase.from_("user_roles").insert({
+                    await supabase.table("user_roles").insert({
                         "user_id": user_id,
                         "role_id": role_id
                     }).execute()

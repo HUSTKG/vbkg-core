@@ -51,7 +51,7 @@ async def read_pipelines(
 @router.post("/", response_model=ApiResponse[Pipeline])
 async def create_pipeline(
     pipeline_in: PipelineCreate,
-    current_user: User = Depends(check_write_permission),
+    current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[Pipeline]:
     """
     Create new pipeline.
@@ -61,7 +61,7 @@ async def create_pipeline(
     
     pipeline = await data_extraction_service.create_pipeline(
         pipeline_in=pipeline_in,
-        created_by=UUID(current_user.id)
+        created_by=UUID(current_user["id"])
     )
     return ApiResponse( 
         data=pipeline,
@@ -151,7 +151,7 @@ async def run_pipeline_endpoint(
     pipeline_id: UUID4,
     background_tasks: BackgroundTasks,
     params: Optional[Dict[str, Any]] = None,
-    current_user: User = Depends(check_write_permission),
+    current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[PipelineRun]:
     """
     Run a pipeline.
@@ -170,7 +170,7 @@ async def run_pipeline_endpoint(
     pipeline_run_in = PipelineRunCreate(
         pipeline_id=pipeline_id,
         status=PipelineStatus.PENDING,
-        triggered_by=current_user.id,
+        triggered_by=current_user["id"],
     )
     
     pipeline_run = await data_extraction_service.create_pipeline_run(pipeline_run_in=pipeline_run_in)

@@ -27,12 +27,14 @@ class DataSourceService:
             data["created_by"] = user_id
             
             # Convert Enum to string
-            data["source_type"] = str(data["source_type"])
+            data["source_type"] = data["source_type"].value
             
             # Handle sensitive credentials - encrypt if needed
             if data.get("credentials"):
                 # In a real implementation, you might want to encrypt this
                 pass
+
+            print(data)
             
             response = await supabase.from_("data_sources").insert(data).execute()
             

@@ -17,7 +17,7 @@ class ApiKey(BaseModel):
 
 class PaginatedMeta(BaseModel):
     total: int
-    page: int
+    skip: int
     limit: int
 
 class ApiResponse(BaseModel, Generic[T]):

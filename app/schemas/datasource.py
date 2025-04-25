@@ -63,7 +63,7 @@ class DataSourceBase(BaseModel):
     
     @field_validator('connection_details')
     def validate_connection_details(cls, v, values):
-        source_type = values.get('source_type')
+        source_type = values.data.get('source_type')
         if source_type == SourceType.FILE:
             FileConnectionConfig(**v)
         elif source_type == SourceType.API:

@@ -11,10 +11,10 @@ from app.schemas.api import ApiResponse
 from app.services.auth import AuthService
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
-@router.post("/login", response_model=ApiResponse[Token])
-async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> ApiResponse[Token]:
+@router.post("/login", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
     """
     Login endpoint using OAuth2 password flow.
     """
@@ -22,17 +22,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> ApiResponse
     login_data = UserLogin(email=form_data.username, password=form_data.password)
     result = await auth_service.login(login_data)
     
-    return ApiResponse(
-        data={
-            "access_token": result["access_token"],
-            "token_type": result["token_type"]
-        },
-        status=status.HTTP_200_OK,
-        message="Login successful"
+    return Token(
+        access_token=result["access_token"],
+        token_type=result["token_type"],
     )
 
-@router.post("/login/json", response_model=ApiResponse[Token])
-async def login_json(login_data: UserLogin) -> ApiResponse[Token]:
+@router.post("/login/json", response_model=ApiResponse[Dict[str, Any]])
+async def login_json(login_data: UserLogin) -> ApiResponse[Dict[str, Any]]:
     """
     Login endpoint using JSON payload instead of form data.
     """

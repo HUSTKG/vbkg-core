@@ -52,7 +52,7 @@ class Entity(EntityBase):
     embedding: Optional[List[float]] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EntityInDB(Entity):
     """Model for entity stored in database."""
@@ -92,7 +92,7 @@ class EntityConflict(BaseModel):
     entity2: Optional[Entity] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EntityResolution(BaseModel):
     """Model for resolving entity conflicts."""

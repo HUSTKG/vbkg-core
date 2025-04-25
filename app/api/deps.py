@@ -1,4 +1,4 @@
-from typing import Annotated, Dict, Any, Generator
+from typing import Annotated, Dict, Any
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -8,7 +8,6 @@ from app.services.auth import AuthService
 from app.services.user import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
-
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any]:
     """
