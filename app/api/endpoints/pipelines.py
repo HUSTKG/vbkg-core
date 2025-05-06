@@ -1,16 +1,17 @@
 from uuid import UUID
+from attr import s
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import Any, List, Optional, Dict
 from pydantic import UUID4
 
-from app.schemas.api import ApiResponse, PaginatedResponse
+from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.pipeline import (
     Pipeline, PipelineCreate, PipelineStatus, PipelineUpdate,
     PipelineRun, PipelineRunCreate, PipelineRunStatus
 )
 from app.schemas.user import User
 from app.api.deps import PermissionChecker 
-from app.services.data_extraction import DataExtractionService 
+from app.services.pipeline import PipelineService 
 
 router = APIRouter()
 
@@ -25,13 +26,13 @@ async def read_pipelines(
     pipeline_type: Optional[str] = None,
     is_active: Optional[bool] = None,
     current_user: User = Depends(check_read_permission),
-) -> PaginatedResponse[List[Pipeline]]:
+) -> PaginatedResponse[Pipeline]:
     """
     Retrieve pipelines.
     """
-    data_extraction_service = DataExtractionService()
+    pipeline_service = PipelineService()
 
-    pipelines = await data_extraction_service.get_pipelines(
+    pipelines = await pipeline_service.get_pipelines(
         skip=skip,
         limit=limit,
         pipeline_type=pipeline_type,
@@ -39,11 +40,11 @@ async def read_pipelines(
     )
     return PaginatedResponse( 
         data=pipelines.data,
-        meta={
-            "total": pipelines.count,
-            "skip": skip,
-            "limit": limit,
-        },
+        meta=PaginatedMeta(
+            skip=skip,
+            limit=limit,
+            total=pipelines.count if pipelines.count else 0,
+        ),
         status=status.HTTP_200_OK,
         message="Pipelines retrieved successfully"
     )
@@ -56,15 +57,16 @@ async def create_pipeline(
     """
     Create new pipeline.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline = await data_extraction_service.create_pipeline(
+    pipeline = await pipeline_service.create_pipeline(
+        user_id=current_user["id"],
         pipeline_in=pipeline_in,
-        created_by=UUID(current_user["id"])
     )
+
     return ApiResponse( 
-        data=pipeline,
+        data=Pipeline(**pipeline),
         status=status.HTTP_201_CREATED,
         message="Pipeline created successfully"
     )
@@ -77,17 +79,17 @@ async def read_pipeline(
     """
     Get a specific pipeline.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline = await data_extraction_service.get_pipeline(pipeline_id=pipeline_id)
+    pipeline = await pipeline_service.get_pipeline(pipeline_id=pipeline_id)
     if not pipeline:
         raise HTTPException(
             status_code=404,
             detail="Pipeline not found",
         )
     return ApiResponse(
-        data=pipeline,
+        data=Pipeline(**pipeline),
         status=status.HTTP_200_OK,
         message="Pipeline retrieved successfully"
     )
@@ -101,22 +103,22 @@ async def update_pipeline(
     """
     Update a pipeline.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline = await data_extraction_service.get_pipeline(pipeline_id=pipeline_id)
+    pipeline = await pipeline_service.get_pipeline(pipeline_id=pipeline_id)
     if not pipeline:
         raise HTTPException(
             status_code=404,
             detail="Pipeline not found",
         )
     
-    pipeline = await update_pipeline(
+    pipeline = await pipeline_service.update_pipeline(
         pipeline_id=pipeline_id,
         pipeline_in=pipeline_in
     )
     return ApiResponse( 
-        data=pipeline,
+        data=Pipeline(**pipeline),
         status=status.HTTP_200_OK,
         message="Pipeline updated successfully"
     )
@@ -129,19 +131,20 @@ async def delete_pipeline(
     """
     Delete a pipeline.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline = await data_extraction_service.get_pipeline(pipeline_id=pipeline_id)
+    pipeline = await pipeline_service.get_pipeline(pipeline_id=pipeline_id)
     if not pipeline:
         raise HTTPException(
             status_code=404,
             detail="Pipeline not found",
         )
     
-    pipeline = await delete_pipeline(pipeline_id=pipeline_id)
+    pipeline = await pipeline_service.delete_pipeline(pipeline_id=pipeline_id)
+
     return ApiResponse( 
-        data=pipeline,
+        data=Pipeline(**pipeline),
         status=status.HTTP_200_OK,
         message="Pipeline deleted successfully"
     )
@@ -156,10 +159,10 @@ async def run_pipeline_endpoint(
     """
     Run a pipeline.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline = await data_extraction_service.get_pipeline(pipeline_id=pipeline_id)
+    pipeline = await pipeline_service.get_pipeline(pipeline_id=pipeline_id)
     if not pipeline:
         raise HTTPException(
             status_code=404,
@@ -173,7 +176,7 @@ async def run_pipeline_endpoint(
         triggered_by=current_user["id"],
     )
     
-    pipeline_run = await data_extraction_service.create_pipeline_run(pipeline_run_in=pipeline_run_in)
+    pipeline_run = await pipeline_service.create_pipeline_run(run_in=pipeline_run_in)
 
     if not pipeline_run:
         raise HTTPException(
@@ -183,7 +186,7 @@ async def run_pipeline_endpoint(
     
     # Run pipeline in background
     background_tasks.add_task(
-        data_extraction_service.run_pipeline,
+        pipeline_service.run_pipeline,
         pipeline_id=pipeline_id,
         pipeline_run_id=pipeline_run["id"],
         params=params
@@ -206,10 +209,10 @@ async def read_pipeline_runs(
     """
     Retrieve pipeline runs.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline_runs = await data_extraction_service.get_pipeline_runs(
+    pipeline_runs = await pipeline_service.get_pipeline_runs(
         skip=skip,
         limit=limit,
         pipeline_id=pipeline_id,
@@ -225,10 +228,10 @@ async def read_pipeline_run(
     """
     Get a specific pipeline run.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline_run = await data_extraction_service.get_pipeline_run(run_id=run_id)
+    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
     if not pipeline_run:
         raise HTTPException(
             status_code=404,
@@ -248,23 +251,23 @@ async def get_pipeline_run_status(
     """
     Get the status of a pipeline run.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline_run = await data_extraction_service.get_pipeline_run(run_id=run_id)
+    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
     if not pipeline_run:
         raise HTTPException(
             status_code=404,
             detail="Pipeline run not found",
         )
     
-    pipeline_run_status =  {
-        "status": pipeline_run["status"],
-        "start_time": pipeline_run["start_time"],
-        "end_time": pipeline_run["end_time"],
-        "duration": pipeline_run["duration"],
-        "stats": pipeline_run["stats"]
-    }
+    pipeline_run_status =  PipelineRunStatus(
+        status=pipeline_run["status"],
+        start_time=pipeline_run["start_time"],
+        end_time=pipeline_run["end_time"],
+        duration=pipeline_run["duration"],
+        stats=pipeline_run["stats"]
+    )
 
     return ApiResponse(
         data=pipeline_run_status,
@@ -280,10 +283,10 @@ async def cancel_pipeline_run(
     """
     Cancel a running pipeline.
     """
-    from app.services.data_extraction import DataExtractionService 
-    data_extraction_service = DataExtractionService()
+    from app.services.pipeline import PipelineService 
+    pipeline_service = PipelineService()
     
-    pipeline_run = await data_extraction_service.get_pipeline_run(run_id=run_id)
+    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
     if not pipeline_run:
         raise HTTPException(
             status_code=404,

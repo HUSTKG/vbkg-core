@@ -7,10 +7,12 @@ import asyncio
 import json
 import traceback
 
+from postgrest.base_request_builder import APIResponse
 from pydantic import UUID4
 
 from app.core.supabase import get_supabase
 from app.schemas.pipeline import (
+    Pipeline,
     PipelineCreate,
     PipelineUpdate,
     PipelineStatus,
@@ -134,8 +136,8 @@ class PipelineService:
         is_active: Optional[bool] = None,
         created_by: Optional[str] = None,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[Dict[str, Any]]:
+        skip: int = 0
+    ) -> APIResponse[Pipeline]:
         """Get pipelines with filtering and pagination"""
         try:
             supabase = await get_supabase()
@@ -150,9 +152,9 @@ class PipelineService:
             if created_by:
                 query = query.eq("created_by", created_by)
                 
-            response = await query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            response = await query.order("created_at", desc=True).range(skip, skip + limit - 1).execute()
             
-            return response.data or []
+            return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -515,7 +517,7 @@ class PipelineService:
         _status: Optional[str] = None,
         triggered_by: Optional[str] = None,
         limit: int = 100,
-        offset: int = 0
+        skip: int = 0
     ) -> List[Dict[str, Any]]:
         """Get pipeline runs with filtering and pagination"""
         try:
@@ -531,7 +533,7 @@ class PipelineService:
             if triggered_by:
                 query = query.eq("triggered_by", triggered_by)
                 
-            response = await query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+            response = await query.order("created_at", desc=True).range(skip, skip + limit - 1).execute()
             
             return response.data or []
         except Exception as e:

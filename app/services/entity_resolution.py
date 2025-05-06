@@ -1010,7 +1010,7 @@ class EntityResolutionService:
         entity_id: Optional[UUID] = None,
         limit: int = 100,
         offset: int = 0
-    ) -> List[Dict[str, Any]]:
+    ) -> List[EntityConflict]:
         """
         Get entity conflicts with optional filtering.
         
@@ -1201,7 +1201,7 @@ async def get_entity_conflicts(
     entity_id: Optional[UUID] = None,
     limit: int = 100,
     offset: int = 0
-) -> List[Dict[str, Any]]:
+) -> List[EntityConflict]:
     """
     Get entity conflicts with optional filtering.
     """

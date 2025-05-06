@@ -2,6 +2,8 @@ import logging
 from typing import Any, Dict, List
 from uuid import UUID
 
+from neo4j import Query
+
 from app.core.supabase import get_supabase
 from app.nlp.embeddings import get_entity_embedding, get_text_embedding
 from app.utils.neo4j import get_neo4j_driver

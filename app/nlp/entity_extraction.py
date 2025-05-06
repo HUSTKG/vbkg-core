@@ -88,7 +88,7 @@ async def extract_entities_with_openai(text: str) -> List[Dict[str, Any]]:
         
         # Make the API call
         response = openai_client.chat.completions.create(
-            model="gpt-4-turbo",  # or use a more appropriate model
+            model="gpt-4.1-nano-2025-04-14",  # or use a more appropriate model
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
