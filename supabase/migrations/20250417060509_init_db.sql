@@ -340,7 +340,7 @@ BEGIN
     SELECT 1 FROM public.user_roles ur
     JOIN public.role_permissions rp ON ur.role_id = rp.role_id
     JOIN public.permissions p ON rp.permission_id = p.id
-    WHERE ur.user_id = user_id AND p.name = permission_name
+    WHERE ur.user_id = check_user_permission.user_id AND p.name = permission_name
   ) INTO has_permission;
   
   RETURN has_permission;

@@ -1,7 +1,9 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from fastapi import HTTPException, status
+
 from app.core.supabase import get_supabase
-from app.schemas.user import UserLogin, UserCreate
+from app.schemas.user import UserCreate, UserLogin
 
 
 class AuthService:
@@ -9,10 +11,9 @@ class AuthService:
         """Authenticate user and return tokens"""
         try:
             supabase = await get_supabase()
-            response = await supabase.auth.sign_in_with_password({
-                "email": user_data.email,
-                "password": user_data.password
-            })
+            response = await supabase.auth.sign_in_with_password(
+                {"email": user_data.email, "password": user_data.password}
+            )
 
             if not response.user:
                 raise HTTPException(
@@ -27,17 +28,19 @@ class AuthService:
                     detail="Session not found",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
+
             return {
-                "access_token": response.session.access_token,
-                "token_type": "bearer",
+                "session": {
+                    "access_token": response.session.access_token,
+                    "refresh_token": response.session.refresh_token,
+                },
                 "user": {
                     "id": response.user.id,
-                    "roles": await self._get_user_roles(response.user.id), 
+                    "roles": await self._get_user_roles(response.user.id),
                     "email": response.user.email,
                     "is_active": response.user.confirmed_at is not None,
                     "full_name": response.user.user_metadata.get("full_name"),
-                }
+                },
             }
         except Exception as _:
             raise HTTPException(
@@ -55,43 +58,41 @@ class AuthService:
             if user_exists:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered"
+                    detail="Email already registered",
                 )
-            
+
             # Register user in auth system
-            response = await supabase.auth.sign_up({
-                "email": user_data.email,
-                "password": user_data.password,
-                "options": {
-                    "data": {
-                        "full_name": user_data.full_name
-                    }
+            response = await supabase.auth.sign_up(
+                {
+                    "email": user_data.email,
+                    "password": user_data.password,
+                    "options": {"data": {"full_name": user_data.full_name}},
                 }
-            })
+            )
 
             if not response.user:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="User registration failed"
+                    detail="User registration failed",
                 )
-            
+
             # Assign roles to user
             user_id = response.user.id
             await self._assign_roles(user_id, user_data.roles)
-            
+
             return {
                 "id": user_id,
                 "email": user_data.email,
                 "full_name": user_data.full_name,
                 "roles": user_data.roles,
-                "is_active": False  # User needs to confirm email
+                "is_active": False,  # User needs to confirm email
             }
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Registration error: {str(e)}"
+                detail=f"Registration error: {str(e)}",
             )
 
     async def logout(self, _: str) -> Dict[str, Any]:
@@ -103,7 +104,7 @@ class AuthService:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Logout error: {str(e)}"
+                detail=f"Logout error: {str(e)}",
             )
 
     async def get_current_user(self, token: str) -> Dict[str, Any]:
@@ -118,23 +119,23 @@ class AuthService:
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             user = response.user
-            
+
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid authentication credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
+
             # Get roles for user
             roles = await self._get_user_roles(user.id)
-            
+
             return {
                 "id": user.id,
                 "email": user.email,
                 "full_name": user.user_metadata.get("full_name"),
                 "is_active": user.confirmed_at is not None,
-                "roles": roles
+                "roles": roles,
             }
         except Exception as _:
             raise HTTPException(
@@ -148,7 +149,12 @@ class AuthService:
         try:
             supabase = await get_supabase()
             # Query the profile to see if user exists
-            response = await supabase.from_("profiles").select("id").eq("email", email).execute()
+            response = (
+                await supabase.from_("profiles")
+                .select("id")
+                .eq("email", email)
+                .execute()
+            )
             return len(response.data) > 0
         except Exception:
             return False
@@ -159,16 +165,20 @@ class AuthService:
             supabase = await get_supabase()
             # Get role IDs from role names
             for role_name in role_names:
-                response = await supabase.table("roles").select("id").eq("name", role_name).execute()
-                
+                response = (
+                    await supabase.table("roles")
+                    .select("id")
+                    .eq("name", role_name)
+                    .execute()
+                )
+
                 if response.data and len(response.data) > 0:
                     role_id = response.data[0]["id"]
-                    
+
                     # Assign role to user
-                    await supabase.table("user_roles").insert({
-                        "user_id": user_id,
-                        "role_id": role_id
-                    }).execute()
+                    await supabase.table("user_roles").insert(
+                        {"user_id": user_id, "role_id": role_id}
+                    ).execute()
         except Exception as e:
             print(f"Error assigning roles: {e}")
 
@@ -176,11 +186,14 @@ class AuthService:
         """Get roles for a user"""
         try:
             supabase = await get_supabase()
-            response = await supabase.from_("user_roles").select(
-                "role:role_id(name)"
-            ).eq("user_id", user_id).execute()
-            
-            return [item["role"]["name"] for item in response.data]
+            response = (
+                await supabase.table("user_roles")
+                .select("roles:role_id(name)")
+                .eq("user_id", user_id)
+                .execute()
+            )
+
+            return [item["roles"]["name"] for item in response.data]
         except Exception as e:
             print(f"Error getting roles: {e}")
             return []

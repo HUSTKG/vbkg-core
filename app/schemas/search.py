@@ -1,7 +1,7 @@
-from typing import Optional, List, Dict, Any, Union
 from enum import Enum
-from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class SearchType(str, Enum):
@@ -97,18 +97,24 @@ class GraphSearchQuery(BaseModel):
     end_entity_type: Optional[str] = None
     max_depth: int = Field(3, ge=1, le=5)
     limit: int = Field(20, ge=1, le=100)
-    
-    @validator('relationship_path')
+
+    @field_validator("relationship_path")
     def validate_relationship_path(cls, v):
         if not v:
             raise ValueError("Relationship path must not be empty")
         return v
-    
-    @validator('start_entity_id', 'start_entity_type', 'start_entity_text')
+
+    @field_validator("start_entity_id", "start_entity_type", "start_entity_text")
     def validate_start_entity(cls, v, values):
         # Ensure at least one of start_entity_id, start_entity_type+start_entity_text is provided
-        if 'start_entity_id' not in values and 'start_entity_type' not in values and 'start_entity_text' not in values:
-            raise ValueError("Either start_entity_id or both start_entity_type and start_entity_text must be provided")
+        if (
+            "start_entity_id" not in values
+            and "start_entity_type" not in values
+            and "start_entity_text" not in values
+        ):
+            raise ValueError(
+                "Either start_entity_id or both start_entity_type and start_entity_text must be provided"
+            )
         return v
 
 

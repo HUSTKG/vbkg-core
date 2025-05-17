@@ -1,20 +1,14 @@
-# app/services/search.py
 from typing import List, Dict, Any, Optional, Tuple
 from fastapi import HTTPException, Path, Query, status
 import time
-from datetime import datetime
 import numpy as np
 from py2neo import Graph, NodeMatcher, RelationshipMatcher
-import uuid
 import json
 
 from app.core.config import settings
 from app.schemas.search import (
     GraphSearchQuery,
     SearchType,
-    SearchFilter,
-    RelationshipFilter,
-    SearchSort,
     SortOrder,
     SearchRequest,
     EntitySearchResult,

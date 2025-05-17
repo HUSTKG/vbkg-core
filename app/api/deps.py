@@ -9,6 +9,7 @@ from app.services.user import UserService
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any]:
     """
     Validate token and return current user.
@@ -17,7 +18,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any
     return await auth_service.get_current_user(token)
 
 
-async def get_current_active_user(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_current_active_user(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
     """
     Get current active user.
     """
@@ -26,32 +29,40 @@ async def get_current_active_user(current_user: Dict[str, Any] = Depends(get_cur
     return current_user
 
 
-async def get_current_active_admin(current_user: Annotated[Dict[str, Any], Depends(get_current_active_user)]) -> Dict[str, Any]:
+async def get_current_active_admin(
+    current_user: Annotated[Dict[str, Any], Depends(get_current_active_user)],
+) -> Dict[str, Any]:
     """
     Get current active admin.
     """
     if "admin" not in current_user.get("roles", []):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="The user doesn't have enough privileges"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The user doesn't have enough privileges",
         )
     return current_user
+
 
 class PermissionChecker:
     """
     Dependency to check if the user has a specific permission.
     """
+
     def __init__(self, permission: str):
         self.permission = permission
 
-    async def __call__(self, current_user: Dict[str, Any] = Depends(get_current_active_user)) -> Dict[str, Any]:
+    async def __call__(
+        self, current_user: Dict[str, Any] = Depends(get_current_active_user)
+    ) -> Dict[str, Any]:
         user_service = UserService()
-        has_permission = await user_service.check_permission(current_user["id"], self.permission)
-        
+        has_permission = await user_service.check_permission(
+            current_user["id"], self.permission
+        )
+
         if not has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"User doesn't have the required permission: {self.permission}"
+                detail=f"User doesn't have the required permission: {self.permission}",
             )
-        
+
         return current_user

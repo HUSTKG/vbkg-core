@@ -13,6 +13,11 @@ tenacity>=8.2.2
 numpy>=1.24.3
 sentence-transformers>=2.2.2
 # Thêm thư viện OpenRE hoặc tương tự cho tiếng Việt
-spacy
 py2neo
 asyncpg
+rdflib
+flower
+sqlalchemy 
+pandas
+psutil
+isort

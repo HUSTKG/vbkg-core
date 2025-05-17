@@ -1,7 +1,8 @@
-from typing import Optional, List, Dict, Any, Union
-from enum import Enum
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from enum import Enum
+from typing import Any, Dict, List, Optional, Union
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class VisualizationType(str, Enum):
@@ -135,27 +136,27 @@ class VisualizationConfig(BaseModel):
         GraphVisualizationConfig,
         TreeVisualizationConfig,
         TableVisualizationConfig,
-        ChartVisualizationConfig
+        ChartVisualizationConfig,
     ] = Field(...)
-    
-    @validator('config', pre=True)
+
+    @field_validator("config")
     def validate_config(cls, v, values):
-        if 'type' not in values:
+        if "type" not in values:
             raise ValueError("Visualization type is required")
-        
-        if values['type'] == VisualizationType.GRAPH:
+
+        if values["type"] == VisualizationType.GRAPH:
             if not isinstance(v, GraphVisualizationConfig):
                 return GraphVisualizationConfig(**v)
-        elif values['type'] == VisualizationType.TREE:
+        elif values["type"] == VisualizationType.TREE:
             if not isinstance(v, TreeVisualizationConfig):
                 return TreeVisualizationConfig(**v)
-        elif values['type'] == VisualizationType.TABLE:
+        elif values["type"] == VisualizationType.TABLE:
             if not isinstance(v, TableVisualizationConfig):
                 return TableVisualizationConfig(**v)
-        elif values['type'] == VisualizationType.CHART:
+        elif values["type"] == VisualizationType.CHART:
             if not isinstance(v, ChartVisualizationConfig):
                 return ChartVisualizationConfig(**v)
-        
+
         return v
 
 
@@ -168,13 +169,18 @@ class VisualizationBase(BaseModel):
     entity_type: Optional[str] = None
     is_public: bool = False
     config: VisualizationConfig
-    
-    @validator('query_id', 'cypher_query', 'entity_id', 'entity_type')
+
+    @field_validator("query_id", "cypher_query", "entity_id", "entity_type")
     def validate_data_source(cls, v, values):
         # Ensure at least one data source is provided
-        if not any(key in values and values[key] is not None for key in ['query_id', 'cypher_query', 'entity_id']):
+        if not any(
+            key in values and values[key] is not None
+            for key in ["query_id", "cypher_query", "entity_id"]
+        ):
             if v is None:
-                raise ValueError("At least one of query_id, cypher_query, or entity_id must be provided")
+                raise ValueError(
+                    "At least one of query_id, cypher_query, or entity_id must be provided"
+                )
         return v
 
 
@@ -210,10 +216,10 @@ class VisualizationData(BaseModel):
     chart_data: Optional[List[Dict[str, Any]]] = None
     metadata: Optional[Dict[str, Any]] = None
 
+
 class DefaultVisualizationRequest(BaseModel):
     entity_id: str
     visualization_type: VisualizationType = VisualizationType.GRAPH
     title: Optional[str] = None
     description: Optional[str] = None
     is_public: bool = False
-

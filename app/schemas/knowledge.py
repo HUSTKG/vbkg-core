@@ -1,4 +1,5 @@
 from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -27,4 +28,3 @@ class EntityUpdate(BaseModel):
 class CypherQuery(BaseModel):
     query: str
     parameters: Optional[Dict[str, Any]] = None
-
