@@ -118,6 +118,7 @@ class AuthService:
                     detail="Invalid authentication credentials",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
+
             user = response.user
 
             if not user:
@@ -197,3 +198,25 @@ class AuthService:
         except Exception as e:
             print(f"Error getting roles: {e}")
             return []
+
+    async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
+        """Refresh the access token using the refresh token"""
+        try:
+            supabase = await get_supabase()
+            response = await supabase.auth.refresh_session(refresh_token)
+            if not response.session:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            return {
+                "access_token": response.session.access_token,
+                "refresh_token": response.session.refresh_token,
+            }
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Token refresh error: {str(e)}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )

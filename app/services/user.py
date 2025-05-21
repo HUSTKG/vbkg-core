@@ -1,4 +1,5 @@
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from fastapi import HTTPException, status
 from postgrest.base_request_builder import APIResponse
 from postgrest.types import CountMethod
@@ -197,14 +198,11 @@ class UserService:
         """Check if user has a specific permission"""
         try:
             supabase = await get_supabase()
-            print(user_id)
             # Call the database function to check permission
             response = await supabase.rpc(
                 "check_user_permission",
                 {"user_id": user_id, "permission_name": permission},
             ).execute()
-
-            print(response)
 
             return response.data
         except Exception as e:

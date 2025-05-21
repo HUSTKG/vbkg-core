@@ -1,5 +1,6 @@
 import secrets
-from typing import List, Union, Optional
+from typing import List, Optional, Union
+
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings
 
@@ -50,6 +51,19 @@ class Settings(BaseSettings):
     # Celery
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
+
+    # Pipeline Configuration
+    PIPELINE_MAX_EXECUTION_TIME: int = 3600
+    PIPELINE_STEP_TIMEOUT: int = 300
+    PIPELINE_MAX_RETRIES: int = 3
+
+    # File Processing Configuration
+    MAX_FILE_SIZE: int = 100 * 1024 * 1024
+    SUPPORTED_FILE_TYPES: list = ["pdf", "docx", "txt", "csv", "json", "xml"]
+
+    # Custom Python Code Configuration
+    CUSTOM_PYTHON_TIMEOUT: int = 120
+    CUSTOM_PYTHON_MAX_MEMORY: str = "512M"
 
     # OpenAI settings
     OPENAI_API_KEY: Optional[str] = None

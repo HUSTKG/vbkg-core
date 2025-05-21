@@ -1,46 +1,90 @@
-from typing import Dict, Any, Optional
-from fastapi import HTTPException, status
+import json
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+from fastapi import HTTPException, status
 from postgrest.base_request_builder import APIResponse
-from pydantic import UUID4
+
 from app.core.supabase import get_supabase
-from app.schemas.pipeline import (
-    Pipeline,
-    PipelineCreate,
-    PipelineStep,
-    PipelineUpdate,
-    PipelineRunStatus,
-    PipelineRunCreate,
-    PipelineRunUpdate,
-)
+from app.schemas.pipeline import (Pipeline, PipelineCreate, PipelineRunCreate,
+                                  PipelineRunStatus, PipelineRunUpdate,
+                                  PipelineUpdate)
 
 
 class PipelineService:
     """Service for managing pipelines and their execution."""
 
-    async def create_pipeline(self, pipeline_in: PipelineCreate) -> Dict[str, Any]:
+    async def create_pipeline(
+        self, pipeline_in: PipelineCreate, user_id: str
+    ) -> Dict[str, Any]:
         """Create a new pipeline"""
         try:
             supabase = await get_supabase()
 
             pipeline_dict = pipeline_in.model_dump()
 
-            response = await supabase.from_("pipelines").insert(pipeline_dict).execute()
+            pipeline_response = (
+                await supabase.from_("pipelines")
+                .insert(
+                    {
+                        "name": pipeline_dict["name"],
+                        "description": pipeline_dict["description"],
+                        "pipeline_type": pipeline_dict["pipeline_type"],
+                        "schedule": pipeline_dict["schedule"],
+                        "is_active": pipeline_dict["is_active"],
+                        "created_by": user_id,
+                    }
+                )
+                .execute()
+            )
 
-            if not response.data:
+            if pipeline_dict.get("steps"):
+                # create pipeline_steps
+                # I want to map pipeline["steps"] array with pipeline_id
+                # and insert them into pipeline_steps table
+
+                print(pipeline_dict["steps"])
+
+                pipeline_dict["steps"] = [
+                    {
+                        "id": step["id"],
+                        "name": step["name"],
+                        "step_type": step["step_type"],
+                        "config": json.dumps(step["config"]),
+                        "inputs": "".join(step["inputs"]),
+                        "run_order": step["run_order"],
+                        "pipeline_id": pipeline_response.data[0]["id"],
+                    }
+                    for step in pipeline_dict["steps"]
+                ]
+
+                # Insert pipeline steps
+                response = (
+                    await supabase.from_("pipeline_steps")
+                    .insert(pipeline_dict["steps"])
+                    .execute()
+                )
+
+                if not response.data:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create pipeline steps",
+                    )
+
+            if not pipeline_response.data:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to create pipeline",
                 )
 
-            return response.data[0]
+            return pipeline_response.data[0]
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error creating pipeline: {str(e)}",
             )
 
-    async def get_pipeline(self, pipeline_id: UUID4) -> Dict[str, Any]:
+    async def get_pipeline(self, pipeline_id: str) -> Dict[str, Any]:
         """Get a pipeline by ID"""
         try:
             supabase = await get_supabase()
@@ -67,7 +111,7 @@ class PipelineService:
             )
 
     async def update_pipeline(
-        self, pipeline_id: UUID4, pipeline_in: PipelineUpdate
+        self, pipeline_id: str, pipeline_in: PipelineUpdate
     ) -> Dict[str, Any]:
         """Update a pipeline"""
         try:
@@ -100,7 +144,7 @@ class PipelineService:
                 detail=f"Error updating pipeline: {str(e)}",
             )
 
-    async def delete_pipeline(self, pipeline_id: UUID4) -> Dict[str, Any]:
+    async def delete_pipeline(self, pipeline_id: str) -> Dict[str, Any]:
         """Delete a pipeline"""
         try:
             supabase = await get_supabase()
@@ -158,13 +202,14 @@ class PipelineService:
 
     async def execute_pipeline(
         self,
-        pipeline_id: UUID4,
-        user_id: Optional[UUID4] = None,
+        pipeline_id: str,
+        user_id: Optional[str] = None,
+        input_parameters: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        from app.tasks.worker import run_pipeline_task
-
         """Execute a pipeline"""
         try:
+            from app.tasks.worker import run_pipeline_task
+
             # Check if pipeline exists and is active
             pipeline = await self.get_pipeline(pipeline_id)
 
@@ -180,19 +225,29 @@ class PipelineService:
                 status=PipelineRunStatus.PENDING,
                 start_time=datetime.now(timezone.utc),
                 triggered_by=user_id,
+                input_parameters=input_parameters or {},
             )
 
             run = await self.create_pipeline_run(run_data)
 
-            # Trigger worker
-            # TODO: Trigger Worker
-            await run_pipeline_task.delay(
-                pipeline_id=pipeline_id,
+            # Start the pipeline task asynchronously
+            task = run_pipeline_task.delay(
+                pipeline_id=pipeline_id, run_id=run["id"], user_id=user_id
+            ).get(timeout=1)
+
+            # Update run with celery task ID
+            await self.update_pipeline_run(
                 run_id=run["id"],
-                user_id=user_id,
+                pipeline_id=pipeline_id,
+                run_update=PipelineRunUpdate(celery_task_id=task.id),
             )
 
-            return run
+            return {
+                **run,
+                "celery_task_id": task.id,
+                "message": f"Pipeline {pipeline_id} execution started",
+            }
+
         except HTTPException:
             raise
         except Exception as e:
@@ -223,14 +278,15 @@ class PipelineService:
                 detail=f"Error creating pipeline run: {str(e)}",
             )
 
-    async def get_pipeline_run(self, run_id: UUID4) -> Dict[str, Any]:
+    async def get_pipeline_run(self, run_id: str, pipeline_id: str) -> Dict[str, Any]:
         """Get a pipeline run by ID"""
         try:
             supabase = await get_supabase()
             response = (
                 await supabase.from_("pipeline_runs")
                 .select("*")
-                .eq("id", run_id)
+                .filter("id", "eq", run_id)
+                .filter("pipeline_id", "eq", pipeline_id)
                 .single()
                 .execute()
             )
@@ -251,13 +307,13 @@ class PipelineService:
             )
 
     async def update_pipeline_run(
-        self, run_id: UUID4, run_update: PipelineRunUpdate
+        self, run_id: str, pipeline_id: str, run_update: PipelineRunUpdate
     ) -> Dict[str, Any]:
         """Update a pipeline run"""
         try:
             supabase = await get_supabase()
             # Check if run exists
-            await self.get_pipeline_run(run_id)
+            await self.get_pipeline_run(run_id, pipeline_id)
 
             # Update run
             data = run_update.model_dump(exclude_unset=True)
@@ -269,7 +325,7 @@ class PipelineService:
                 and run_update.end_time
                 and not run_update.duration
             ):
-                run = await self.get_pipeline_run(run_id)
+                run = await self.get_pipeline_run(run_id, pipeline_id)
                 start_time = datetime.fromisoformat(run["start_time"])
                 end_time = datetime.fromisoformat(str(run_update.end_time))
                 data["duration"] = int((end_time - start_time).total_seconds())
@@ -358,216 +414,44 @@ class PipelineService:
                 detail=f"Error retrieving pipeline run logs: {str(e)}",
             )
 
-    # Manage pipeline steps
-    async def create_pipeline_step(
-        self, step_in: Dict[str, Any], pipeline_id: UUID4
-    ) -> Dict[str, Any]:
-        """Create a new pipeline step"""
-        try:
-            supabase = await get_supabase()
-            step_in["pipeline_id"] = str(pipeline_id)
-            response = await supabase.from_("pipeline_steps").insert(step_in).execute()
-            if not response.data:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to create pipeline step",
-                )
-            return response.data[0]
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error creating pipeline step: {str(e)}",
-            )
+    async def cancel_pipeline_run(self, run_id: str, pipeline_id: str) -> bool:
+        """Cancel a pipeline run"""
 
-    async def get_pipeline_step(self, step_id: UUID4) -> Dict[str, Any]:
-        """Get a pipeline step by ID"""
         try:
-            supabase = await get_supabase()
-            response = (
-                await supabase.from_("pipeline_steps")
-                .select("*")
-                .eq("id", step_id)
-                .single()
-                .execute()
-            )
-            if not response.data:
+            from app.tasks.worker import cancel_pipeline_run_task
+
+            # Check if pipeline run exists and can be cancelled
+            pipeline_run = await self.get_pipeline_run(run_id, pipeline_id)
+
+            if not pipeline_run:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Pipeline step not found",
+                    detail="Pipeline run not found",
                 )
-            return response.data
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error retrieving pipeline step: {str(e)}",
-            )
-
-    async def update_pipeline_step(
-        self, step_id: UUID4, step_in: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Update a pipeline step"""
-        try:
-            supabase = await get_supabase()
-            # Check if step exists
-            await self.get_pipeline_step(step_id)
-            # Update step
-            response = (
-                await supabase.from_("pipeline_steps")
-                .update(step_in)
-                .eq("id", step_id)
-                .execute()
-            )
-            if not response.data:
+            if pipeline_run["pipeline_id"] != pipeline_id:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update pipeline step",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Pipeline ID does not match the run's pipeline ID",
                 )
-            return response.data[0]
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error updating pipeline step: {str(e)}",
-            )
 
-    async def delete_pipeline_step(self, step_id: UUID4) -> Dict[str, Any]:
-        """Delete a pipeline step"""
-        try:
-            supabase = await get_supabase()
-            # Check if step exists
-            await self.get_pipeline_step(step_id)
-            # Delete step
-            await supabase.from_("pipeline_steps").delete().eq("id", step_id).execute()
-            return {"success": True, "message": "Pipeline step deleted"}
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error deleting pipeline step: {str(e)}",
-            )
-
-    async def get_pipeline_steps(
-        self, pipeline_id: str, limit: int = 100, skip: int = 0
-    ) -> APIResponse[PipelineStep]:
-        """Get pipeline steps with filtering and pagination"""
-        try:
-            supabase = await get_supabase()
-            query = (
-                supabase.from_("pipeline_steps")
-                .select("*")
-                .eq("pipeline_id", pipeline_id)
-            )
-            response = (
-                await query.order("created_at", desc=True)
-                .range(skip, skip + limit - 1)
-                .execute()
-            )
-            data = [
-                PipelineStep(**data) for data in response.data
-            ]  # Convert to PipelineStep model
-            return APIResponse(data=data, count=response.count)
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error retrieving pipeline steps: {str(e)}",
-            )
-
-    async def get_pipeline_step_runs(
-        self, pipeline_run_id: UUID4, limit: int = 100, skip: int = 0
-    ) -> APIResponse[Dict[str, Any]]:
-        """Get pipeline step runs with filtering and pagination"""
-        try:
-            supabase = await get_supabase()
-            query = (
-                supabase.from_("pipeline_step_runs")
-                .select("*")
-                .eq("pipeline_run_id", pipeline_run_id)
-            )
-            response = (
-                await query.order("created_at", desc=True)
-                .range(skip, skip + limit - 1)
-                .execute()
-            )
-            return response
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error retrieving pipeline step runs: {str(e)}",
-            )
-
-    async def get_pipeline_step_run(self, step_run_id: UUID4) -> Dict[str, Any]:
-        """Get a pipeline step run by ID"""
-        try:
-            supabase = await get_supabase()
-            response = (
-                await supabase.from_("pipeline_step_runs")
-                .select("*")
-                .eq("id", step_run_id)
-                .single()
-                .execute()
-            )
-            if not response.data:
+            if pipeline_run["status"] in [
+                PipelineRunStatus.COMPLETED,
+                PipelineRunStatus.FAILED,
+                PipelineRunStatus.CANCELLED,
+            ]:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Pipeline step run not found",
+                    status_code=400,
+                    detail=f"Cannot cancel pipeline run with status: {pipeline_run['status']}",
                 )
-            return response.data
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error retrieving pipeline step run: {str(e)}",
-            )
 
-    async def update_pipeline_step_run(
-        self, step_run_id: UUID4, step_run_in: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Update a pipeline step run"""
-        try:
-            supabase = await get_supabase()
-            # Check if step run exists
-            await self.get_pipeline_step_run(step_run_id)
-            # Update step run
-            response = (
-                await supabase.from_("pipeline_step_runs")
-                .update(step_run_in)
-                .eq("id", step_run_id)
-                .execute()
-            )
-            if not response.data:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update pipeline step run",
-                )
-            return response.data[0]
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error updating pipeline step run: {str(e)}",
-            )
+            # Cancel via Celery task
+            cancel_pipeline_run_task.delay(run_id)
 
-    async def delete_pipeline_step_run(self, step_run_id: UUID4) -> Dict[str, Any]:
-        """Delete a pipeline step run"""
-        try:
-            supabase = await get_supabase()
-            # Check if step run exists
-            await self.get_pipeline_step_run(step_run_id)
-            # Delete step run
-            await supabase.from_("pipeline_step_runs").delete().eq(
-                "id", step_run_id
-            ).execute()
-            return {"success": True, "message": "Pipeline step run deleted"}
+            return True
+
         except HTTPException:
             raise
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error deleting pipeline step run: {str(e)}",
+                status_code=500, detail=f"Error cancelling pipeline: {str(e)}"
             )

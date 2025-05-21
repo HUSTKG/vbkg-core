@@ -59,8 +59,22 @@ async def logout(token: str = Depends(oauth2_scheme)) -> ApiResponse[None]:
     Logout a user.
     """
     auth_service = AuthService()
-    print(token)
     await auth_service.logout(token)
     return ApiResponse(
         data=None, status=status.HTTP_200_OK, message="Logged out successfully"
+    )
+
+
+@router.post("/refresh-token", response_model=ApiResponse[Token])
+async def refresh_token(token: str = Depends(oauth2_scheme)) -> ApiResponse[Token]:
+    """
+    Refresh the access token using the refresh token.
+    """
+
+    auth_service = AuthService()
+    result = await auth_service.refresh_token(token)
+    return ApiResponse(
+        data=Token(**result),
+        status=status.HTTP_200_OK,
+        message="Token refreshed successfully",
     )

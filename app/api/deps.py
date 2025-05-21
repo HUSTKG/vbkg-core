@@ -1,4 +1,4 @@
-from typing import Annotated, Dict, Any
+from typing import Annotated, Any, Dict
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer

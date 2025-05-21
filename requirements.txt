@@ -1,4 +1,4 @@
-fastapi[standard]>=0.95.0
+fastapi[standard]
 python-dotenv>=1.0.0
 pydantic-settings
 python-jose[cryptography]>=3.3.0

@@ -25,6 +25,8 @@ class FileUploadBase(BaseModel):
 class FileUpload(FileUploadBase):
     """Complete file upload model returned from API."""
 
+    id: str = Field(..., description="Unique identifier for the file upload")
+
     storage_path: str = Field(..., description="Path where the file is stored")
     upload_status: FileUploadStatus = Field(
         FileUploadStatus.PENDING, description="Status of the file upload"

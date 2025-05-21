@@ -72,6 +72,7 @@ class DataSourceBase(BaseModel):
     connection_details: Dict[str, Any] = Field(
         ..., description="Connection details specific to the source type"
     )
+    credentials: Optional[Dict[str, Any]] = None
 
     @field_validator("connection_details")
     def validate_connection_details(cls, v, values):
@@ -88,7 +89,7 @@ class DataSourceBase(BaseModel):
 
 
 class DataSourceCreate(DataSourceBase):
-    credentials: Optional[Dict[str, Any]] = None
+    pass
 
 
 class DataSourceUpdate(BaseModel):

@@ -1,16 +1,16 @@
-from typing import Annotated, Any, Dict, List
+import uuid
+from typing import Any, Dict
 
-from fastapi import HTTPException
-from fastapi import UploadFile as File
-from fastapi import status
+from fastapi import HTTPException, UploadFile, status
+from gotrue import Optional
+from postgrest.base_request_builder import APIResponse
+from postgrest.types import CountMethod
 
 from app.core.config import settings
 from app.core.supabase import get_supabase
-from app.schemas.file_upload import (FileUpload, FileUploadCreate,
-                                     FileUploadStatus, FileUploadUpdate)
+from app.schemas.file_upload import FileUploadCreate, FileUploadStatus
+from app.services.datasource import DataSourceService
 from app.utils.file_handler import get_file_type
-from app.utils.supabase_utils import (create_signed_upload_url,
-                                      upload_file_to_signed_url)
 
 
 class UploadService:
@@ -19,247 +19,311 @@ class UploadService:
 
     async def upload_file(
         self,
-        file_path: Annotated[str, "file_path in bucket"],
-        user_id: Annotated[str, "user_id"],
-        file: File,
-    ) -> FileUpload:
-        """
-        Upload a file to Supabase storage.
-        """
+        file: UploadFile,
+        datasource_id: Optional[str],
+        user_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Upload a file to Supabase storage and register it in the database"""
         try:
-            # Upload file to Supabase storage
-            folder = "usercont/"
-            # check start with / or not
-            if not file_path.startswith("/"):
-                file_path = folder + file_path
-            else:
-                file_path = folder + file_path[1:]
+            supabase = await get_supabase()
+            datasource_service = DataSourceService()
+            if datasource_id:
+                # First check if data source exists
+                datasource = await datasource_service.get_datasource(datasource_id)
 
-            file_name = file.filename if file.filename else "untitled"
-            file_size = file.size if file.size else 0
+                if datasource["source_type"] != "file":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Data source is not of type 'file'",
+                    )
 
-            file_type = get_file_type(file_name, file.content_type)
-
-            # create file upload record
-            draft_file = await self.create_file_upload(
-                file_upload_in=FileUploadCreate(
-                    file_name=file_name,
-                    file_type=file_type,
-                    file_size=file_size,
-                    storage_path=file_path,
-                    uploaded_by=user_id,
+            if not file.filename:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File name is required",
                 )
+
+            # Generate a unique file path in storage
+            file_ext = file.filename.split(".")[-1] if "." in file.filename else ""
+            storage_path = f"{datasource_id if datasource_id else 'usercont'}/{file.filename}.{uuid.uuid4()}.{file_ext}"
+
+            # Read file content
+            file_content = await file.read()
+
+            # Upload to Supabase Storage
+            storage_response = await supabase.storage.from_(
+                settings.S3_BUCKET_NAME
+            ).upload(storage_path, file_content)
+
+            if not storage_response:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to upload file to storage",
+                )
+
+            # Register in database
+            file_upload = FileUploadCreate(
+                data_source_id=datasource_id if datasource_id else None,
+                file_name=file.filename,
+                file_type=get_file_type(file.filename, file.content_type),
+                file_size=len(file_content),
+                uploaded_by=user_id,
+                storage_path=storage_path,
+                metadata=metadata or {},
             )
 
-            if not draft_file:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to create file upload record",
-                )
+            upload_data = file_upload.model_dump()
+            upload_data["uploaded_by"] = user_id
 
-            initData = await create_signed_upload_url(file_path)
-
-            if not initData:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to create signed URL",
-                )
-
-            file_to_upload = await file.read()
-
-            is_uploaded = await upload_file_to_signed_url(
-                file_path=file_path,
-                signed_url=initData["signed_url"],
-                file=file_to_upload,
+            response = (
+                await supabase.from_("file_uploads").insert(upload_data).execute()
             )
 
-            if not is_uploaded:
-                file_upload = await self.update_file_upload(
-                    file_upload_id=draft_file["id"],
-                    user_id=user_id,
-                    file_upload_in=FileUploadUpdate(
-                        upload_status=FileUploadStatus.FAILED
-                    ),
-                )
-
-            else:
-                file_upload = await self.update_file_upload(
-                    file_upload_id=draft_file["id"],
-                    user_id=user_id,
-                    file_upload_in=FileUploadUpdate(
-                        upload_status=FileUploadStatus.COMPLETED
-                    ),
-                )
-
-            if not file_upload:
+            if not response.data:
+                # If database insert fails, try to delete from storage
+                await supabase.storage.from_("documents").remove([storage_path])
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update file upload record",
+                    detail="Failed to register file upload",
                 )
 
-            return FileUpload(**file_upload)
-
+            return response.data[0]
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error uploading file: {str(e)}",
             )
 
-    async def create_file_upload(
+    async def get_file_uploads(
         self,
-        file_upload_in: Annotated[FileUploadCreate, "File upload data"],
-    ) -> Dict[str, Any] | None:
-        """
-        Create a record in the file_uploads table.
-        """
+        data_source_id: Optional[str] = None,
+        _status: Optional[str] = None,
+        processed: Optional[bool] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> APIResponse[Dict[str, Any]]:
+        """Get file uploads with filtering and pagination"""
         try:
             supabase = await get_supabase()
+            query = supabase.from_("file_uploads").select("*", count=CountMethod.exact)
 
-            file_upload_dict = file_upload_in.model_dump()
+            if data_source_id:
+                query = query.eq("data_source_id", data_source_id)
+
+            if _status:
+                query = query.eq("upload_status", _status)
+
+            if processed is not None:
+                query = query.eq("processed", processed)
 
             response = (
-                await supabase.from_("file_uploads").insert(file_upload_dict).execute()
+                await query.order("uploaded_at", desc=True)
+                .range(skip, skip + limit - 1)
+                .execute()
             )
 
-            return response.data[0]
-
-        except Exception as e:
-            print(f"Error creating file upload record: {str(e)}")
-            return None
-
-    async def delete_file_upload(
-        self,
-        file_upload_id: Annotated[str, "file upload id"],
-    ) -> None:
-        """
-        Delete a record in the file_uploads table.
-        """
-        try:
-            supabase = await get_supabase()
-            await supabase.from_("file_uploads").delete().eq(
-                "id", file_upload_id
-            ).execute()
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error deleting file upload record: {str(e)}",
-            )
-
-    async def get_file_upload_url(
-        self,
-        file_upload_id: Annotated[str, "file upload id"],
-        user_id: Annotated[str, "user id"],
-    ) -> str:
-        """
-        Get a signed URL for a file upload.
-        """
-
-        try:
-            supabase = await get_supabase()
-            file_upload = await self.get_file_upload(
-                file_upload_id=file_upload_id,
-                user_id=user_id,
-            )
-            if not file_upload:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="File upload record not found",
-                )
-            response = await supabase.storage.from_(
-                settings.S3_BUCKET_NAME
-            ).get_public_url(file_upload["storage_path"])
             return response
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error getting public URL: {str(e)}",
+                detail=f"Error retrieving file uploads: {str(e)}",
             )
 
-    async def get_file_uploads(
-        self,
-        user_id: Annotated[str, "user id"],
-        skip: Annotated[int, "skip"],
-        limit: Annotated[int, "limit"],
-    ) -> List[Dict[str, Any]]:
-        """
-        Read file uploads for a user.
-        """
+    async def get_file_upload(self, file_upload_id: str) -> Dict[str, Any]:
+        """Get a file upload by ID"""
         try:
             supabase = await get_supabase()
             response = (
                 await supabase.from_("file_uploads")
                 .select("*")
-                .eq("uploaded_by", user_id)
-                .range(skip, skip + limit)
-                .execute()
-            )
-            return response.data
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error reading file uploads: {str(e)}",
-            )
-
-    async def get_file_upload(
-        self,
-        file_upload_id: Annotated[str, "file upload id"],
-        user_id: Annotated[str, "user id"],
-    ) -> Dict[str, Any]:
-        """
-        Get a file upload record by ID.
-        """
-        try:
-            supabase = await get_supabase()
-            response = (
-                await supabase.from_("file_uploads")
-                .select("*")
-                .or_(f"id.eq.{file_upload_id},and(uploaded_by.eq.{user_id})")
-                .execute()
-            )
-            data = response.data[0] if response.data else None
-
-            if not data:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="File upload record not found",
-                )
-            return data
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Error getting file upload record: {str(e)}",
-            )
-
-    async def update_file_upload(
-        self,
-        file_upload_id: Annotated[str, "file upload id"],
-        user_id: Annotated[str, "user id"],
-        file_upload_in: Annotated[FileUploadUpdate, "file upload data"],
-    ) -> Dict[str, Any] | None:
-        """
-        Update a file upload record.
-        """
-        try:
-            supabase = await get_supabase()
-            file_upload_dict = file_upload_in.model_dump()
-            response = (
-                await supabase.from_("file_uploads")
-                .update(file_upload_dict)
                 .eq("id", file_upload_id)
-                .eq("uploaded_by", user_id)
+                .single()
                 .execute()
             )
 
-            data = response.data[0] if response.data else None
-
-            if not data:
+            if not response.data:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="File upload record not found",
+                    detail="File upload not found",
                 )
 
-            return data
-
+            return response.data
+        except HTTPException:
+            raise
         except Exception as e:
-            print(f"Error updating file upload record: {str(e)}")
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving file upload: {str(e)}",
+            )
+
+    async def update_file_status(
+        self,
+        file_upload_id: str,
+        fileStatus: FileUploadStatus,
+        processed: Optional[bool] = None,
+        error_message: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Update a file upload status"""
+        try:
+            supabase = await get_supabase()
+            # First check if file upload exists
+            await self.get_file_upload(file_upload_id)
+
+            # Update the file status
+            data: dict = {"upload_status": fileStatus}
+
+            if processed is not None:
+                data["processed"] = processed
+            if error_message:
+                # Store error message in metadata
+                file_upload = await self.get_file_upload(file_upload_id)
+                metadata = file_upload.get("metadata", {}) or {}
+                metadata["error_message"] = error_message
+                data["metadata"] = metadata
+
+            response = (
+                await supabase.from_("file_uploads")
+                .update(data)
+                .eq("id", file_upload_id)
+                .execute()
+            )
+
+            if not response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update file status",
+                )
+
+            return response.data[0]
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error updating file status: {str(e)}",
+            )
+
+    async def delete_file_upload(self, file_upload_id: str) -> Dict[str, Any]:
+        """Delete a file upload and remove from storage"""
+        try:
+            supabase = await get_supabase()
+            # First get the file upload to get storage path
+            file_upload = await self.get_file_upload(file_upload_id)
+            storage_path = file_upload.get("storage_path")
+
+            # Delete from storage if path exists
+            if storage_path:
+                try:
+                    await supabase.storage.from_("documents").remove([storage_path])
+                except Exception as e:
+                    # Log error but continue with deletion from database
+                    print(f"Error removing file from storage: {e}")
+
+            # Delete from database
+            await supabase.from_("file_uploads").delete().eq(
+                "id", file_upload_id
+            ).execute()
+
+            return {"success": True, "message": "File upload deleted"}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deleting file upload: {str(e)}",
+            )
+
+    async def get_file_content(self, file_upload_id: str) -> bytes:
+        """Get the content of a file from storage"""
+        try:
+            supabase = await get_supabase()
+            # Get the file upload to get storage path
+            file_upload = await self.get_file_upload(file_upload_id)
+            storage_path = file_upload.get("storage_path")
+
+            if not storage_path:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File storage path not found",
+                )
+
+            # Get from storage
+            try:
+                response = await supabase.storage.from_("documents").download(
+                    storage_path
+                )
+                return response
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"File not found in storage: {str(e)}",
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving file content: {str(e)}",
+            )
+
+    async def update_file_metadata(
+        self,
+        file_upload_id: str,
+        metadata: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Update metadata of a file upload"""
+        try:
+            supabase = await get_supabase()
+            # First check if file upload exists
+            await self.get_file_upload(file_upload_id)
+            # Update the metadata
+            response = (
+                await supabase.from_("file_uploads")
+                .update({"metadata": metadata})
+                .eq("id", file_upload_id)
+                .execute()
+            )
+            if not response.data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to update file metadata",
+                )
+            return response.data[0]
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error updating file metadata: {str(e)}",
+            )
+
+    async def get_file_public_url(
+        self,
+        file_upload_id: str,
+    ) -> str:
+        """Get the public URL of a file upload"""
+        try:
+            supabase = await get_supabase()
+            # Get the file upload to get storage path
+            file_upload = await self.get_file_upload(file_upload_id)
+            storage_path = file_upload.get("storage_path")
+            if not storage_path:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File storage path not found",
+                )
+            # Get public URL
+            public_url = await supabase.storage.from_(
+                settings.S3_BUCKET_NAME
+            ).get_public_url(storage_path)
+            return public_url
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving file public URL: {str(e)}",
+            )

@@ -1,27 +1,17 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    status as httpStatus,
-    BackgroundTasks,
-)
-from datetime import datetime, timezone
-from typing import Any, List, Optional, Dict
-from pydantic import UUID4
+from typing import Annotated, Any, Dict, List, Optional
 
-from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.pipeline import (
-    Pipeline,
-    PipelineCreate,
-    PipelineRunStatus,
-    PipelineUpdate,
-    PipelineRun,
-    PipelineRunCreate,
-    PipelineRunStatus,
-)
-from app.schemas.user import User
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
+from fastapi import status as httpStatus
+
 from app.api.deps import PermissionChecker
+from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
+from app.schemas.pipeline import (Pipeline, PipelineCreate, PipelineRun,
+                                  PipelineRunStatus, PipelineUpdate,
+                                  StartPipelineRequest)
+from app.schemas.pipeline_step import PipelineStep, PipelineStepRun
+from app.schemas.user import User
 from app.services.pipeline import PipelineService
+from app.services.pipeline_step import PipelineStepService
 
 router = APIRouter()
 
@@ -29,7 +19,7 @@ check_read_permission = PermissionChecker("pipeline:read")
 check_write_permission = PermissionChecker("pipeline:write")
 
 
-@router.get("/", response_model=PaginatedResponse[List[Pipeline]])
+@router.get("", response_model=PaginatedResponse[Pipeline])
 async def read_pipelines(
     skip: int = 0,
     limit: int = 100,
@@ -57,7 +47,7 @@ async def read_pipelines(
     )
 
 
-@router.post("/", response_model=ApiResponse[Pipeline])
+@router.post("", response_model=ApiResponse[Pipeline])
 async def create_pipeline(
     pipeline_in: PipelineCreate,
     current_user: Dict[str, Any] = Depends(check_write_permission),
@@ -70,8 +60,8 @@ async def create_pipeline(
     pipeline_service = PipelineService()
 
     pipeline = await pipeline_service.create_pipeline(
-        user_id=current_user["id"],
         pipeline_in=pipeline_in,
+        user_id=current_user["id"],
     )
 
     return ApiResponse(
@@ -81,9 +71,171 @@ async def create_pipeline(
     )
 
 
+@router.get("/{pipeline_id}/runs")
+async def get_pipeline_runs(
+    pipeline_id: Annotated[str, Path()],
+    status: Optional[str] = None,
+    limit: int = 20,
+    skip: int = 0,
+    pipeline_service: PipelineService = Depends(lambda: PipelineService()),
+) -> PaginatedResponse[PipelineRun]:
+    """
+    Get pipeline run history with optional filtering
+    """
+    try:
+        runs_response = await pipeline_service.get_pipeline_runs(
+            pipeline_id=pipeline_id, _status=status, limit=limit, skip=skip
+        )
+
+        return PaginatedResponse(
+            data=[PipelineRun(**data) for data in runs_response.data],
+            meta=PaginatedMeta(
+                total=runs_response.count if runs_response.count else 0,
+                limit=limit,
+                skip=skip,
+            ),
+            status=httpStatus.HTTP_200_OK,
+            message="Pipeline runs retrieved successfully",
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching pipeline runs: {str(e)}"
+        )
+
+
+@router.get("/runs/{run_id}", response_model=ApiResponse[PipelineRun])
+async def read_pipeline_run(
+    run_id: Annotated[str, Path()],
+    current_user: User = Depends(check_read_permission),
+) -> ApiResponse[PipelineRun]:
+    """
+    Get a specific pipeline run.
+    """
+    from app.services.pipeline import PipelineService
+
+    pipeline_service = PipelineService()
+
+    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
+    if not pipeline_run:
+        raise HTTPException(
+            status_code=404,
+            detail="Pipeline run not found",
+        )
+    return ApiResponse(
+        data=PipelineRun(**pipeline_run),
+        status=httpStatus.HTTP_200_OK,
+        message="Pipeline run retrieved successfully",
+    )
+
+
+@router.get("/{pipeline_id}/runs/{run_id}/logs")
+async def get_pipeline_run_logs(
+    pipeline_id: str,
+    run_id: str,
+    pipeline_service: PipelineService = Depends(lambda: PipelineService()),
+) -> Dict[str, Any]:
+    """
+    Get detailed logs for a pipeline run
+    """
+    try:
+        logs = await pipeline_service.get_pipeline_run_logs(run_id)
+        return logs
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching pipeline logs: {str(e)}"
+        )
+
+
+@router.get("/{pipeline_id}/runs/{run_id}/status")
+async def get_pipeline_run_status(
+    pipeline_id: str,
+    run_id: str,
+    pipeline_service: PipelineService = Depends(lambda: PipelineService()),
+    step_service: PipelineStepService = Depends(lambda: PipelineStepService()),
+) -> Dict[str, Any]:
+    """
+    Get the detailed status of a pipeline run including step progress
+    """
+    try:
+        # Get pipeline run details
+        pipeline_run = await pipeline_service.get_pipeline_run(run_id)
+
+        # Get step runs for this pipeline run
+        step_runs_response = await step_service.get_pipeline_step_runs(run_id)
+        step_runs = step_runs_response.data
+
+        # Calculate progress
+        total_steps = len(step_runs) if step_runs else 0
+        completed_steps = (
+            len([s for s in step_runs if s["status"] == "completed"])
+            if step_runs
+            else 0
+        )
+        failed_steps = (
+            len([s for s in step_runs if s["status"] == "failed"]) if step_runs else 0
+        )
+        running_steps = (
+            len([s for s in step_runs if s["status"] == "running"]) if step_runs else 0
+        )
+
+        progress_percentage = (
+            (completed_steps / total_steps * 100) if total_steps > 0 else 0
+        )
+
+        return {
+            "pipeline_run": pipeline_run,
+            "step_runs": step_runs,
+            "progress": {
+                "percentage": round(progress_percentage, 2),
+                "total_steps": total_steps,
+                "completed_steps": completed_steps,
+                "failed_steps": failed_steps,
+                "running_steps": running_steps,
+            },
+            "overall_status": pipeline_run["status"],
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error fetching pipeline run status: {str(e)}"
+        )
+
+
+@router.post("/{pipeline_id}/runs/{run_id}/cancel")
+async def cancel_pipeline_run(
+    pipeline_id: str,
+    run_id: str,
+    pipeline_service: PipelineService = Depends(lambda: PipelineService()),
+) -> ApiResponse[None]:
+    """
+    Cancel a running pipeline
+    """
+    from app.services.pipeline import PipelineService
+
+    pipeline_service = PipelineService()
+
+    isCanceled = await pipeline_service.cancel_pipeline_run(
+        run_id=run_id, pipeline_id=pipeline_id
+    )
+    if not isCanceled:
+        raise HTTPException(
+            status_code=httpStatus.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
+    return ApiResponse(
+        data=None,
+        status=httpStatus.HTTP_200_OK,
+        message="Pipeline retrieved successfully",
+    )
+
+
 @router.get("/{pipeline_id}", response_model=ApiResponse[Pipeline])
 async def read_pipeline(
-    pipeline_id: UUID4,
+    pipeline_id: Annotated[str, Path()],
     current_user: User = Depends(check_read_permission),
 ) -> ApiResponse[Pipeline]:
     """
@@ -108,7 +260,7 @@ async def read_pipeline(
 
 @router.put("/{pipeline_id}", response_model=ApiResponse[Pipeline])
 async def update_pipeline(
-    pipeline_id: UUID4,
+    pipeline_id: Annotated[str, Path()],
     pipeline_in: PipelineUpdate,
     current_user: User = Depends(check_write_permission),
 ) -> ApiResponse[Pipeline]:
@@ -138,7 +290,7 @@ async def update_pipeline(
 
 @router.delete("/{pipeline_id}", response_model=ApiResponse[Pipeline])
 async def delete_pipeline(
-    pipeline_id: UUID4,
+    pipeline_id: Annotated[str, Path()],
     current_user: User = Depends(check_write_permission),
 ) -> ApiResponse[Pipeline]:
     """
@@ -164,157 +316,157 @@ async def delete_pipeline(
     )
 
 
-@router.post("/{pipeline_id}/run", response_model=ApiResponse[PipelineRun])
-async def run_pipeline_endpoint(
-    pipeline_id: UUID4,
-    background_tasks: BackgroundTasks,
-    params: Optional[Dict[str, Any]] = None,
+@router.post("/{pipeline_id}/run", response_model=Dict[str, Any])
+async def execute_pipeline(
+    pipeline_id: str,
+    request: StartPipelineRequest,
     current_user: Dict[str, Any] = Depends(check_write_permission),
-) -> ApiResponse[PipelineRun]:
+    pipeline_service: PipelineService = Depends(lambda: PipelineService()),
+) -> Dict[str, Any]:
     """
-    Run a pipeline.
+    Execute a pipeline with optional input parameters
     """
-    from app.services.pipeline import PipelineService
-
-    pipeline_service = PipelineService()
-
-    pipeline = await pipeline_service.get_pipeline(pipeline_id=pipeline_id)
-    if not pipeline:
-        raise HTTPException(
-            status_code=404,
-            detail="Pipeline not found",
+    try:
+        result = await pipeline_service.execute_pipeline(
+            pipeline_id=pipeline_id,
+            user_id=current_user["id"],
+            input_parameters=request.input_parameters,
         )
 
-    # TODO: Execute Pipeline
-    pipeline_run = await pipeline_service.execute_pipeline(
-        pipeline_id=pipeline_id,
-        user_id=current_user["id"],
-    )
+        return {
+            "success": True,
+            "pipeline_run_id": result["id"],
+            "celery_task_id": result["celery_task_id"],
+            "status": result["status"],
+            "message": result["message"],
+        }
 
-    return ApiResponse(
-        data=PipelineRun(**pipeline_run),
-        status=httpStatus.HTTP_201_CREATED,
-        message="Pipeline run started successfully",
-    )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to execute pipeline: {str(e)}"
+        )
 
 
-@router.get("/runs", response_model=PaginatedResponse[PipelineRun])
-async def read_pipeline_runs(
+@router.get("/{pipeline_id}/steps", response_model=PaginatedResponse[PipelineStep])
+async def get_pipeline_steps(
+    pipeline_id: Annotated[str, Path()],
     skip: int = 0,
     limit: int = 100,
-    pipeline_id: Optional[UUID4] = None,
-    status: Optional[str] = None,
     current_user: User = Depends(check_read_permission),
-) -> PaginatedResponse[PipelineRun]:
+) -> PaginatedResponse[PipelineStep]:
     """
-    Retrieve pipeline runs.
+    Get a specific pipeline step.
     """
-    from app.services.pipeline import PipelineService
+    from app.services.pipeline_step import PipelineStepService
 
-    pipeline_service = PipelineService()
-
-    pipeline_runs = await pipeline_service.get_pipeline_runs(
-        skip=skip, limit=limit, pipeline_id=str(pipeline_id)
+    pipeline_step_service = PipelineStepService()
+    step = await pipeline_step_service.get_pipeline_steps(
+        pipeline_id=pipeline_id, skip=skip, limit=limit
     )
+    if not step.data:
+        raise HTTPException(
+            status_code=404,
+            detail="Pipeline step not found",
+        )
     return PaginatedResponse(
-        data=[PipelineRun(**data) for data in pipeline_runs.data],
+        data=[PipelineStep(**data) for data in step.data],
         meta=PaginatedMeta(
-            skip=skip,
+            total=step.count if step.count else 0,
             limit=limit,
-            total=pipeline_runs.count if pipeline_runs.count else 0,
+            skip=skip,
         ),
         status=httpStatus.HTTP_200_OK,
-        message="Read Pipeline Runs Success",
+        message="Pipeline step retrieved successfully",
     )
 
 
-@router.get("/runs/{run_id}", response_model=ApiResponse[PipelineRun])
-async def read_pipeline_run(
-    run_id: UUID4,
+@router.get("/{pipeline_id}/steps/{step_id}", response_model=ApiResponse[PipelineStep])
+async def get_pipeline_step(
+    pipeline_id: Annotated[str, Path()],
+    step_id: Annotated[str, Path()],
     current_user: User = Depends(check_read_permission),
-) -> ApiResponse[PipelineRun]:
+) -> ApiResponse[PipelineStep]:
     """
-    Get a specific pipeline run.
+    Get a specific pipeline step.
     """
-    from app.services.pipeline import PipelineService
+    from app.services.pipeline_step import PipelineStepService
 
-    pipeline_service = PipelineService()
-
-    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
-    if not pipeline_run:
+    pipeline_step_service = PipelineStepService()
+    step = await pipeline_step_service.get_pipeline_step(
+        pipeline_id=pipeline_id, step_id=step_id
+    )
+    if not step.data:
         raise HTTPException(
             status_code=404,
-            detail="Pipeline run not found",
+            detail="Pipeline step not found",
         )
     return ApiResponse(
-        data=PipelineRun(**pipeline_run),
+        data=PipelineStep(**step),
         status=httpStatus.HTTP_200_OK,
-        message="Pipeline run retrieved successfully",
+        message="Pipeline step retrieved successfully",
     )
 
 
-@router.get("/runs/{run_id}/status", response_model=ApiResponse[PipelineRun])
-async def get_pipeline_run_status(
-    run_id: UUID4,
+@router.get(
+    "/runs/{pipeline_run_id}/steps", response_model=PaginatedResponse[PipelineStepRun]
+)
+async def get_pipeline_step_runs(
+    pipeline_run_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
     current_user: User = Depends(check_read_permission),
-) -> ApiResponse[PipelineRun]:
+) -> PaginatedResponse[PipelineStepRun]:
     """
-    Get the status of a pipeline run.
+    Get a specific pipeline step.
     """
-    from app.services.pipeline import PipelineService
+    from app.services.pipeline_step import PipelineStepService
 
-    pipeline_service = PipelineService()
-
-    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
-    if not pipeline_run:
+    pipeline_step_service = PipelineStepService()
+    step = await pipeline_step_service.get_pipeline_step_runs(
+        pipeline_run_id=pipeline_run_id, skip=skip, limit=limit
+    )
+    if not step.data:
         raise HTTPException(
             status_code=404,
-            detail="Pipeline run not found",
+            detail="Pipeline step not found",
         )
-
-    pipeline_run = PipelineRun(**pipeline_run)
-
-    return ApiResponse(
-        data=pipeline_run,
+    return PaginatedResponse(
+        data=[PipelineStep(**data) for data in step.data],
+        meta=PaginatedMeta(
+            total=step.count if step.count else 0,
+            limit=limit,
+            skip=skip,
+        ),
         status=httpStatus.HTTP_200_OK,
-        message="Pipeline run status retrieved successfully",
+        message="Pipeline step retrieved successfully",
     )
 
 
-@router.post("/runs/{run_id}/cancel", response_model=ApiResponse[None])
-async def cancel_pipeline_run(
-    run_id: UUID4,
-    current_user: User = Depends(check_write_permission),
-) -> ApiResponse[None]:
+@router.get(
+    "/runs/{pipeline_run_id}/steps/{step_run_id}",
+    response_model=ApiResponse[PipelineStepRun],
+)
+async def get_pipeline_step_run(
+    pipeline_run_id: Annotated[str, Path()],
+    step_run_id: Annotated[str, Path()],
+    current_user: User = Depends(check_read_permission),
+) -> ApiResponse[PipelineStep]:
     """
-    Cancel a running pipeline.
+    Get a specific pipeline step.
     """
-    from app.services.pipeline import PipelineService
+    from app.services.pipeline_step import PipelineStepService
 
-    pipeline_service = PipelineService()
-
-    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
-    if not pipeline_run:
+    pipeline_step_service = PipelineStepService()
+    step_run = await pipeline_step_service.get_pipeline_step_run(
+        step_run_id=step_run_id, pipeline_run_id=pipeline_run_id
+    )
+    if not step_run.data:
         raise HTTPException(
             status_code=404,
-            detail="Pipeline run not found",
+            detail="Pipeline step run not found",
         )
-
-    if pipeline_run["status"] not in ["pending", "running"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Pipeline run has status '{pipeline_run['status']}' and cannot be cancelled",
-        )
-
-    success = await cancel_pipeline_run(run_id=run_id)
-    if not success:
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to cancel pipeline run",
-        )
-
     return ApiResponse(
-        data=None,
+        data=PipelineStep(**step_run),
         status=httpStatus.HTTP_200_OK,
-        message="Pipeline run cancelled successfully",
+        message="Pipeline step retrieved successfully",
     )
