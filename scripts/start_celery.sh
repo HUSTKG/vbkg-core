@@ -19,14 +19,16 @@ if [ $REMAINING -gt 0 ]; then
     sleep 2
 fi
 
+
 # Clean up any leftover PID files
 rm -f /tmp/celery_*.pid 2>/dev/null || true
 
+
 # Start Celery worker for pipeline tasks
 echo "Starting Celery worker for pipeline tasks..."
-celery -A app.tasks.worker.celery_app worker \
+celery -A app.tasks.worker worker \
     --loglevel=info \
-    --queues=pipeline,steps \
+    --queues=pipeline,steps,celery \
     --concurrency=4 \
     --hostname=pipeline-worker@%h \
     --detach \
@@ -35,15 +37,17 @@ celery -A app.tasks.worker.celery_app worker \
 
 # Start Celery beat scheduler (if you have scheduled pipelines)
 echo "Starting Celery beat scheduler..."
-celery -A app.tasks.worker.celery_app beat \
+celery -A app.tasks.worker beat \
     --loglevel=info \
     --detach \
     --pidfile=/tmp/celery_beat.pid \
     --logfile=/tmp/celery_beat.log
 
+FLOWER_UNAUTHENTICATED_API=true
+
 # Start Flower monitoring (optional)
 echo "Starting Flower monitoring..."
-celery -A app.tasks.worker.celery_app flower \
+celery -A app.tasks.worker flower \
     --port=5555 \
     --detach \
     --pidfile=/tmp/celery_flower.pid \

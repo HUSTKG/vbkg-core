@@ -12,6 +12,7 @@ class PipelineRunStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 class PipelineStepType(str, Enum):
     FILE_READER = "file_reader"
     API_FETCHER = "api_fetcher"
@@ -21,6 +22,8 @@ class PipelineStepType(str, Enum):
     FIBO_MAPPER = "fibo_mapper"
     ENTITY_RESOLUTION = "entity_resolution"
     KNOWLEDGE_GRAPH_WRITER = "knowledge_graph_writer"
+    DATA_VALIDATION = "data_validation"
+    DATA_TRANSFORMATION = "data_transformation"
     CUSTOM_PYTHON = "custom_python"
 
 
@@ -33,15 +36,18 @@ class StepConfig(BaseModel):
 class FileReaderConfig(StepConfig):
     """Configuration for reading files from storage"""
 
-    file_id: str
+    datasource_id: Optional[str] = None  # Reference to data source
+    file_id: Optional[str] = None  # Direct file ID (alternative to datasource)
     encoding: str = "utf-8"
     chunk_size: Optional[int] = None
+    file_filter: Optional[str] = None  # Pattern to filter files
 
 
 class ApiFetcherConfig(StepConfig):
     """Configuration for fetching data from APIs"""
 
-    url: AnyHttpUrl
+    datasource_id: Optional[str] = None  # Reference to data source
+    url: Optional[AnyHttpUrl] = None  # Direct URL (alternative to datasource)
     method: str = "GET"
     headers: Optional[Dict[str, str]] = None
     params: Optional[Dict[str, Any]] = None
@@ -49,15 +55,18 @@ class ApiFetcherConfig(StepConfig):
     auth_type: Optional[str] = None
     auth_config: Optional[Dict[str, Any]] = None
     pagination: Optional[Dict[str, Any]] = None
+    use_datasource_auth: bool = True  # Use auth from data source
 
 
 class DatabaseExtractorConfig(StepConfig):
     """Configuration for extracting data from databases"""
 
-    connection_string: str
+    datasource_id: Optional[str] = None  # Reference to data source
+    connection_string: Optional[str] = None  # Direct connection (alternative)
     query: str
     params: Optional[Dict[str, Any]] = None
     batch_size: int = 1000
+    use_datasource_connection: bool = True  # Use connection from data source
 
 
 class TextExtractorConfig(StepConfig):
@@ -127,31 +136,42 @@ class CustomPythonConfig(StepConfig):
     timeout: int = 60  # seconds
 
 
-# Base Models
 class PipelineStepBase(BaseModel):
     name: str = Field(..., description="Human-readable name for this step")
     step_type: PipelineStepType
     config: Dict[str, Any] = Field(..., description="Configuration for this step")
     run_order: int = Field(..., description="Execution run_order of this step")
-    inputs: Optional[List[str]] = None  # IDs of steps that feed into this step
+    inputs: Optional[List[str]] = None
     enabled: bool = True
+    datasource_id: Optional[str] = None  # Direct reference to data source
 
     @field_validator("config")
-    def validate_config(cls, v, values):
+    def validate_config_with_datasource(cls, v, values):
         step_type = values.data.get("step_type")
+        datasource_id = values.data.get("datasource_id")
+
         if not step_type:
             return v
 
+        # If datasource_id is provided, some config fields become optional
         if isinstance(v, dict):
             if step_type == PipelineStepType.FILE_READER:
-                return FileReaderConfig(**v)
+                config = FileReaderConfig(**v)
+                if datasource_id and not config.datasource_id:
+                    config.datasource_id = datasource_id
+                return config
             elif step_type == PipelineStepType.API_FETCHER:
-                return ApiFetcherConfig(**v)
-            # Continue with other step types validation
-            # Add validation for all other step types
+                config = ApiFetcherConfig(**v)
+                if datasource_id and not config.datasource_id:
+                    config.datasource_id = datasource_id
+                return config
+            elif step_type == PipelineStepType.DATABASE_EXTRACTOR:
+                config = DatabaseExtractorConfig(**v)
+                if datasource_id and not config.datasource_id:
+                    config.datasource_id = datasource_id
+                return config
 
         return v
-
 
 class PipelineStepRunBase(BaseModel):
     status: PipelineRunStatus = PipelineRunStatus.PENDING
@@ -162,7 +182,6 @@ class PipelineStepRunBase(BaseModel):
 # Create Models
 class PipelineStepCreate(PipelineStepBase):
     id: Optional[str] = None
-
 
 
 class PipelineStepRunCreate(PipelineStepRunBase):

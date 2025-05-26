@@ -5,19 +5,15 @@ from fastapi import APIRouter, Depends, Path, Query, status
 from app.api.deps import PermissionChecker, get_current_user
 from app.schemas.api import ApiResponse, PaginatedResponse
 from app.schemas.entity import Entity
-from app.schemas.knowledge import (
-    CypherQuery,
-    EntityCreate,
-    EntityUpdate,
-    RelationshipCreate,
-)
+from app.schemas.knowledge import (CypherQuery, EntityCreate, EntityUpdate,
+                                   RelationshipCreate)
 from app.schemas.relationship import Relationship
 from app.services.knowledge_graph import KnowledgeGraphService
 
 router = APIRouter()
 
-check_read_permission = PermissionChecker("knowledge:read")
-check_write_permission = PermissionChecker("knowledge:write")
+check_read_permission = PermissionChecker("kg:read")
+check_write_permission = PermissionChecker("kg:write")
 
 
 @router.post("/entities", response_model=ApiResponse[Entity], status_code=status.HTTP_201_CREATED)
@@ -42,6 +38,29 @@ async def create_entity(
         message="Entity created successfully"
     )
 
+@router.get("/entities/search", response_model=ApiResponse[List[Dict[str, Any]]])
+async def search_entities(
+    query: str = Query(..., min_length=1),
+    entity_type: Optional[str] = None,
+    fibo_class: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=100),
+    current_user: Dict[str, Any] = Depends(check_read_permission)
+) -> ApiResponse[List[Dict[str, Any]]]:
+    """
+    Search for entities by text.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service.search_entities(
+        query=query,
+        entity_type=entity_type,
+        fibo_class=fibo_class,
+        limit=limit
+    )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_200_OK,
+        message="Entities retrieved successfully"
+    )
 
 @router.get("/entities/{entity_id}", response_model=ApiResponse[Entity])
 async def read_entity(
@@ -102,6 +121,7 @@ async def update_entity(
         message="Entity updated successfully"
     )
 
+
 @router.delete("/entities/{entity_id}", response_model=ApiResponse[Dict[str, Any]])
 async def delete_entity(
     entity_id: str = Path(...),
@@ -118,30 +138,6 @@ async def delete_entity(
         message="Entity deleted successfully"
     )
 
-
-@router.get("/entities", response_model=ApiResponse[List[Dict[str, Any]]])
-async def search_entities(
-    query: str = Query(..., min_length=1),
-    entity_type: Optional[str] = None,
-    fibo_class: Optional[str] = None,
-    limit: int = Query(20, ge=1, le=100),
-    current_user: Dict[str, Any] = Depends(check_read_permission)
-) -> ApiResponse[List[Dict[str, Any]]]:
-    """
-    Search for entities by text.
-    """
-    kg_service = KnowledgeGraphService()
-    response = await kg_service.search_entities(
-        query=query,
-        entity_type=entity_type,
-        fibo_class=fibo_class,
-        limit=limit
-    )
-    return ApiResponse(
-        data=response,
-        status=status.HTTP_200_OK,
-        message="Entities retrieved successfully"
-    )
 
 
 @router.post("/relationships", response_model=ApiResponse[Relationship], status_code=status.HTTP_201_CREATED)

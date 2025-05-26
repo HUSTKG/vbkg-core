@@ -3,7 +3,17 @@ CREATE TABLE IF NOT EXISTS public.pipeline_steps (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   pipeline_id UUID REFERENCES public.pipelines(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  step_type TEXT NOT NULL,
+  step_type TEXT NOT NULL CHECK (step_type IN (
+    'file_reader', 
+    'api_fetcher', 
+    'database_extractor', 
+    'text_extractor', 
+    'llm_entity_extractor', 
+    'entity_resolution', 
+    'fibo_mapper', 
+    'knowledge_graph_writer', 
+    'custom_python'
+  )),
   config JSONB NOT NULL,
   run_order INTEGER NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, now()) NOT NULL,

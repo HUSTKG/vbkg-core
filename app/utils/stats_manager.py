@@ -1,22 +1,13 @@
-import time
-import psutil
-import contextlib
 import json
-import traceback
-from datetime import datetime
-from typing import Dict, Any, Optional, Callable
-from supabase._async.client import AsyncClient as Client, create_client
-from functools import wraps
+import time
 from contextlib import contextmanager
+from datetime import datetime
+from functools import wraps
+from typing import Any, Dict
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from sqlalchemy import update
-from fastapi import BackgroundTasks, Depends
-
-# Import your models
-from app.schemas.pipeline import PipelineRun, PipelineStepRun
-
+import psutil
+from supabase._async.client import AsyncClient as Client
 
 # ---- Context Managers for Metrics Collection ----
 
@@ -247,7 +238,6 @@ def track_stats(func):
                     step_id,
                     pipeline_run_id,
                     *args,
-                    stats_manager=stats_manager,
                     **kwargs,
                 )
 

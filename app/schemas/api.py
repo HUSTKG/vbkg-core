@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Any, List, Optional, Generic, TypeVar
+from typing import Any, Generic, List, Optional, TypeVar
+
 from pydantic import BaseModel
 
 T = TypeVar("T")
@@ -17,7 +18,7 @@ class ApiKey(BaseModel):
 
 class PaginatedMeta(BaseModel):
     total: int
-    skip: int
+    skip: Optional[int] = 0
     limit: int
 
 class ApiResponse(BaseModel, Generic[T]):

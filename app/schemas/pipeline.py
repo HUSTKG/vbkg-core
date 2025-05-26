@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from app.schemas.pipeline_step import (PipelineStep, PipelineStepBase,
-                                       PipelineStepRun)
+                                       PipelineStepCreate, PipelineStepRun)
 
 
 # Enums
@@ -30,7 +30,7 @@ class PipelineCreate(BaseModel):
     pipeline_type: PipelineType
     schedule: Optional[str] = None
     is_active: bool = True
-    steps: List[PipelineStepBase]  # Steps data to be inserted in pipeline_steps table
+    steps: List[PipelineStepCreate]  # Steps data to be inserted in pipeline_steps table
 
 
 class PipelineBase(BaseModel):
@@ -73,8 +73,7 @@ class PipelineUpdate(BaseModel):
 
 class PipelineRunUpdate(BaseModel):
     status: Optional[PipelineRunStatus] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    end_time: Optional[str] = None
     duration: Optional[int] = None
     result: Optional[Dict[str, Any]] = None
     log: Optional[str] = None
@@ -116,3 +115,22 @@ class PipelineRunResult(BaseModel):
     celery_task_id: Optional[str] = None
     status: PipelineRunStatus
     message: str
+
+
+class PipelineCreateFromTemplate(BaseModel):
+    """Create pipeline from data source template"""
+
+    datasource_id: str
+    template_name: str
+    custom_options: Optional[Dict[str, Any]] = None
+    name_override: Optional[str] = None
+    description_override: Optional[str] = None
+    schedule: Optional[str] = None
+
+
+class PipelineStepWithDataSource(PipelineStepBase):
+    """Pipeline step with data source reference"""
+
+    datasource_id: Optional[str] = None
+    datasource_name: Optional[str] = None  # For display purposes
+    datasource_type: Optional[str] = None  # For display purposes

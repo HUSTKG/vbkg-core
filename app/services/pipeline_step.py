@@ -46,10 +46,10 @@ class PipelineStepService:
                 .select("*")
                 .filter("id", "eq", step_id)
                 .filter("pipeline_id", "eq", pipeline_id)
-                .single()
+                .maybe_single()
                 .execute()
             )
-            if not response.data:
+            if not response:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Pipeline step not found",
@@ -94,7 +94,9 @@ class PipelineStepService:
                 detail=f"Error updating pipeline step: {str(e)}",
             )
 
-    async def delete_pipeline_step(self, step_id: str, pipeline_id: str) -> Dict[str, Any]:
+    async def delete_pipeline_step(
+        self, step_id: str, pipeline_id: str
+    ) -> Dict[str, Any]:
         """Delete a pipeline step"""
         try:
             supabase = await get_supabase()
@@ -188,10 +190,10 @@ class PipelineStepService:
                 .select("*")
                 .filter("id", "eq", step_run_id)
                 .filter("pipeline_run_id", "eq", pipeline_run_id)
-                .single()
+                .maybe_single()
                 .execute()
             )
-            if not response.data:
+            if not response:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Pipeline step run not found",
@@ -231,7 +233,9 @@ class PipelineStepService:
         try:
             supabase = await get_supabase()
             # Check if step run exists
-            await self.get_pipeline_step_run(step_run_id, pipeline_run_id)
+            await self.get_pipeline_step_run(
+                step_run_id=step_run_id, pipeline_run_id=pipeline_run_id
+            )
             # Update step run
             response = (
                 await supabase.from_("pipeline_step_runs")
@@ -253,7 +257,9 @@ class PipelineStepService:
                 detail=f"Error updating pipeline step run: {str(e)}",
             )
 
-    async def delete_pipeline_step_run(self, step_run_id: str, pipeline_run_id: str) -> Dict[str, Any]:
+    async def delete_pipeline_step_run(
+        self, step_run_id: str, pipeline_run_id: str
+    ) -> Dict[str, Any]:
         """Delete a pipeline step run"""
         try:
             supabase = await get_supabase()

@@ -1,13 +1,13 @@
 from typing import Annotated, Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path
-from fastapi import status as httpStatus
+from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import status as HttpStatus
 
 from app.api.deps import PermissionChecker
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.pipeline import (Pipeline, PipelineCreate, PipelineRun,
-                                  PipelineRunStatus, PipelineUpdate,
-                                  StartPipelineRequest)
+from app.schemas.pipeline import (Pipeline, PipelineCreate,
+                                  PipelineCreateFromTemplate, PipelineRun,
+                                  PipelineUpdate, StartPipelineRequest)
 from app.schemas.pipeline_step import PipelineStep, PipelineStepRun
 from app.schemas.user import User
 from app.services.pipeline import PipelineService
@@ -42,7 +42,7 @@ async def read_pipelines(
             limit=limit,
             total=pipelines.count if pipelines.count else 0,
         ),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipelines retrieved successfully",
     )
 
@@ -66,7 +66,7 @@ async def create_pipeline(
 
     return ApiResponse(
         data=Pipeline(**pipeline),
-        status=httpStatus.HTTP_201_CREATED,
+        status=HttpStatus.HTTP_201_CREATED,
         message="Pipeline created successfully",
     )
 
@@ -94,7 +94,7 @@ async def get_pipeline_runs(
                 limit=limit,
                 skip=skip,
             ),
-            status=httpStatus.HTTP_200_OK,
+            status=HttpStatus.HTTP_200_OK,
             message="Pipeline runs retrieved successfully",
         )
 
@@ -104,8 +104,9 @@ async def get_pipeline_runs(
         )
 
 
-@router.get("/runs/{run_id}", response_model=ApiResponse[PipelineRun])
+@router.get("/{pipeline_id}/runs/{run_id}", response_model=ApiResponse[PipelineRun])
 async def read_pipeline_run(
+    pipeline_id: Annotated[str, Path()],
     run_id: Annotated[str, Path()],
     current_user: User = Depends(check_read_permission),
 ) -> ApiResponse[PipelineRun]:
@@ -116,7 +117,9 @@ async def read_pipeline_run(
 
     pipeline_service = PipelineService()
 
-    pipeline_run = await pipeline_service.get_pipeline_run(run_id=run_id)
+    pipeline_run = await pipeline_service.get_pipeline_run(
+        run_id=run_id, pipeline_id=pipeline_id
+    )
     if not pipeline_run:
         raise HTTPException(
             status_code=404,
@@ -124,7 +127,7 @@ async def read_pipeline_run(
         )
     return ApiResponse(
         data=PipelineRun(**pipeline_run),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline run retrieved successfully",
     )
 
@@ -223,12 +226,12 @@ async def cancel_pipeline_run(
     )
     if not isCanceled:
         raise HTTPException(
-            status_code=httpStatus.HTTP_404_NOT_FOUND,
+            status_code=HttpStatus.HTTP_404_NOT_FOUND,
             detail="Pipeline not found",
         )
     return ApiResponse(
         data=None,
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline retrieved successfully",
     )
 
@@ -248,12 +251,12 @@ async def read_pipeline(
     pipeline = await pipeline_service.get_pipeline(pipeline_id=pipeline_id)
     if not pipeline:
         raise HTTPException(
-            status_code=httpStatus.HTTP_404_NOT_FOUND,
+            status_code=HttpStatus.HTTP_404_NOT_FOUND,
             detail="Pipeline not found",
         )
     return ApiResponse(
         data=Pipeline(**pipeline),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline retrieved successfully",
     )
 
@@ -283,7 +286,7 @@ async def update_pipeline(
     )
     return ApiResponse(
         data=Pipeline(**pipeline),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline updated successfully",
     )
 
@@ -311,7 +314,7 @@ async def delete_pipeline(
 
     return ApiResponse(
         data=Pipeline(**pipeline),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline deleted successfully",
     )
 
@@ -375,7 +378,7 @@ async def get_pipeline_steps(
             limit=limit,
             skip=skip,
         ),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline step retrieved successfully",
     )
 
@@ -402,7 +405,7 @@ async def get_pipeline_step(
         )
     return ApiResponse(
         data=PipelineStep(**step),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline step retrieved successfully",
     )
 
@@ -431,13 +434,13 @@ async def get_pipeline_step_runs(
             detail="Pipeline step not found",
         )
     return PaginatedResponse(
-        data=[PipelineStep(**data) for data in step.data],
+        data=[PipelineStepRun(**data) for data in step.data],
         meta=PaginatedMeta(
             total=step.count if step.count else 0,
             limit=limit,
             skip=skip,
         ),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline step retrieved successfully",
     )
 
@@ -460,13 +463,113 @@ async def get_pipeline_step_run(
     step_run = await pipeline_step_service.get_pipeline_step_run(
         step_run_id=step_run_id, pipeline_run_id=pipeline_run_id
     )
-    if not step_run.data:
+    if not step_run:
         raise HTTPException(
             status_code=404,
             detail="Pipeline step run not found",
         )
     return ApiResponse(
         data=PipelineStep(**step_run),
-        status=httpStatus.HTTP_200_OK,
+        status=HttpStatus.HTTP_200_OK,
         message="Pipeline step retrieved successfully",
     )
+
+
+@router.post("/from-template", response_model=ApiResponse[Dict[str, Any]])
+async def create_pipeline_from_datasource_template(
+    template_request: PipelineCreateFromTemplate,
+    current_user: Dict[str, Any] = Depends(check_write_permission),
+) -> ApiResponse[Dict[str, Any]]:
+    """Create pipeline from data source template"""
+
+    pipeline_service = PipelineService()
+
+    try:
+        pipeline = await pipeline_service.create_pipeline_from_template(
+            template_request, current_user["id"]
+        )
+
+        return ApiResponse(
+            data=pipeline,
+            status=HttpStatus.HTTP_201_CREATED,
+            message="Pipeline created from template successfully",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create pipeline from template: {str(e)}",
+        )
+
+
+@router.get("/{pipeline_id}/with-datasources")
+async def get_pipeline_with_datasources(
+    pipeline_id: str,
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[Dict[str, Any]]:
+    """Get pipeline with data source information"""
+
+    pipeline_service = PipelineService()
+
+    try:
+        pipeline = await pipeline_service.get_pipeline_with_datasources(pipeline_id)
+
+        return ApiResponse(
+            data=pipeline,
+            status=HttpStatus.HTTP_200_OK,
+            message="Pipeline with data sources retrieved successfully",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get pipeline: {str(e)}",
+        )
+
+
+@router.get("/{pipeline_id}/validate-datasources")
+async def validate_pipeline_datasources(
+    pipeline_id: str,
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[Dict[str, Any]]:
+    """Validate data sources used in pipeline"""
+
+    pipeline_service = PipelineService()
+
+    try:
+        validation = await pipeline_service.validate_pipeline_datasources(pipeline_id)
+
+        return ApiResponse(
+            data=validation,
+            status=HttpStatus.HTTP_200_OK,
+            message="Pipeline data source validation completed",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate: {str(e)}",
+        )
+
+
+@router.get("/steps/{step_type}/compatible-datasources")
+async def get_compatible_datasources_for_step(
+    step_type: str,
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[List[Dict[str, Any]]]:
+    """Get data sources compatible with a specific step type"""
+
+    pipeline_service = PipelineService()
+
+    try:
+        datasources = await pipeline_service.get_available_datasources_for_step(
+            step_type
+        )
+
+        return ApiResponse(
+            data=datasources,
+            status=HttpStatus.HTTP_200_OK,
+            message=f"Compatible data sources for {step_type} retrieved successfully",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get compatible data sources: {str(e)}",
+        )

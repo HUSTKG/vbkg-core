@@ -34,9 +34,9 @@ class Settings(BaseSettings):
     )
 
     # Neo4j
-    NEO4J_URI: str = "bolt://neo4j:7687"
+    NEO4J_URI: str = "bolt://0.0.0.0:7687"
     NEO4J_USER: str = "neo4j"
-    NEO4J_PASSWORD: str = "your-neo4j-password"
+    NEO4J_PASSWORD: str = "123456789"
 
     # AWS S3
     AWS_ACCESS_KEY_ID: Optional[str] = None
@@ -75,6 +75,8 @@ class Settings(BaseSettings):
     # Fallback model settings
     SPACY_MODEL: str = "xx_ent_wiki_sm"
     EMBEDDING_MODEL: str = "paraphrase-multilingual-MiniLM-L12-v2"
+
+    FLOWER_UNAUTHENTICATED_API: str = "true"
 
     class Config:
         env_file = ".env"

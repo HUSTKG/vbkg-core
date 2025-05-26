@@ -51,17 +51,6 @@ class UploadService:
             # Read file content
             file_content = await file.read()
 
-            # Upload to Supabase Storage
-            storage_response = await supabase.storage.from_(
-                settings.S3_BUCKET_NAME
-            ).upload(storage_path, file_content)
-
-            if not storage_response:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to upload file to storage",
-                )
-
             # Register in database
             file_upload = FileUploadCreate(
                 data_source_id=datasource_id if datasource_id else None,
@@ -87,6 +76,24 @@ class UploadService:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to register file upload",
                 )
+
+            # Upload to Supabase Storage
+            storage_response = await supabase.storage.from_(
+                settings.S3_BUCKET_NAME
+            ).upload(storage_path, file_content)
+
+            if not storage_response:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to upload file to storage",
+                )
+
+            # Update upload status
+            await self.update_file_status(
+                response.data[0]["id"],
+                FileUploadStatus.COMPLETED,
+                processed=False,
+            )
 
             return response.data[0]
         except HTTPException:
@@ -252,9 +259,9 @@ class UploadService:
 
             # Get from storage
             try:
-                response = await supabase.storage.from_("documents").download(
-                    storage_path
-                )
+                response = await supabase.storage.from_(
+                    settings.S3_BUCKET_NAME
+                ).download(storage_path)
                 return response
             except Exception as e:
                 raise HTTPException(

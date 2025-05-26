@@ -4,12 +4,14 @@ from fastapi import HTTPException, status
 
 from app.core.supabase import get_supabase
 from app.schemas.user import UserCreate, UserLogin
+from app.services.user import UserService
 
 
 class AuthService:
     async def login(self, user_data: UserLogin) -> Dict[str, Any]:
         """Authenticate user and return tokens"""
         try:
+            user_service = UserService()
             supabase = await get_supabase()
             response = await supabase.auth.sign_in_with_password(
                 {"email": user_data.email, "password": user_data.password}
@@ -28,6 +30,12 @@ class AuthService:
                     detail="Session not found",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
+
+            await user_service._log_user_activity(
+                user_id=response.user.id,
+                action="login",
+                details={"email": user_data.email},
+            )
 
             return {
                 "session": {
@@ -52,6 +60,7 @@ class AuthService:
     async def register(self, user_data: UserCreate) -> Dict[str, Any]:
         """Register a new user"""
         try:
+            user_service = UserService()
             supabase = await get_supabase()
             # Check if user already exists
             user_exists = await self._check_user_exists(user_data.email)
@@ -79,6 +88,12 @@ class AuthService:
             # Assign roles to user
             user_id = response.user.id
             await self._assign_roles(user_id, user_data.roles)
+
+            await user_service._log_user_activity(
+                user_id=user_id,
+                action="register",
+                details={"email": user_data.email, "roles": user_data.roles},
+            )
 
             return {
                 "id": user_id,

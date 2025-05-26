@@ -1,14 +1,15 @@
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
 from postgrest.base_request_builder import APIResponse
 
 from app.core.supabase import get_supabase
-from app.schemas.pipeline import (Pipeline, PipelineCreate, PipelineRunCreate,
-                                  PipelineRunStatus, PipelineRunUpdate,
-                                  PipelineUpdate)
+from app.schemas.pipeline import (Pipeline, PipelineCreate,
+                                  PipelineCreateFromTemplate,
+                                  PipelineRunCreate, PipelineRunStatus,
+                                  PipelineRunUpdate, PipelineUpdate)
 
 
 class PipelineService:
@@ -233,7 +234,7 @@ class PipelineService:
             # Start the pipeline task asynchronously
             task = run_pipeline_task.delay(
                 pipeline_id=pipeline_id, run_id=run["id"], user_id=user_id
-            ).get(timeout=1)
+            )
 
             # Update run with celery task ID
             await self.update_pipeline_run(
@@ -326,16 +327,19 @@ class PipelineService:
                 and not run_update.duration
             ):
                 run = await self.get_pipeline_run(run_id, pipeline_id)
-                start_time = datetime.fromisoformat(run["start_time"])
+                start_time = datetime.fromisoformat(str(run["start_time"]))
                 end_time = datetime.fromisoformat(str(run_update.end_time))
                 data["duration"] = int((end_time - start_time).total_seconds())
 
+            print(data)
             response = (
                 await supabase.from_("pipeline_runs")
                 .update(data)
                 .eq("id", run_id)
                 .execute()
             )
+
+            print(response)
 
             if not response.data:
                 raise HTTPException(
@@ -455,3 +459,164 @@ class PipelineService:
             raise HTTPException(
                 status_code=500, detail=f"Error cancelling pipeline: {str(e)}"
             )
+
+    async def create_pipeline_from_template(
+        self, template_request: PipelineCreateFromTemplate, user_id: str
+    ) -> Dict[str, Any]:
+        """Create pipeline from data source template"""
+
+        from app.services.datasource import DataSourceService
+
+        datasource_service = DataSourceService()
+
+        # Create pipeline using data source template
+        pipeline = await datasource_service.create_pipeline_from_template(
+            datasource_id=template_request.datasource_id,
+            template_name=template_request.template_name,
+            user_id=user_id,
+            custom_options=template_request.custom_options,
+        )
+
+        # Override name/description if provided
+        updates = {}
+        if template_request.name_override:
+            updates["name"] = template_request.name_override
+        if template_request.description_override:
+            updates["description"] = template_request.description_override
+        if template_request.schedule:
+            updates["schedule"] = template_request.schedule
+
+        if updates:
+            pipeline = await self.update_pipeline(
+                pipeline["id"], PipelineUpdate(**updates)
+            )
+
+        return pipeline
+
+    async def get_pipeline_with_datasources(self, pipeline_id: str) -> Dict[str, Any]:
+        """Get pipeline with data source information included"""
+
+        pipeline = await self.get_pipeline(pipeline_id)
+
+        # Get pipeline steps with data source info
+        from app.services.pipeline_step import PipelineStepService
+
+        step_service = PipelineStepService()
+        steps_response = await step_service.get_pipeline_steps(pipeline_id)
+
+        # Enrich steps with data source information
+        from app.services.datasource import DataSourceService
+
+        datasource_service = DataSourceService()
+
+        enriched_steps = []
+        for step in steps_response.data:
+            step_config = step.get("config", {})
+            datasource_id = step_config.get("datasource_id") or step.get(
+                "datasource_id"
+            )
+
+            if datasource_id:
+                try:
+                    datasource = await datasource_service.get_datasource(datasource_id)
+                    step["datasource_info"] = {
+                        "id": datasource["id"],
+                        "name": datasource["name"],
+                        "source_type": datasource["source_type"],
+                        "is_active": datasource["is_active"],
+                    }
+                except:
+                    step["datasource_info"] = None
+
+            enriched_steps.append(step)
+
+        pipeline["steps"] = enriched_steps
+        return pipeline
+
+    async def validate_pipeline_datasources(self, pipeline_id: str) -> Dict[str, Any]:
+        """Validate that all data sources referenced in pipeline are valid and accessible"""
+
+        from app.services.datasource import DataSourceService
+        from app.services.pipeline_step import PipelineStepService
+
+        step_service = PipelineStepService()
+        datasource_service = DataSourceService()
+
+        steps_response = await step_service.get_pipeline_steps(pipeline_id)
+        validation_results = {
+            "is_valid": True,
+            "errors": [],
+            "warnings": [],
+            "datasources_used": [],
+        }
+
+        datasources_checked = set()
+
+        for step in steps_response.data:
+            step_config = step.get("config", {})
+            datasource_id = step_config.get("datasource_id")
+
+            if datasource_id and datasource_id not in datasources_checked:
+                try:
+                    datasource = await datasource_service.get_datasource(datasource_id)
+
+                    if not datasource["is_active"]:
+                        validation_results["warnings"].append(
+                            f"Data source '{datasource['name']}' is inactive"
+                        )
+
+                    validation_results["datasources_used"].append(
+                        {
+                            "id": datasource["id"],
+                            "name": datasource["name"],
+                            "source_type": datasource["source_type"],
+                            "is_active": datasource["is_active"],
+                            "used_in_steps": [
+                                s["name"]
+                                for s in steps_response.data
+                                if s.get("config", {}).get("datasource_id")
+                                == datasource_id
+                            ],
+                        }
+                    )
+
+                    datasources_checked.add(datasource_id)
+
+                except Exception as e:
+                    validation_results["is_valid"] = False
+                    validation_results["errors"].append(
+                        f"Data source '{datasource_id}' referenced in step '{step['name']}' is not accessible: {str(e)}"
+                    )
+
+        return validation_results
+
+    async def get_available_datasources_for_step(
+        self, step_type: str
+    ) -> List[Dict[str, Any]]:
+        """Get data sources that are compatible with a specific step type"""
+
+        from app.services.datasource import DataSourceService
+
+        datasource_service = DataSourceService()
+
+        # Define compatibility mapping
+        step_datasource_compatibility = {
+            "file_reader": ["file"],
+            "api_fetcher": ["api", "url"],
+            "database_extractor": ["database"],
+            "text_extractor": ["file", "url"],  # Can work with files or URLs
+        }
+
+        compatible_types = step_datasource_compatibility.get(step_type, [])
+        if not compatible_types:
+            return []
+
+        # Get all active data sources of compatible types
+        all_datasources = []
+        for source_type in compatible_types:
+            datasources_response = await datasource_service.get_datasources(
+                source_type=source_type, is_active=True
+            )
+            all_datasources.extend(datasources_response.data)
+
+        return all_datasources

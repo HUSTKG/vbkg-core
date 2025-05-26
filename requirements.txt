@@ -21,3 +21,8 @@ sqlalchemy
 pandas
 psutil
 isort
+PyPDF2>=3.0.1
+python-docx
+nltk
+Levenshtein
+pdfplumber
