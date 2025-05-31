@@ -1,0 +1,28 @@
+{
+  "name": "vbkg",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "biome --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "@typescript-eslint/eslint-plugin": "^8.29.1",
+    "@typescript-eslint/parser": "^8.29.1",
+    "biome": "0.3.3",
+    "eslint": "^9.24.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "packageManager": "bun@1.2.9",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

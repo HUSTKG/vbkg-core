@@ -1,5 +1,3 @@
-# app/services/visualization.py
-import json
 import time
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
@@ -9,9 +7,8 @@ from postgrest.base_request_builder import APIResponse
 
 from app.core.config import settings
 from app.core.supabase import get_supabase
-from app.schemas.visualization import (Visualization, VisualizationCreate,
-                                       VisualizationData, VisualizationType,
-                                       VisualizationUpdate)
+from app.schemas.visualization import (VisualizationCreate, VisualizationData,
+                                       VisualizationType, VisualizationUpdate)
 from app.services.user import UserService
 
 
@@ -158,9 +155,6 @@ class VisualizationService:
                 detail=f"Error updating visualization: {str(e)}",
             )
 
-    # app/services/visualization.py (continued)
-
-    # app/services/visualization.py (continued)
     async def delete_visualization(self, visualization_id: str) -> Dict[str, Any]:
         """Delete a visualization"""
         try:

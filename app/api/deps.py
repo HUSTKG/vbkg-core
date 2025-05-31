@@ -30,7 +30,9 @@ async def get_current_user(
         if user:
             # Log API usage
             await _log_api_usage(request, user, api_key_id=user.get("api_key_info", {}).get("id"))
+
             return user
+
         
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -52,7 +54,7 @@ async def get_current_user(
             
             return enhanced_user
             
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",

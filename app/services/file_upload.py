@@ -10,12 +10,13 @@ from app.core.config import settings
 from app.core.supabase import get_supabase
 from app.schemas.file_upload import FileUploadCreate, FileUploadStatus
 from app.services.datasource import DataSourceService
+from app.services.user import UserService
 from app.utils.file_handler import get_file_type
 
 
 class UploadService:
     def __init__(self):
-        pass
+        self.user_service = UserService()
 
     async def upload_file(
         self,
@@ -93,6 +94,12 @@ class UploadService:
                 response.data[0]["id"],
                 FileUploadStatus.COMPLETED,
                 processed=False,
+            )
+
+            await self.user_service._log_user_activity(
+                user_id,
+                "file_upload",
+                f"Uploaded file '{file.filename}' to data source '{datasource_id}'",
             )
 
             return response.data[0]

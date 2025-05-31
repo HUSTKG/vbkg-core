@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (except the one we need)
+**/dist
+**/build
+**/.next
+**/.nuxt
+
+# Keep console app source but ignore its build initially
+!apps/console
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+**/*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# Turbo
+.turbo
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Environment files
+.env*
+!.env.example

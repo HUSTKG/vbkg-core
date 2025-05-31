@@ -1,0 +1,59 @@
+# Exclude frontend from API build
+frontend/
+
+# Exclude data directory (mounted as volume)
+data/
+
+# Exclude any other large directories you might have
+tests/
+docs/
+scripts/
+.github/
+
+# Exclude git and development files
+.git/
+.gitignore
+.env
+.env.local
+
+# Exclude documentation
+README.md
+*.md
+docs/
+
+# Exclude Docker files
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile.frontend
+
+# Exclude IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Exclude OS files
+.DS_Store
+Thumbs.db
+
+# Exclude Python virtual environments
+.venv/
+venv/
+env/
+.env/
+
+# Exclude Python cache and artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Exclude Node.js files (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

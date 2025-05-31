@@ -49,6 +49,7 @@ async def read_user_me(
     """
     Get current user with enhanced information including permissions.
     """
+    print("Current user:", current_user)  # Debugging line
     return ApiResponse(
         data=current_user,
         status=status.HTTP_200_OK,
@@ -229,7 +230,6 @@ async def revoke_api_key(
     )
 
 
-# User Activity Endpoints
 @router.get("/me/activity", response_model=ApiResponse[List[Dict[str, Any]]])
 async def get_my_activity(
     limit: int = 50,

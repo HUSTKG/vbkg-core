@@ -87,7 +87,7 @@ class AuthService:
 
             # Assign roles to user
             user_id = response.user.id
-            await self._assign_roles(user_id, user_data.roles)
+            await self._assign_roles(user_id, role_names=["user"])
 
             await user_service._log_user_activity(
                 user_id=user_id,
@@ -128,6 +128,7 @@ class AuthService:
             supabase = await get_supabase()
             response = await supabase.auth.get_user(token)
             if not response:
+                print("No response from Supabase auth get_user")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid authentication credentials",
@@ -137,6 +138,7 @@ class AuthService:
             user = response.user
 
             if not user:
+                print("No user found in Supabase auth get_user response")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid authentication credentials",
@@ -154,6 +156,7 @@ class AuthService:
                 "roles": roles,
             }
         except Exception as _:
+            print("Error in get_current_user:", _)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authentication credentials",

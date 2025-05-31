@@ -7,9 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=off \
     PIP_DISABLE_PIP_VERSION_CHECK=on 
 
-WORKDIR /app
-
-# Install system dependencies
+# Install system dependencies as root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     build-essential \
@@ -21,20 +19,27 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies as root
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# Install Vietnamese language model for spaCy (if needed)
+# Install Vietnamese language model for spaCy
 RUN pip install https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.5.0/xx_ent_wiki_sm-3.5.0-py3-none-any.whl
 
-# Copy project files
-COPY . .
+# Create non-root user and app directory
+RUN adduser --disabled-password --gecos "" appuser \
+    && mkdir -p /app \
+    && chown appuser:appuser /app
 
-# Run as non-root user
-RUN adduser --disabled-password --gecos "" appuser
-RUN chown -R appuser:appuser /app
+# Switch to non-root user
 USER appuser
+WORKDIR /app
+
+# Copy application code with correct ownership (this avoids slow chown -R)
+COPY --chown=appuser:appuser . .
+
+# Expose port
+EXPOSE 8000
 
 # Command to run on container start
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

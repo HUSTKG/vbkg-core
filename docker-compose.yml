@@ -37,7 +37,7 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - ./frontend/.env.local
+      - ./frontend/apps/console/.env.local
     depends_on:
       - api
     networks:
