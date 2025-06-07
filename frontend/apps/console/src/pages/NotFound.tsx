@@ -1,4 +1,4 @@
-import { Button } from "@vbkg/ui";
+import { Button } from "@/components";
 import { useNavigate } from "react-router";
 
 export default function NotFound() {

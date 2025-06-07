@@ -40,6 +40,7 @@ class FIBOClass(FIBOClassBase):
 class FIBOPropertyBase(BaseModel):
     uri: str = Field(..., description="URI of the FIBO property")
     label: Optional[str] = None
+    domain: Optional[str] = None
     description: Optional[str] = None
     property_type: str = Field(
         ..., description="Type of property: 'object' or 'datatype'"

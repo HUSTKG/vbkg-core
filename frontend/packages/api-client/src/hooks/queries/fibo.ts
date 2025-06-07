@@ -117,7 +117,7 @@ export const useRelationshipMappings = (
 
 export const useSuggestFiboClasses = (
   input: ISuggestFiboClassesRequest,
-  options?: UseQueryOptions<ISuggestFiboClassesResponse, Error>,
+  options?: Partial<UseQueryOptions<ISuggestFiboClassesResponse, Error>>,
 ) => {
   return useQuery<ISuggestFiboClassesResponse, Error>({
     queryKey: ["suggestFiboClasses", input],
@@ -129,7 +129,7 @@ export const useSuggestFiboClasses = (
 
 export const useSuggestFiboProperties = (
   input: ISuggestFiboPropertiesRequest,
-  options?: UseQueryOptions<ISuggestFiboPropertiesResponse, Error>,
+  options?: Partial<UseQueryOptions<ISuggestFiboPropertiesResponse, Error>>,
 ) => {
   return useQuery<ISuggestFiboPropertiesResponse, Error>({
     queryKey: ["suggestFiboProperties", input],

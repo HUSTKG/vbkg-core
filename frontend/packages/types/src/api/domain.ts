@@ -13,7 +13,6 @@ import {
   DomainSearchRequest,
   EntityTypeSearchRequest,
   RelationshipTypeSearchRequest,
-  RelationshipTypeSearchResponse,
   TypeDomainMappingRequest,
   TypeValidationRequest,
   TypeValidationResponse,
@@ -99,7 +98,7 @@ export interface ICreateRelationshipTypeResponse
 export interface IReadRelationshipTypesRequest
   extends RelationshipTypeSearchRequest {}
 export interface IReadRelationshipTypesResponse
-  extends ApiResponse<RelationshipTypeSearchResponse> {}
+  extends PaginatedResponse<RelationshipType> {}
 
 export interface IReadRelationshipTypeRequest {
   id: string;

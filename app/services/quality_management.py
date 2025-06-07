@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -7,8 +6,8 @@ from uuid import UUID
 from postgrest.types import CountMethod
 
 from app.core.supabase import get_supabase
-from app.schemas.conflict_resolution import (ConflictStatus, QualityAssessment,
-                                             QualityDimension, QualityReport)
+from app.schemas.conflict_resolution import (ConflictStatus, QualityDimension,
+                                             QualityReport)
 from app.services.conflict_detection import ConflictDetectionService
 from app.services.conflict_resolution import ConflictResolutionService
 from app.services.user import UserService
@@ -39,19 +38,19 @@ class QualityManagementService:
         # Get basic statistics
         entities_response = (
             await supabase.table("kg_entities")
-            .select("*", count="exact")
+            .select("*", count=CountMethod.exact)
             .eq("is_active", True)
             .execute()
         )
         relationships_response = (
             await supabase.table("kg_relationships")
-            .select("*", count="exact")
+            .select("*", count=CountMethod.exact)
             .eq("is_active", True)
             .execute()
         )
         conflicts_response = (
             await supabase.table("conflicts")
-            .select("*", count="exact")
+            .select("*", count=CountMethod.exact)
             .in_(
                 "status",
                 [ConflictStatus.DETECTED.value, ConflictStatus.UNDER_REVIEW.value],
@@ -97,7 +96,7 @@ class QualityManagementService:
         )
 
         return QualityReport(
-            report_date=end_date,
+            report_date=end_date.isoformat(),
             overall_score=overall_score,
             dimension_scores=dimension_scores,
             total_entities=total_entities,
@@ -269,10 +268,16 @@ class QualityManagementService:
         supabase = await get_supabase()
         entities_response = (
             await supabase.table("kg_entities")
-            .select("*", count="exact")
+            .select("*", count=CountMethod.exact)
             .eq("is_active", True)
             .execute()
         )
+        # drop the embedding
+
+        if not entities_response.data:
+            return 1.0
+
+        # Count total entities
         total_entities = entities_response.count or 0
 
         if total_entities == 0:
@@ -402,7 +407,7 @@ class QualityManagementService:
                 }
             )
 
-            results["quality_report"] = quality_report.dict()
+            results["quality_report"] = quality_report.model_dump()
 
         except Exception as e:
             logger.error(f"Quality assessment failed: {e}")

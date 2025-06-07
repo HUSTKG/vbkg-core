@@ -1,7 +1,7 @@
 import { useCreateFiboClass } from "@vbkg/api-client";
 import { CreateFiboClassSchema } from "@vbkg/schemas";
 import { FIBOClass } from "@vbkg/types";
-import { AppForm, FieldConfig } from "@vbkg/ui";
+import { AppForm, FieldConfig } from "@/components";
 
 interface FormCreateFiboClassProps {
   fiboClasses: FIBOClass[];

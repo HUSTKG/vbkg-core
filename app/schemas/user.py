@@ -6,7 +6,7 @@ from pydantic import BaseModel, EmailStr, Field
 class UserBase(BaseModel):
     """Base model for user data."""
 
-    email: EmailStr
+    email: Optional[EmailStr]
     full_name: Optional[str] = None
     department: Optional[str] = None
     position: Optional[str] = None
@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
     position: Optional[str] = None
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
+    is_active: Optional[bool] = None
     roles: Optional[List[str]] = None
 
 

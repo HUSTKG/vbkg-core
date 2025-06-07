@@ -1,4 +1,4 @@
-import { Dialog } from "@vbkg/ui";
+import { Dialog } from "@/components";
 import FormCreateDialog from "../form/create";
 
 interface CreateDomainDialogProps {

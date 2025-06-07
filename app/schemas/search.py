@@ -104,18 +104,18 @@ class GraphSearchQuery(BaseModel):
             raise ValueError("Relationship path must not be empty")
         return v
 
-    @field_validator("start_entity_id", "start_entity_type", "start_entity_text")
-    def validate_start_entity(cls, v, values):
-        # Ensure at least one of start_entity_id, start_entity_type+start_entity_text is provided
-        if (
-            "start_entity_id" not in values
-            and "start_entity_type" not in values
-            and "start_entity_text" not in values
-        ):
-            raise ValueError(
-                "Either start_entity_id or both start_entity_type and start_entity_text must be provided"
-            )
-        return v
+    # @field_validator("start_entity_id", "start_entity_type", "start_entity_text")
+    # def validate_start_entity(cls, v, values):
+    #     # Ensure at least one of start_entity_id, start_entity_type+start_entity_text is provided
+    #     if (
+    #         "start_entity_id" not in values
+    #         and "start_entity_type" not in values
+    #         and "start_entity_text" not in values
+    #     ):
+    #         raise ValueError(
+    #             "Either start_entity_id or both start_entity_type and start_entity_text must be provided"
+    #         )
+    #     return v
 
 
 class GraphSearchResult(BaseModel):

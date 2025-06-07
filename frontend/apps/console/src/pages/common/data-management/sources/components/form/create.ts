@@ -1,6 +1,6 @@
 import { CreateDataSourceSchema } from "@vbkg/schemas";
 import { SourceType } from "@vbkg/types";
-import { FieldConfig } from "@vbkg/ui";
+import { FieldConfig } from "@/components";
 import { z } from "zod";
 
 export const formCreateDataSourceConfig = (

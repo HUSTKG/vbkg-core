@@ -1,7 +1,7 @@
 import { useUpdateFiboProperty } from "@vbkg/api-client";
 import { UpdateFiboPropertySchema } from "@vbkg/schemas";
 import { FIBOClass, FIBOProperty } from "@vbkg/types";
-import { AppForm, FieldConfig, toast } from "@vbkg/ui";
+import { AppForm, FieldConfig, toast } from "@/components";
 import { z } from "zod";
 
 interface FormEditFiboPropertyProps {

@@ -1,4 +1,4 @@
-import { AppForm, FieldConfig } from "@vbkg/ui";
+import { AppForm, FieldConfig } from "@/components";
 import { UpdateDomainSchema } from "@vbkg/schemas";
 import { Domain } from "@vbkg/types";
 import { z } from "zod";

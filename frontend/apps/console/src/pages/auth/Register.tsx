@@ -1,6 +1,6 @@
 import { useRegister } from "@vbkg/api-client";
 import { registerSchema } from "@vbkg/schemas";
-import { AppForm, Card } from "@vbkg/ui";
+import { AppForm, Card } from "@/components";
 import { Link } from "react-router";
 
 export default function Register() {

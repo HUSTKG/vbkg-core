@@ -43,7 +43,7 @@ celery -A app.tasks.worker beat \
     --pidfile=/tmp/celery_beat.pid \
     --logfile=/tmp/celery_beat.log
 
-FLOWER_UNAUTHENTICATED_API=true
+export FLOWER_UNAUTHENTICATED_API=true
 
 # Start Flower monitoring (optional)
 echo "Starting Flower monitoring..."

@@ -20,8 +20,6 @@ import {
   IGetRelationshipTypesByDomainResponse,
   IGetCompatibleRelationshipsRequest,
   IGetCompatibleRelationshipsResponse,
-  IGetDomainAnalyticsOverviewRequest,
-  IGetDomainAnalyticsOverviewResponse,
 } from "@vbkg/types";
 import { DomainService } from "../../services/domain";
 
@@ -176,21 +174,6 @@ export const useCompatibleRelationships = (
     queryKey: ["compatibleRelationships", input],
     queryFn: () => DomainService.getCompatibleRelationships(input),
     enabled: !!input.source_entity_type_id,
-    ...options,
-  });
-};
-
-// =============================================
-// ANALYTICS HOOKS
-// =============================================
-
-export const useDomainAnalyticsOverview = (
-  input: IGetDomainAnalyticsOverviewRequest = {},
-  options?: UseQueryOptions<IGetDomainAnalyticsOverviewResponse, Error>,
-) => {
-  return useQuery<IGetDomainAnalyticsOverviewResponse, Error>({
-    queryKey: ["domainAnalyticsOverview"],
-    queryFn: () => DomainService.getDomainAnalyticsOverview(input),
     ...options,
   });
 };

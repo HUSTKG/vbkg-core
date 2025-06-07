@@ -31,7 +31,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@vbkg/ui";
+} from "@/components";
 import { useDomains, useRelationshipTypes } from "@vbkg/api-client";
 
 // Types based on API schemas

@@ -106,9 +106,7 @@ export interface IReadEntityMappingRequest {
 export interface IReadEntityMappingResponse
   extends ApiResponse<EntityMapping> {}
 
-export interface ICreateEntityMappingRequest {
-  mapping: EntityMappingCreate;
-}
+export interface ICreateEntityMappingRequest extends EntityMappingCreate{ }
 export interface ICreateEntityMappingResponse
   extends ApiResponse<EntityMapping> {}
 
@@ -150,11 +148,7 @@ export interface IReadRelationshipMappingRequest {
 export interface IReadRelationshipMappingResponse
   extends ApiResponse<RelationshipMapping> {}
 
-export interface ICreateRelationshipMappingRequest {
-  mapping: RelationshipMappingCreate;
-}
-export interface ICreateRelationshipMappingResponse
-  extends ApiResponse<RelationshipMapping> {}
+export interface ICreateRelationshipMappingRequest extends RelationshipMappingCreate {}
 
 export interface IUpdateRelationshipMappingRequest
   extends RelationshipMappingUpdate {

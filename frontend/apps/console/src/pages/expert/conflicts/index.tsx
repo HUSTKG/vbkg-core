@@ -30,7 +30,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@vbkg/ui";
+} from "@/components";
 
 // Reusable Components
 const StatusBadge = ({ status }: any) => {
@@ -686,50 +686,6 @@ const ConflictsPage = () => {
                 <Play className="h-4 w-4 mr-2" />
                 {isDetecting ? "Đang phát hiện..." : "Phát hiện xung đột"}
               </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {stats.total}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Tổng số xung đột
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-yellow-600">
-              {stats.detected}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Mới phát hiện
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.under_review}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Đang xem xét
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-green-600">
-              {stats.resolved}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Đã giải quyết
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-red-600">
-              {stats.escalated}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Đã báo cáo
             </div>
           </div>
         </div>

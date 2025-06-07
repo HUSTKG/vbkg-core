@@ -1,6 +1,6 @@
 import { FIBOClass } from "@vbkg/types";
 import FormCreateFiboClass from "../form/create-class";
-import { Dialog } from "@vbkg/ui";
+import { Dialog } from "@/components";
 
 export default function CreateFiboClassDialog({
   isCreateClassModalOpen,

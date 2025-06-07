@@ -1,11 +1,12 @@
 import asyncio
+import json
 import logging
 from typing import Dict, List, Optional
 
 from app.core.supabase import get_supabase
 from app.nlp.embeddings import get_text_embedding
-from app.schemas.conflict_resolution import (Conflict, ConflictCreate,
-                                             ConflictSeverity, ConflictType)
+from app.schemas.conflict_resolution import (ConflictCreate, ConflictSeverity,
+                                             ConflictType)
 from app.utils.similarity import calculate_similarity
 
 logger = logging.getLogger(__name__)
@@ -107,13 +108,12 @@ class ConflictDetectionService:
                 )
 
                 # Determine if it's a conflict
-                max_similarity = max(similarities.values())
+                avg_similarity = sum(similarities.values()) / len(similarities)
                 if (
-                    max_similarity
-                    >= self.similarity_thresholds[ConflictType.DUPLICATE_ENTITY]
+                    avg_similarity >= self.similarity_thresholds[ConflictType.DUPLICATE_ENTITY]
                 ):
 
-                    severity = self._determine_severity(max_similarity, similarities)
+                    severity = self._determine_severity(avg_similarity, similarities)
 
                     # convert similarities from float to string
                     similarities = {k: str(v) for k, v in similarities.items()}
@@ -122,7 +122,7 @@ class ConflictDetectionService:
                         conflict_type=ConflictType.DUPLICATE_ENTITY,
                         severity=severity,
                         description=f"Potential duplicate entities detected: '{entity1['entity_text']}' and '{entity2['entity_text']}'",
-                        confidence_score=max_similarity,
+                        confidence_score=avg_similarity,
                         source_entity_id=entity1["id"],
                         target_entity_id=entity2["id"],
                         conflicting_attributes={
@@ -158,7 +158,9 @@ class ConflictDetectionService:
         # Semantic similarity using embeddings
         if entity1.get("embedding") and entity2.get("embedding"):
             similarities["semantic"] = calculate_similarity(
-                entity1["embedding"], entity2["embedding"], method="cosine"
+                json.loads(entity1["embedding"]),
+                json.loads(entity2["embedding"]),
+                method="cosine",
             )
         else:
             # Generate embeddings if not available

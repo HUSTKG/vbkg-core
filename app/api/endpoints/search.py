@@ -4,16 +4,21 @@ from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.api.deps import PermissionChecker
 from app.schemas.api import ApiResponse
-from app.schemas.search import (EmbeddingRequest, EmbeddingResponse,
-                                GraphSearchQuery, GraphSearchResult,
-                                SearchRequest, SearchResponse,
-                                SimilarEntityRequest)
+from app.schemas.search import (
+    EmbeddingRequest,
+    EmbeddingResponse,
+    GraphSearchQuery,
+    GraphSearchResult,
+    SearchRequest,
+    SearchResponse,
+    SimilarEntityRequest,
+)
 from app.services.search import SearchService
 
 router = APIRouter()
 
-check_read_permission = PermissionChecker("knowledge:read")
-check_write_permission = PermissionChecker("knowledge:write")
+check_read_permission = PermissionChecker("kg:read")
+check_write_permission = PermissionChecker("kg:edit")
 
 
 @router.post("/entities", response_model=ApiResponse[SearchResponse])
@@ -25,7 +30,12 @@ async def search_entities(
     Search for entities in the knowledge graph.
     """
     search_service = SearchService()
-    return await search_service.search_entities(search_request=search_request)
+    response = await search_service.search_entities(search_request=search_request)
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_200_OK,
+        message="Entities retrieved successfully",
+    )
 
 
 @router.post("/similar", response_model=ApiResponse[List[Dict[str, Any]]])

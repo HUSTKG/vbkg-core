@@ -9,7 +9,6 @@ export default function ConfigureDataSource() {
         <h1 className="text-2xl font-bold">Quản lý nguồn</h1>
         <CreateDataSourceSheet />
       </div>
-
       <DataSourceList />
     </div>
   );

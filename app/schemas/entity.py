@@ -26,6 +26,16 @@ class EntityCreate(EntityBase):
     is_verified: Optional[bool] = False
     verification_notes: Optional[str] = None
 
+class EntityResponse(BaseModel):
+    id: str
+    entity_text: str
+    entity_type: str
+    properties: Dict[str, Any]
+    confidence: float
+    is_verified: bool
+    relationship_count: int
+    created_at: str
+    updated_at: Optional[str] = None
 
 class EntityUpdate(BaseModel):
     """Model for updating an existing entity."""
@@ -56,9 +66,6 @@ class Entity(EntityBase):
     verified_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
-
-    # Optional embedding vector (not always returned)
-    embedding: Optional[List[float]] = None
 
     class Config:
         from_attributes = True

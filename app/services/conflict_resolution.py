@@ -13,7 +13,7 @@ from app.core.supabase import get_supabase
 from app.schemas.conflict_resolution import (ConflictResolution,
                                              ConflictStatus, ConflictType,
                                              ResolutionMethod)
-from app.services.knowledge_graph_editor import KnowledgeGraphEditor
+from app.services.knowledge_graph import KnowledgeGraphService
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class ConflictResolutionService:
     """Service for resolving conflicts using AI assistance and expert input"""
 
     def __init__(self):
-        self.kg_editor = KnowledgeGraphEditor()
+        self.kg_editor = KnowledgeGraphService()
         self.llm_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
 
     async def resolve_conflict_automatically(
@@ -107,7 +107,6 @@ class ConflictResolutionService:
             # Extract response text
             response_text = response.choices[0].message.content.strip()
 
-            print(f"AI Response: {response_text}")
 
             # Parse LLM response
             suggestions = self._parse_ai_response(response_text)
@@ -421,7 +420,8 @@ class ConflictResolutionService:
 
     async def get_conflicts_for_review(
         self,
-        expert_id: str,
+        expert_id: Optional[str] = None,
+        severity: Optional[str] = None,
         status: Optional[ConflictStatus] = None,
         conflict_type: Optional[ConflictType] = None,
         limit: int = 50,
@@ -440,15 +440,17 @@ class ConflictResolutionService:
                 [ConflictStatus.DETECTED.value, ConflictStatus.UNDER_REVIEW.value],
             )
 
+        if severity:
+            query = query.eq("severity", severity)
+
+        if expert_id:
+            query = query.eq("assigned_to", expert_id)
+
         if conflict_type:
             query = query.eq("conflict_type", conflict_type.value)
 
         # Prioritize by severity and assignment
-        query = (
-            query.order("severity", desc=True)
-            .order("detected_at", desc=False)
-            .limit(limit)
-        )
+        query = query.order("detected_at", desc=False).limit(limit)
 
         response = await query.execute()
         conflicts = response.data

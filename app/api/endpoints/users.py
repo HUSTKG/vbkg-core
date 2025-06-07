@@ -49,7 +49,6 @@ async def read_user_me(
     """
     Get current user with enhanced information including permissions.
     """
-    print("Current user:", current_user)  # Debugging line
     return ApiResponse(
         data=current_user,
         status=status.HTTP_200_OK,
@@ -120,7 +119,7 @@ async def read_user(
     user_service = UserService()
     user = await user_service.get_user_by_id(user_id)
     return ApiResponse(
-        data=user, status=status.HTTP_200_OK, message="User retrieved successfully"
+        data=User(**user), status=status.HTTP_200_OK, message="User retrieved successfully"
     )
 
 

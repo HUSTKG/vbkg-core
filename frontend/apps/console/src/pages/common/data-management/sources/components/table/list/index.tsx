@@ -9,7 +9,7 @@ import {
   CardTitle,
   DataTable,
   toast,
-} from "@vbkg/ui";
+} from "@/components";
 import { Edit, Eye, Trash } from "lucide-react";
 import React, { useCallback, useState } from "react";
 import { dataSourceTableColumns } from "./columns";
@@ -41,7 +41,7 @@ const DataSourceList: React.FC = () => {
   }, []);
 
   const handleEdit = useCallback((row: DataSource) => {
-    console.log("Chỉnh sửa:", row.id);
+	navigate("./" + row.id + "?edit=true");
   }, []);
 
   const handleDelete = useCallback((row: DataSource) => {

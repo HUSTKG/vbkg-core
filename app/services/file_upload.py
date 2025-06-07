@@ -29,9 +29,17 @@ class UploadService:
         try:
             supabase = await get_supabase()
             datasource_service = DataSourceService()
+
+            file_path = f"usercont.{uuid.uuid4()}"
+            file_format = ""
+
             if datasource_id:
                 # First check if data source exists
                 datasource = await datasource_service.get_datasource(datasource_id)
+
+                connection_details = datasource.get("connection_details", {})
+                file_path = f"{connection_details["file_path"]}.{datasource_id}"
+                file_format = connection_details.get("file_format", "")
 
                 if datasource["source_type"] != "file":
                     raise HTTPException(
@@ -47,7 +55,15 @@ class UploadService:
 
             # Generate a unique file path in storage
             file_ext = file.filename.split(".")[-1] if "." in file.filename else ""
-            storage_path = f"{datasource_id if datasource_id else 'usercont'}/{file.filename}.{uuid.uuid4()}.{file_ext}"
+
+            if not file_ext or (file_format and file_ext.lower() != file_format):
+                # If file extension does not match expected format, use the provided format
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"File extension '{file_ext}' does not match expected format '{file_format}'",
+                )
+
+            storage_path = f"{file_path}/{file.filename}.{file_ext}"
 
             # Read file content
             file_content = await file.read()

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Activity,
   Users,
@@ -30,7 +30,7 @@ import {
   Check,
 } from "lucide-react";
 import { z } from "zod";
-import { AppForm, DataTable, StatisticCard } from "@vbkg/ui";
+import { AppForm, DataTable, StatisticCard } from "@/components";
 
 // Activity Timeline Component
 const ActivityTimeline = ({ activities, onActivityClick }) => {

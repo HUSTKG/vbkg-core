@@ -748,7 +748,7 @@ class FIBOService:
 
             response = await query.execute()
 
-            mapping_data = mapping.dict()
+            mapping_data = mapping.model_dump()
             if user_id:
                 mapping_data["created_by"] = user_id
 
@@ -778,6 +778,10 @@ class FIBOService:
                     .insert(mapping_data)
                     .execute()
                 )
+                # update entity.is_mapped
+                await supabase.from_("entities").update(
+                        {"is_mapped": True}
+                                        ).eq("id", mapping_data["entity_type_id"]).execute()
                 return insert_response.data[0]
         except HTTPException:
             raise
@@ -971,6 +975,10 @@ class FIBOService:
                     .execute()
                 )
 
+                await supabase.from_("relationship_types").update(
+                        {"is_mapped": True}
+                                        ).eq("id", mapping.relationship_type_id).execute()
+
                 await self.user_service._log_user_activity(
                     user_id=user_id,
                     action="create_relationship_mapping",
@@ -1067,7 +1075,7 @@ class FIBOService:
             classes = await self.get_fibo_classes(search=entity_type, limit=1)
 
             if classes:
-                return classes[0]
+                return classes.data[0]
 
             return None
         except Exception as e:
@@ -1104,7 +1112,7 @@ class FIBOService:
             )
 
             if properties:
-                return properties[0]
+                return properties.data[0]
 
             return None
         except Exception as e:

@@ -1,5 +1,5 @@
 import { Domain } from "@vbkg/types";
-import { Badge, Dialog } from "@vbkg/ui";
+import { Badge, Dialog } from "@/components";
 
 interface ViewDomainDialogProps {
   isViewModalOpen: boolean;

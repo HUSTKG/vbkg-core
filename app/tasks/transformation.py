@@ -72,9 +72,16 @@ async def enrich_entities_with_embeddings(
                 try:
                     # Create combined text for embedding
                     entity_text = f"{entity['entity_type']}: {entity['entity_text']}"
+
+                    text_to_embed = entity_text
+                    properties = entity.get("properties", {})
+
+                    if properties:
+                        # Add properties to the text if available
+                        text_to_embed += " " + " ".join(f"{key}: {value}" for key, value in properties.items())
                     
                     # Generate embedding
-                    embedding = await get_text_embedding(entity_text)
+                    embedding = await get_text_embedding(text_to_embed)
                     
                     if embedding:
                         # Update entity with embedding
@@ -356,7 +363,8 @@ async def detect_entity_conflicts(
     Returns:
         Dictionary with statistics about the operation
     """
-    from app.services.entity_resolution import find_entity_conflicts, create_entity_conflict
+    from app.services.entity_resolution import (create_entity_conflict,
+                                                find_entity_conflicts)
     
     try:
         supabase = await get_supabase()

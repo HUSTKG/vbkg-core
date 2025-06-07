@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Database, Settings, Download, FileText, Search } from "lucide-react";
-import * as z from "zod";
 import {
   Badge,
   Button,
@@ -19,9 +18,8 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@vbkg/ui";
+} from "@/components";
 import { useFiboClasses, useFiboProperties } from "@vbkg/api-client";
-import { ImportOntologySchema } from "@vbkg/schemas";
 import PropertyListTable from "./table/property-list";
 import ClassListTable from "./table/class-list";
 import ImportOntologyDialog from "./dialog/import";
@@ -136,12 +134,8 @@ const FIBOManagementPage: React.FC = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={() => setIsImportModalOpen(true)}>
+          <Button variant={"outline"} onClick={() => setIsImportModalOpen(true)}>
             Import Ontology
-          </Button>
-          <Button>
-            <Download size={16} className="mr-2" />
-            Export
           </Button>
         </div>
       </div>
@@ -262,7 +256,7 @@ const FIBOManagementPage: React.FC = () => {
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={() => setIsCreateClassModalOpen(true)}>
+                  <Button variant="outline" onClick={() => setIsCreateClassModalOpen(true)}>
                     Create Class
                   </Button>
                 </div>

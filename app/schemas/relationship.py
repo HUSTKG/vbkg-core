@@ -4,6 +4,17 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class RelationshipResponse(BaseModel):
+    id: str
+    relationship_type: str
+    properties: Dict[str, Any]
+    confidence: float
+    is_verified: bool
+    source_entity: Dict[str, Any]
+    target_entity: Dict[str, Any]
+    created_at: str
+
+
 class RelationshipBase(BaseModel):
     """Base model for relationship data."""
 

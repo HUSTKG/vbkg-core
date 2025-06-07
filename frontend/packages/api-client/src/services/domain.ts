@@ -47,12 +47,6 @@ import {
   IGetRelationshipTypesByDomainResponse,
   IGetCompatibleRelationshipsRequest,
   IGetCompatibleRelationshipsResponse,
-  IGetDomainAnalyticsOverviewRequest,
-  IGetDomainAnalyticsOverviewResponse,
-  IBulkCreateEntityTypesRequest,
-  IBulkCreateEntityTypesResponse,
-  IBulkCreateRelationshipTypesRequest,
-  IBulkCreateRelationshipTypesResponse,
 } from "@vbkg/types";
 import { API_ENDPOINTS } from "@vbkg/utils";
 import { api } from "../config/axios";
@@ -350,46 +344,6 @@ const getCompatibleRelationships = async (
 };
 
 // =============================================
-// ANALYTICS SERVICES
-// =============================================
-
-const getDomainAnalyticsOverview = async (
-  input: IGetDomainAnalyticsOverviewRequest,
-): Promise<IGetDomainAnalyticsOverviewResponse> => {
-  return await api()
-    .get<IGetDomainAnalyticsOverviewResponse>(
-      API_ENDPOINTS.GET_DOMAIN_ANALYTICS_OVERVIEW,
-    )
-    .then((res) => res.data);
-};
-
-// =============================================
-// BULK OPERATION SERVICES
-// =============================================
-
-const bulkCreateEntityTypes = async (
-  input: IBulkCreateEntityTypesRequest,
-): Promise<IBulkCreateEntityTypesResponse> => {
-  return await api()
-    .post<IBulkCreateEntityTypesResponse>(
-      API_ENDPOINTS.BULK_CREATE_ENTITY_TYPES,
-      input,
-    )
-    .then((res) => res.data);
-};
-
-const bulkCreateRelationshipTypes = async (
-  input: IBulkCreateRelationshipTypesRequest,
-): Promise<IBulkCreateRelationshipTypesResponse> => {
-  return await api()
-    .post<IBulkCreateRelationshipTypesResponse>(
-      API_ENDPOINTS.BULK_CREATE_RELATIONSHIP_TYPES,
-      input,
-    )
-    .then((res) => res.data);
-};
-
-// =============================================
 // EXPORT SERVICE
 // =============================================
 
@@ -429,11 +383,4 @@ export const DomainService = {
   getEntityTypesByDomain,
   getRelationshipTypesByDomain,
   getCompatibleRelationships,
-
-  // Analytics
-  getDomainAnalyticsOverview,
-
-  // Bulk Operations
-  bulkCreateEntityTypes,
-  bulkCreateRelationshipTypes,
 };

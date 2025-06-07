@@ -1,5 +1,5 @@
 import { DataSource } from "@vbkg/types";
-import { DeleteDialog } from "@vbkg/ui";
+import { DeleteDialog } from "@/components";
 
 interface DeleteDataSourceDialogProps {
   open: boolean;

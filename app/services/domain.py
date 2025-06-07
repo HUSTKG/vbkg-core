@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
 from postgrest.types import CountMethod
 
@@ -334,6 +333,7 @@ class DomainService:
         query: Optional[str] = None,
         domain_ids: Optional[List[int]] = None,
         is_active: Optional[bool] = None,
+        is_mapped: Optional[bool] = None,
         include_usage: bool = False,
         limit: int = 50,
         skip: int = 0,
@@ -355,6 +355,13 @@ class DomainService:
 
         if is_active is not None:
             db_query = db_query.eq("is_active", is_active)
+
+        if is_mapped is not None:
+            # return only types that are mapped to domains
+            if is_mapped:
+                db_query = db_query.eq("is_mapped", True)
+            else:
+                db_query = db_query.eq("is_mapped", False)
 
         if query:
             db_query = db_query.or_(
@@ -517,6 +524,7 @@ class DomainService:
         domain_ids: Optional[List[int]] = None,
         source_entity_type_id: Optional[int] = None,
         target_entity_type_id: Optional[int] = None,
+        is_mapped: Optional[bool] = None,
         is_bidirectional: Optional[bool] = None,
         is_active: Optional[bool] = None,
         include_usage: bool = False,
@@ -539,6 +547,13 @@ class DomainService:
 
         if is_active is not None:
             db_query = db_query.eq("is_active", is_active)
+
+        if is_mapped is not None:
+            # return only types that are mapped to domains
+            if is_mapped:
+                db_query = db_query.eq("is_mapped", True)
+            else:
+                db_query = db_query.eq("is_mapped", False)
 
         if is_bidirectional is not None:
             db_query = db_query.eq("is_bidirectional", is_bidirectional)

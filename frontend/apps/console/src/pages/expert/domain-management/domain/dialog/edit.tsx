@@ -1,5 +1,5 @@
 import { Domain } from "@vbkg/types";
-import { AppForm, Dialog } from "@vbkg/ui";
+import { AppForm, Dialog } from "@/components";
 import { UpdateDomainSchema } from "@vbkg/schemas";
 import { z } from "zod";
 import FormEditDomain from "../form/edit";

@@ -1,205 +1,215 @@
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import {
-  ICreateFiboClassRequest,
-  ICreateFiboClassResponse,
-  IUpdateFiboClassRequest,
-  IUpdateFiboClassResponse,
-  IDeleteFiboClassRequest,
-  IDeleteFiboClassResponse,
-  ICreateFiboPropertyRequest,
-  ICreateFiboPropertyResponse,
-  IUpdateFiboPropertyRequest,
-  IUpdateFiboPropertyResponse,
-  IDeleteFiboPropertyRequest,
-  IDeleteFiboPropertyResponse,
-  IImportOntologyRequest,
-  IImportOntologyResponse,
-  ICreateEntityMappingRequest,
-  ICreateEntityMappingResponse,
-  IDeleteEntityMappingRequest,
-  IDeleteEntityMappingResponse,
-  IVerifyEntityMappingRequest,
-  IVerifyEntityMappingResponse,
-  ICreateRelationshipMappingRequest,
-  ICreateRelationshipMappingResponse,
-  IDeleteRelationshipMappingRequest,
-  IDeleteRelationshipMappingResponse,
-  IVerifyRelationshipMappingRequest,
-  IVerifyRelationshipMappingResponse,
+	useMutation,
+	UseMutationOptions,
+	useQueryClient,
+} from "@tanstack/react-query";
+import {
+	ICreateFiboClassRequest,
+	ICreateFiboClassResponse,
+	IUpdateFiboClassRequest,
+	IUpdateFiboClassResponse,
+	IDeleteFiboClassRequest,
+	IDeleteFiboClassResponse,
+	ICreateFiboPropertyRequest,
+	ICreateFiboPropertyResponse,
+	IUpdateFiboPropertyRequest,
+	IUpdateFiboPropertyResponse,
+	IDeleteFiboPropertyRequest,
+	IDeleteFiboPropertyResponse,
+	IImportOntologyRequest,
+	IImportOntologyResponse,
+	ICreateEntityMappingRequest,
+	ICreateEntityMappingResponse,
+	IDeleteEntityMappingRequest,
+	IDeleteEntityMappingResponse,
+	IVerifyEntityMappingRequest,
+	IVerifyEntityMappingResponse,
+	ICreateRelationshipMappingRequest,
+	IDeleteRelationshipMappingRequest,
+	IDeleteRelationshipMappingResponse,
+	IVerifyRelationshipMappingRequest,
+	IVerifyRelationshipMappingResponse,
 } from "@vbkg/types";
 import { FiboService } from "../../services/fibo";
 
 export const useCreateFiboClass = (
-  options?: UseMutationOptions<
-    ICreateFiboClassResponse,
-    Error,
-    ICreateFiboClassRequest
-  >,
+	options?: UseMutationOptions<
+		ICreateFiboClassResponse,
+		Error,
+		ICreateFiboClassRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.createFiboClass,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.createFiboClass,
+		...options,
+	});
 };
 
 export const useUpdateFiboClass = (
-  options?: UseMutationOptions<
-    IUpdateFiboClassResponse,
-    Error,
-    IUpdateFiboClassRequest
-  >,
+	options?: UseMutationOptions<
+		IUpdateFiboClassResponse,
+		Error,
+		IUpdateFiboClassRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.updateFiboClass,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.updateFiboClass,
+		...options,
+	});
 };
 
 export const useDeleteFiboClass = (
-  options?: UseMutationOptions<
-    IDeleteFiboClassResponse,
-    Error,
-    IDeleteFiboClassRequest
-  >,
+	options?: UseMutationOptions<
+		IDeleteFiboClassResponse,
+		Error,
+		IDeleteFiboClassRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.deleteFiboClass,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.deleteFiboClass,
+		...options,
+	});
 };
 
 // FIBO Property Mutation Hooks (keeping existing)
 export const useCreateFiboProperty = (
-  options?: UseMutationOptions<
-    ICreateFiboPropertyResponse,
-    Error,
-    ICreateFiboPropertyRequest
-  >,
+	options?: UseMutationOptions<
+		ICreateFiboPropertyResponse,
+		Error,
+		ICreateFiboPropertyRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.createFiboProperty,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.createFiboProperty,
+		...options,
+	});
 };
 
 export const useUpdateFiboProperty = (
-  options?: UseMutationOptions<
-    IUpdateFiboPropertyResponse,
-    Error,
-    IUpdateFiboPropertyRequest
-  >,
+	options?: UseMutationOptions<
+		IUpdateFiboPropertyResponse,
+		Error,
+		IUpdateFiboPropertyRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.updateFiboProperty,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.updateFiboProperty,
+		...options,
+	});
 };
 
 export const useDeleteFiboProperty = (
-  options?: UseMutationOptions<
-    IDeleteFiboPropertyResponse,
-    Error,
-    IDeleteFiboPropertyRequest
-  >,
+	options?: UseMutationOptions<
+		IDeleteFiboPropertyResponse,
+		Error,
+		IDeleteFiboPropertyRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.deleteFiboProperty,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.deleteFiboProperty,
+		...options,
+	});
 };
 
 // Ontology Import Hook (keeping existing)
 export const useImportOntology = (
-  options?: UseMutationOptions<
-    IImportOntologyResponse,
-    Error,
-    IImportOntologyRequest
-  >,
+	options?: UseMutationOptions<
+		IImportOntologyResponse,
+		Error,
+		IImportOntologyRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.importOntology,
-    ...options,
-  });
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: FiboService.importOntology,
+		...options,
+		onSuccess: (...params) => {
+			// Invalidate queries related to FIBO classes and properties
+			queryClient.invalidateQueries({queryKey: ["fiboClasses"]});
+			queryClient.invalidateQueries({queryKey: ["fiboProperties"]});
+			options?.onSuccess?.(...params);
+		},
+	});
 };
 
 // Entity Mapping Mutation Hooks (updated)
 export const useCreateEntityMapping = (
-  options?: UseMutationOptions<
-    ICreateEntityMappingResponse,
-    Error,
-    ICreateEntityMappingRequest
-  >,
+	options?: UseMutationOptions<
+		ICreateEntityMappingResponse,
+		Error,
+		ICreateEntityMappingRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.createEntityMapping,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.createEntityMapping,
+		...options,
+	});
 };
 
 export const useDeleteEntityMapping = (
-  options?: UseMutationOptions<
-    IDeleteEntityMappingResponse,
-    Error,
-    IDeleteEntityMappingRequest
-  >,
+	options?: UseMutationOptions<
+		IDeleteEntityMappingResponse,
+		Error,
+		IDeleteEntityMappingRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.deleteEntityMapping,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.deleteEntityMapping,
+		...options,
+	});
 };
 
 export const useVerifyEntityMapping = (
-  options?: UseMutationOptions<
-    IVerifyEntityMappingResponse,
-    Error,
-    IVerifyEntityMappingRequest
-  >,
+	options?: UseMutationOptions<
+		IVerifyEntityMappingResponse,
+		Error,
+		IVerifyEntityMappingRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.verifyEntityMapping,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.verifyEntityMapping,
+		...options,
+	});
 };
 
 // Relationship Mapping Mutation Hooks (updated)
 export const useCreateRelationshipMapping = (
-  options?: UseMutationOptions<
-    ICreateRelationshipMappingResponse,
-    Error,
-    ICreateRelationshipMappingRequest
-  >,
+	options?: UseMutationOptions<
+		any,
+		Error,
+		ICreateRelationshipMappingRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.createRelationshipMapping,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.createRelationshipMapping,
+		...options,
+	});
 };
 
 export const useDeleteRelationshipMapping = (
-  options?: UseMutationOptions<
-    IDeleteRelationshipMappingResponse,
-    Error,
-    IDeleteRelationshipMappingRequest
-  >,
+	options?: UseMutationOptions<
+		IDeleteRelationshipMappingResponse,
+		Error,
+		IDeleteRelationshipMappingRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.deleteRelationshipMapping,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.deleteRelationshipMapping,
+		...options,
+	});
 };
 
 export const useVerifyRelationshipMapping = (
-  options?: UseMutationOptions<
-    IVerifyRelationshipMappingResponse,
-    Error,
-    IVerifyRelationshipMappingRequest
-  >,
+	options?: UseMutationOptions<
+		IVerifyRelationshipMappingResponse,
+		Error,
+		IVerifyRelationshipMappingRequest
+	>,
 ) => {
-  return useMutation({
-    mutationFn: FiboService.verifyRelationshipMapping,
-    ...options,
-  });
+	return useMutation({
+		mutationFn: FiboService.verifyRelationshipMapping,
+		...options,
+	});
 };
 
 // Bulk Operation Hooks

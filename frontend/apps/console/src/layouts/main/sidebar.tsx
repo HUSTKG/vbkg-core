@@ -150,7 +150,7 @@ const Sidebar = ({
                                 "flex items-center px-3 py-1.5 ml-6 text-sm rounded-md transition-all duration-200 border-l border-gray-200 dark:border-gray-700 pl-4",
                                 isActive(subItem.path)
                                   ? "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white border-gray-900 dark:border-white"
-                                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white",
+                                  : "text-gray-600 dark:text-gray-400 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white",
                               )}
                             >
                               <span className="truncate">{subItem.title}</span>

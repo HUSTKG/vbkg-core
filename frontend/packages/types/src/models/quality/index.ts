@@ -62,9 +62,6 @@ export interface ConflictResolution {
   resolution_data: Record<string, any>;
   reasoning: string;
   confidence_score?: number;
-  resolved_by: string;
-  resolution_timestamp: string;
-  validation_required: boolean;
 }
 
 export interface Conflict {

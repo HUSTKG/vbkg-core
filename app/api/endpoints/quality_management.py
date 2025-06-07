@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -7,11 +8,12 @@ from fastapi import status as HttpStatus
 from app.api.deps import PermissionChecker
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.conflict_resolution import (Conflict, ConflictResolution,
+                                             ConflictResolutionRequest,
                                              ConflictStatus, ConflictType,
                                              KGEdit, QualityReport)
 from app.services.conflict_detection import ConflictDetectionService
 from app.services.conflict_resolution import ConflictResolutionService
-from app.services.knowledge_graph_editor import KnowledgeGraphEditor
+from app.services.knowledge_graph import KnowledgeGraphService
 from app.services.quality_management import QualityManagementService
 
 router = APIRouter()
@@ -99,6 +101,7 @@ async def run_quality_monitoring(
 async def get_conflicts(
     status: Optional[ConflictStatus] = None,
     conflict_type: Optional[ConflictType] = None,
+    severity: Optional[str] = None,
     assigned_to_me: bool = False,
     limit: int = 50,
     skip: int = 0,
@@ -113,7 +116,11 @@ async def get_conflicts(
         expert_id = current_user["id"] if assigned_to_me else None
 
         conflicts = await conflict_service.get_conflicts_for_review(
-            expert_id=expert_id, status=status, conflict_type=conflict_type, limit=limit
+            expert_id=expert_id,
+            status=status,
+            severity=severity,
+            conflict_type=conflict_type,
+            limit=limit,
         )
 
         return PaginatedResponse(
@@ -175,8 +182,8 @@ async def detect_conflicts(
 
 @router.post("/conflicts/{conflict_id}/resolve")
 async def resolve_conflict_manually(
-    conflict_id: UUID,
-    resolution: ConflictResolution,
+    conflict_id: str,
+    resolution: ConflictResolutionRequest,
     current_user: Dict[str, Any] = Depends(check_expert_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """Manually resolve a conflict"""
@@ -185,7 +192,15 @@ async def resolve_conflict_manually(
 
     try:
         result = await conflict_service.resolve_conflict_manually(
-            conflict_id=conflict_id, resolution=resolution, expert_id=current_user["id"]
+            conflict_id=conflict_id,
+            resolution=ConflictResolution(
+                resolution_method=resolution.resolution_method,
+                resolution_data=resolution.resolution_data,
+                reasoning=resolution.reasoning,
+                resolved_by=current_user["id"],
+                resolution_timestamp=datetime.now(timezone.utc),
+            ),
+            expert_id=current_user["id"],
         )
 
         return ApiResponse(
@@ -202,7 +217,7 @@ async def resolve_conflict_manually(
 
 @router.post("/conflicts/{conflict_id}/auto-resolve")
 async def auto_resolve_conflict(
-    conflict_id: UUID,
+    conflict_id: str,
     use_ai: bool = True,
     confidence_threshold: float = 0.8,
     current_user: Dict[str, Any] = Depends(check_expert_permission),
@@ -238,7 +253,7 @@ async def apply_kg_edit(
 ) -> ApiResponse[Dict[str, Any]]:
     """Apply direct edit to knowledge graph"""
 
-    kg_editor = KnowledgeGraphEditor()
+    kg_editor = KnowledgeGraphService()
 
     try:
         result = await kg_editor.apply_edit(
@@ -273,7 +288,7 @@ async def rollback_kg_changes(
 ) -> ApiResponse[Dict[str, Any]]:
     """Rollback knowledge graph changes"""
 
-    kg_editor = KnowledgeGraphEditor()
+    kg_editor = KnowledgeGraphService()
 
     try:
         result = await kg_editor.rollback_changes(rollback_info)

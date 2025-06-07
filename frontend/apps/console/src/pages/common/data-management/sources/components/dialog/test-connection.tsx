@@ -1,4 +1,4 @@
-import { ConfirmDialog } from "@vbkg/ui";
+import { ConfirmDialog } from "@/components";
 
 interface TestConnectionDataSourceDialogProps {
   open: boolean;

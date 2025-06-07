@@ -1,4 +1,4 @@
-import { Dialog } from "@vbkg/ui";
+import { Dialog } from "@/components";
 import FormCreateFiboProperty from "../form/create-property";
 import { FIBOClass } from "@vbkg/types";
 

@@ -82,16 +82,13 @@ export const API_ENDPOINTS = {
   KG_GLOBAL_SEARCH: "/knowledge-graph/search",
 
   // Knowledge
-  CREATE_ENTITY: "/knowledge/entities",
-  READ_ENTITY: (id: string) => `/knowledge/entities/${id}`,
-  READ_ENTITY_RELATIONSHIPS: (id: string) =>
-    `/knowledge/entities/${id}/relationships`,
-  UPDATE_ENTITY: (id: string) => `/knowledge/entities/${id}`,
-  DELETE_ENTITY: (id: string) => `/knowledge/entities/${id}`,
-  CREATE_RELATIONSHIP: "/knowledge/relationships",
-  EXCUTE_QUERY: "/knowledge/query",
-  GET_KNOWLEDGE_GRAPH_STATS: "/knowledge/graph/stats",
-  CREATE_OR_MERGE_ENTITY: "/knowledge/entities/merge",
+  CREATE_ENTITY: "/knowledge-graph/entities",
+  UPDATE_ENTITY: (id: string) => `/knowledge-graph/entities/${id}`,
+  DELETE_ENTITY: (id: string) => `/knowledge-graph/entities/${id}`,
+  CREATE_RELATIONSHIP: "/knowledge-graph/relationships",
+  EXCUTE_QUERY: "/knowledge-graph/query",
+  GET_KNOWLEDGE_GRAPH_STATS: "/knowledge-graph/graph/stats",
+  CREATE_OR_MERGE_ENTITY: "/knowledge-graph/entities/merge",
 
   // Notifications
   READ_NOTIFICATIONS: "/notifications",

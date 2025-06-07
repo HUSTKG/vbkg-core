@@ -1,6 +1,6 @@
 import { FIBOClass } from "@vbkg/types";
 import FormEditFiboClass from "../form/edit-class";
-import { Dialog } from "@vbkg/ui";
+import { Dialog } from "@/components";
 
 interface EditFiboClassDialogProps {
   isEditClassModalOpen: boolean;

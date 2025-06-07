@@ -1,5 +1,5 @@
 import { CreateDataSourceSchema } from "@vbkg/schemas";
-import { AppForm, CustomSheet, Button, toast } from "@vbkg/ui";
+import { AppForm, CustomSheet, Button, toast } from "@/components";
 import { formCreateDataSourceConfig } from "../form/create";
 import { useCreateDatasource } from "@vbkg/api-client";
 
@@ -14,7 +14,7 @@ export default function CreateDataSourceSheet() {
   });
   return (
     <CustomSheet
-      trigger={<Button variant="primary">Add Data Source</Button>}
+      trigger={<Button>Add Data Source</Button>}
       title="Add Data Source"
       description="Create a new data source configuration"
       side="right"

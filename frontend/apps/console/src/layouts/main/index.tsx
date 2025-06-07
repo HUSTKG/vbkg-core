@@ -51,7 +51,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       <div
         className={cn(
           "w-screen transition-all duration-300",
-          isSidebarOpen ? "pl-64" : "pl-20",
+          isSidebarOpen ? "pl-64" : "pl-16",
         )}
       >
         {/* Top Navigation */}

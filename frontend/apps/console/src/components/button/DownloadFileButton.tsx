@@ -1,5 +1,5 @@
 import { useFilePublicUrl } from "@vbkg/api-client";
-import { Button } from "@vbkg/ui";
+import { Button } from "@/components";
 
 interface DownloadFileButtonProps {
   file_id: string;

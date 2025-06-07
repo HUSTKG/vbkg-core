@@ -1,6 +1,6 @@
 import { useImportOntology } from "@vbkg/api-client";
 import { ImportOntologySchema } from "@vbkg/schemas";
-import { AppForm, Button, Input, Progress } from "@vbkg/ui";
+import { AppForm, Button, Progress } from "@/components";
 import FileUploadFormItem from "../../../../../components/form-item/upload-file";
 import { z } from "zod";
 
@@ -19,47 +19,24 @@ export default function FormImportOntology({
     data: z.infer<typeof ImportOntologySchema>,
   ) => {
     importOntology({
-      file_id: data?.file_id?.[0]?.id,
-      url: data?.url,
+      file_id: data?.file_id,
       format: data.format,
     });
   };
 
   return (
     <AppForm
-      fields={(form) => [
-        {
-          name: "source_type",
-          label: "Import Source",
-          type: "select",
-          options: [
-            { label: "From URL", value: "url" },
-            { label: "Upload File", value: "file" },
-          ],
-          defaultValue: "url",
-          required: true,
-        },
-        {
-          name: "url",
-          label: "Ontology URL",
-          type:
-            form.source_type && form.source_type === "url" ? "text" : "hidden",
-          placeholder: "https://spec.edmcouncil.org/fibo/ontology/...",
-        },
+      fields={() => [
         {
           name: "file_id",
           label: "Upload File",
-          type:
-            form.source_type && form.source_type === "file"
-              ? "custom"
-              : "hidden",
+          type: "custom",
           placeholder: "Chọn tệp FIBO ontology",
-          customComponent: ({ value, onChange }) => (
+          customComponent: ({ onChange }) => (
             <FileUploadFormItem
-              value={value}
               maxFiles={1}
               onChange={(value) => {
-                onChange(value);
+                onChange(value[0].id);
               }}
             />
           ),

@@ -6,7 +6,7 @@ import {
   SourceType,
   UrlConnectionConfig,
 } from "@vbkg/types";
-import { Badge, SimpleColumnDef } from "@vbkg/ui";
+import { Badge, SimpleColumnDef } from "@/components";
 import { formatDate } from "@vbkg/utils";
 import { Check, Database, FileText, Globe, Link, X } from "lucide-react";
 

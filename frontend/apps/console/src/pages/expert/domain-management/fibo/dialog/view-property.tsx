@@ -1,5 +1,5 @@
 import { FIBOClass, FIBOProperty } from "@vbkg/types";
-import { Badge, Dialog } from "@vbkg/ui";
+import { Badge, Dialog } from "@/components";
 
 interface ViewFiboPropertyDialogProps {
   isViewPropertyModalOpen: boolean;

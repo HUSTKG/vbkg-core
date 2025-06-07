@@ -12,7 +12,7 @@ import { SearchService } from "../../services/search";
 // Search entities
 export const useSearchEntities = (
   input: ISearchEntitiesRequest,
-  options?: UseQueryOptions<ISearchEntitiesResponse, Error>,
+  options?: Partial<UseQueryOptions<ISearchEntitiesResponse, Error>>,
 ) => {
   return useQuery<ISearchEntitiesResponse, Error>({
     queryKey: ["searchEntities", input],
@@ -24,7 +24,7 @@ export const useSearchEntities = (
 // Find similar entities
 export const useFindSimilarEntities = (
   input: IFindSimilarEntitiesRequest,
-  options?: UseQueryOptions<IFindSimilarEntitiesResponse, Error>,
+  options?: Partial<UseQueryOptions<IFindSimilarEntitiesResponse, Error>>,
 ) => {
   return useQuery<IFindSimilarEntitiesResponse, Error>({
     queryKey: ["findSimilarEntities", input],
@@ -36,7 +36,7 @@ export const useFindSimilarEntities = (
 // Graph search
 export const useGraphSearch = (
   input: IGraphSearchRequest,
-  options?: UseQueryOptions<IGraphSearchResponse, Error>,
+  options?: Partial<UseQueryOptions<IGraphSearchResponse, Error>>,
 ) => {
   return useQuery<IGraphSearchResponse, Error>({
     queryKey: ["graphSearch", input],

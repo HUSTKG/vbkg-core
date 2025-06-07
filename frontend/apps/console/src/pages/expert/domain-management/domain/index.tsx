@@ -14,9 +14,9 @@ import {
   TabsList,
   TabsTrigger,
   toast,
-} from "@vbkg/ui";
+} from "@/components";
 import CreateDomainDialog from "./dialog/create";
-import { useCreateDomain, useDomains, useDomainStats } from "@vbkg/api-client";
+import { useCreateDomain, useDomains } from "@vbkg/api-client";
 import { CreateDomainSchema } from "@vbkg/schemas";
 import DomainListTable from "./table/list-domain";
 

@@ -49,6 +49,7 @@ const UserLayout = () => {
         setSession(null);
         navigate("/login");
       }}
+	  onNavigation={(path) => navigate(path)}
       profileMenuItems={[
         {
           icon: <Users />,

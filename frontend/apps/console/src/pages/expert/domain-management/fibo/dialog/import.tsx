@@ -1,4 +1,4 @@
-import { Dialog } from "@vbkg/ui";
+import { Dialog } from "@/components";
 import FormImportOntology from "../form/import";
 
 interface ImportOntologyDialogProps {

@@ -6,7 +6,7 @@ import {
   DataTable,
   SimpleColumnDef,
   toast,
-} from "@vbkg/ui";
+} from "@/components";
 import ViewDomainDialog from "../dialog/view";
 import { useUpdateDomain } from "@vbkg/api-client";
 import { useState } from "react";

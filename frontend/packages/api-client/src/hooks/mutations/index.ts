@@ -2,7 +2,6 @@ export * from "./auth";
 export * from "./celery";
 export * from "./datasource";
 export * from "./fibo";
-export * from "./knowledge";
 export * from "./knowledge-graph";
 export * from "./validation-rules";
 export * from "./notification";

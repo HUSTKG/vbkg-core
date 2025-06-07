@@ -1,4 +1,4 @@
-import { Badge, Dialog } from "@vbkg/ui";
+import { Badge, Dialog } from "@/components";
 
 interface ViewFiboClassDialogProps {
   isViewClassModalOpen: boolean;

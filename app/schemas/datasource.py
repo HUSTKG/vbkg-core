@@ -130,6 +130,13 @@ class FileUploadStatus(str, Enum):
     FAILED = "failed"
 
 
+class CreatePipelineFromTemplate(BaseModel):
+    template_name: str = Field(..., description="Name of the pipeline template to use")
+    custom_options: Optional[Dict[str, Any]] = Field(
+        default=None, description="Custom options to override template defaults"
+    )
+
+
 class FileUpload(FileUploadBase):
     id: str
     upload_status: FileUploadStatus = FileUploadStatus.PENDING

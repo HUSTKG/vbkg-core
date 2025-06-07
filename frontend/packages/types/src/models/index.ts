@@ -5,7 +5,7 @@ export * from "./datasource";
 export * from "./celery";
 export * from "./entity";
 export * from "./fibo";
-export * from "./knowledge";
+export * from "./knowledge-graph";
 export * from "./notification";
 export * from "./ontology";
 export * from "./pipeline";

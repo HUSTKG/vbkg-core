@@ -1,5 +1,5 @@
 import { CreateDomainSchema } from "@vbkg/schemas";
-import { AppForm, FieldConfig } from "@vbkg/ui";
+import { AppForm, FieldConfig } from "@/components";
 import { z } from "zod";
 
 interface FormCreateDialogProps {

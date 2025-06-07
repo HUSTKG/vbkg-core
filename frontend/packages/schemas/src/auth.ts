@@ -1,13 +1,13 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
+email: z.string().email("Địa chỉ email không hợp lệ"),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters long")
+    .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
     .regex(
       /(?=.*[0-9])(?=.*[A-Z])/,
-      "Password must contain at least one uppercase letter and one digit",
+    "Mật khẩu phải chứa ít nhất một chữ hoa và một chữ số",
     ),
 });
 
@@ -16,15 +16,15 @@ export const registerSchema = loginSchema
     fullname: z.string().optional(),
     confirmPassword: z
       .string()
-      .min(8, "Password must be at least 8 characters long")
+    .min(8, "Mật khẩu xác nhận phải có ít nhất 8 ký tự")
       .regex(
         /(?=.*[0-9])(?=.*[A-Z])/,
-        "Password must contain at least one uppercase letter and one digit",
+        "Mật khẩu xác nhận phải chứa ít nhất một chữ hoa và một chữ số",
       ),
     roles: z.array(z.string()).optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
+    message: "Mật khẩu xác nhận không khớp",
     path: ["confirmPassword"],
   });
 

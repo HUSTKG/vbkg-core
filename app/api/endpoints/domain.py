@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPBearer
@@ -9,9 +9,7 @@ from app.schemas.domain import (CreateDomainRequest, CreateEntityTypeRequest,
                                 CreateRelationshipTypeRequest,
                                 DomainDetailResponse, DomainResponse,
                                 DomainStatsResponse, EntityTypeResponse,
-                                EntityTypeSearchResponse,
                                 RelationshipTypeResponse,
-                                RelationshipTypeSearchResponse,
                                 TypeDomainMappingRequest,
                                 TypeValidationRequest, TypeValidationResponse,
                                 UpdateDomainRequest, UpdateEntityTypeRequest,
@@ -193,6 +191,9 @@ async def search_entity_types(
     domain_ids: Optional[List[int]] = Query(
         default=None, description="Filter by domain IDs"
     ),
+    is_mapped: Optional[bool] = Query(
+        default=None, description="Filter by mapped status"
+        ),
     is_active: Optional[bool] = Query(
         default=None, description="Filter by active status"
     ),
@@ -208,6 +209,7 @@ async def search_entity_types(
         query=query,
         domain_ids=domain_ids,
         is_active=is_active,
+        is_mapped=is_mapped,
         include_usage=include_usage,
         limit=limit,
         skip=skip,
@@ -326,6 +328,9 @@ async def search_relationship_types(
     source_entity_type_id: Optional[int] = Query(
         default=None, description="Filter by source entity type"
     ),
+    is_mapped: Optional[bool] = Query(
+        default=None, description="Filter by mapped status"
+        ),
     target_entity_type_id: Optional[int] = Query(
         default=None, description="Filter by target entity type"
     ),
@@ -350,6 +355,7 @@ async def search_relationship_types(
         target_entity_type_id=target_entity_type_id,
         is_bidirectional=is_bidirectional,
         is_active=is_active,
+        is_mapped=is_mapped,
         include_usage=include_usage,
         limit=limit,
         skip=skip,

@@ -1,5 +1,5 @@
 import { FIBOClass, FIBOProperty } from "@vbkg/types";
-import { Dialog } from "@vbkg/ui";
+import { Dialog } from "@/components";
 import FormEditFiboProperty from "../form/edit-property";
 
 interface EditFiboPropertyDialogProps {

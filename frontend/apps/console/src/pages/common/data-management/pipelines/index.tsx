@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@vbkg/ui";
+} from "@/components";
 import DataPipelineTable from "./components/table/list";
 
 export default function PipelineListPage() {

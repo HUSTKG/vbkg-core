@@ -1,5 +1,5 @@
 import { ApiResponse, DataSource, PaginatedResponse } from "../models";
-import { DataSourceCreate, SourceType } from "../models/datasource";
+import { DataSourceCreate, DataSourceUpdate, SourceType } from "../models/datasource";
 
 export interface ICreateDatasourceRequest extends DataSourceCreate {}
 
@@ -20,7 +20,7 @@ export interface IGetDatasourcesRequest {
 export interface IGetDatasourcesResponse
   extends PaginatedResponse<DataSource> {}
 
-export interface IUpdateDatasourceRequest {
+export interface IUpdateDatasourceRequest extends DataSourceUpdate {
   id: string;
 }
 export interface IUpdateDatasourceResponse extends ApiResponse<DataSource> {}

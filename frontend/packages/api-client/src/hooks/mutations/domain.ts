@@ -28,10 +28,6 @@ import {
   IRemoveRelationshipTypeFromDomainResponse,
   IValidateTypeConstraintsRequest,
   IValidateTypeConstraintsResponse,
-  IBulkCreateEntityTypesRequest,
-  IBulkCreateEntityTypesResponse,
-  IBulkCreateRelationshipTypesRequest,
-  IBulkCreateRelationshipTypesResponse,
 } from "@vbkg/types";
 import { DomainService } from "../../services/domain";
 
@@ -237,32 +233,3 @@ export const useValidateTypeConstraints = (
   });
 };
 
-// =============================================
-// BULK OPERATION MUTATION HOOKS
-// =============================================
-
-export const useBulkCreateEntityTypes = (
-  options?: UseMutationOptions<
-    IBulkCreateEntityTypesResponse,
-    Error,
-    IBulkCreateEntityTypesRequest
-  >,
-) => {
-  return useMutation({
-    mutationFn: DomainService.bulkCreateEntityTypes,
-    ...options,
-  });
-};
-
-export const useBulkCreateRelationshipTypes = (
-  options?: UseMutationOptions<
-    IBulkCreateRelationshipTypesResponse,
-    Error,
-    IBulkCreateRelationshipTypesRequest
-  >,
-) => {
-  return useMutation({
-    mutationFn: DomainService.bulkCreateRelationshipTypes,
-    ...options,
-  });
-};

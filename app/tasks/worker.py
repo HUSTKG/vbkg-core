@@ -4,18 +4,19 @@ import os
 import re
 from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID, uuid4
 
 from celery import Celery
 from celery.signals import worker_process_init
 from celery.utils.log import get_task_logger
+from six import u
 
 from app.core.config import settings
-from app.core.logger import get_logger
 from app.schemas.pipeline import PipelineRunStatus, PipelineRunUpdate
 from app.schemas.pipeline_step import PipelineRunStatus as StepStatus
 from app.schemas.pipeline_step import PipelineStepType
+from app.services.fibo import FIBOService
 
 # Create Celery app
 celery_app = Celery(
@@ -568,25 +569,8 @@ async def resolve_step_input_data_from_db(
                 dep_output = step_run_map[dep_step_id].get("output_data", {})
                 if dep_output:
                     # Add with step prefix for clear identification
-                    input_data[f"step_{dep_step_id}"] = dep_output
-
-                    # Also merge key fields directly for backward compatibility
-                    # Only merge common keys to avoid conflicts
-                    merge_keys = [
-                        "file_id",
-                        "extraction_id",
-                        "entity_extraction_id",
-                        "resolution_id",
-                        "entities",
-                        "relationships",
-                        "text_chunks",
-                        "file_processed",
-                        "file_content",
-                    ]
-
-                    for key in merge_keys:
-                        if key in dep_output:
-                            input_data[key] = dep_output[key]
+                    for key in dep_output:
+                        input_data[key] = dep_output[key]
 
                     logger.info(
                         f"Added dependency data from step {dep_step_id} (size: {len(str(dep_output))} chars)"
@@ -899,6 +883,7 @@ async def execute_llm_entity_extractor_step(
     model = config.get("model", "gpt-4o-mini")
     entity_types = config.get("entity_types", [])
     extract_relationships = config.get("extract_relationships", True)
+    relationship_types = config.get("relationship_types", [])
     max_tokens = config.get("max_tokens", 2000)
     temperature = config.get("temperature", 0.2)
     prompt_template = config.get("prompt_template", "")
@@ -910,8 +895,8 @@ async def execute_llm_entity_extractor_step(
     text_chunks = input_data["text_chunks"]
     file_id = input_data.get("file_id")
 
-    all_entities = []
-    all_relationships = []
+    all_entities: List[Dict[str, Any]] = []
+    all_relationships: List[Dict[str, Any]] = []
 
     try:
         # Process each text chunk
@@ -923,16 +908,17 @@ async def execute_llm_entity_extractor_step(
                 prompt_template.format(text=chunk)
                 if prompt_template
                 else f"""
-Extract entities and relationships from the following text.
+                        Extract entities and relationships from the following text.
 
-Entity types: {', '.join(entity_types)}
+                        Entity types: {', '.join(entity_types)}
+                        Relationship types: {', '.join(relationship_types)}
 
-Text: {chunk}
+                        Text: {chunk}
 
-Return a JSON object with:
-1. entities: list of {{text, type, confidence}}
-2. relationships: list of {{source, target, type, confidence}}
-"""
+                        Return a JSON object with:
+                        1. entities: list of {{text, type, confidence}}
+                        2. relationships: list of {{source, target, type, confidence}}
+                    """
             )
 
             # Call OpenAI API
@@ -941,10 +927,14 @@ Return a JSON object with:
                 result = parse_llm_response(response)
 
                 if result.get("entities"):
-                    all_entities.extend(result["entities"])
+                    all_entities.append(
+                        {"chunk_index": i, "entities": result["entities"]}
+                    )
 
                 if result.get("relationships") and extract_relationships:
-                    all_relationships.extend(result["relationships"])
+                    all_relationships.append(
+                        {"chunk_index": i, "relationships": result["relationships"]}
+                    )
 
             except Exception as e:
                 logger.warning(f"Failed to process chunk {i+1}: {str(e)}")
@@ -1045,40 +1035,48 @@ def parse_llm_response(response: str) -> Dict[str, Any]:
         return {"entities": [], "relationships": []}
 
 
-def deduplicate_entities(entities: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def deduplicate_entities(
+    extraction_entities: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
     """Remove duplicate entities"""
     seen = set()
     unique_entities = []
 
-    for entity in entities:
-        key = (entity.get("text", "").lower(), entity.get("type", ""))
-        if key not in seen:
-            seen.add(key)
-            # Add unique ID
-            entity["id"] = str(uuid4())
-            unique_entities.append(entity)
+    for extraction_item in extraction_entities:
+        entities = extraction_item.get("entities", [])
+        for entity in entities:
+            key = (entity.get("text", "").lower(), entity.get("type", ""))
+            if key not in seen:
+                seen.add(key)
+                # Add unique ID
+                entity["id"] = str(uuid4())
+                entity["chunk_index"] = extraction_item.get("chunk_index", 0)
+                unique_entities.append(entity)
 
     return unique_entities
 
 
 def deduplicate_relationships(
-    relationships: List[Dict[str, Any]],
+    extraction_relationships: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
     """Remove duplicate relationships"""
     seen = set()
     unique_relationships = []
 
-    for rel in relationships:
-        key = (
-            rel.get("source", "").lower(),
-            rel.get("target", "").lower(),
-            rel.get("type", ""),
-        )
-        if key not in seen:
-            seen.add(key)
-            # Add unique ID
-            rel["id"] = str(uuid4())
-            unique_relationships.append(rel)
+    for extraction_item in extraction_relationships:
+        relationships = extraction_item.get("relationships", [])
+        for rel in relationships:
+            key = (
+                rel.get("source", "").lower(),
+                rel.get("target", "").lower(),
+                rel.get("type", ""),
+            )
+            if key not in seen:
+                seen.add(key)
+                # Add unique ID
+                rel["id"] = str(uuid4())
+                rel["chunk_index"] = extraction_item.get("chunk_index", 0)
+                unique_relationships.append(rel)
 
     return unique_relationships
 
@@ -1220,13 +1218,31 @@ async def execute_knowledge_graph_writer_step(
     from app.tasks.transformation import enrich_entities_with_embeddings
 
     batch_size = config.get("batch_size", 100)
-    create_if_not_exists = config.get("create_if_not_exists", True)
 
     if not input_data:
         raise ValueError("No data available from previous steps")
 
-    resolved_entities = input_data.get("entities", [])
-    relationships = input_data.get("relationships", [])
+    mapped_entities = input_data.get("mapped_entities", [])
+    mapped_relationships = input_data.get("mapped_relationships", [])
+    unmapped_entities = input_data.get("unmapped_entities", [])
+    unmapped_relationships = input_data.get("unmapped_relationships", [])
+    create_unmapped = config.get("create_unmapped", True)
+
+    resolved_entities = mapped_entities + unmapped_entities
+
+    for entity in mapped_entities:
+        entity["mapped"] = True
+    for entity in unmapped_entities:
+        entity["mapped"] = False
+    for rel in mapped_relationships:
+        rel["mapped"] = True
+    for rel in unmapped_relationships:
+        rel["mapped"] = False
+
+    resolved_entities = mapped_entities + unmapped_entities
+
+    resolved_relationships = mapped_relationships + unmapped_relationships
+
     extraction_id = input_data.get("extraction_id")
 
     try:
@@ -1236,7 +1252,10 @@ async def execute_knowledge_graph_writer_step(
 
         entities_created = 0
         relationships_created = 0
+        created_relationships = []
+        created_entities = []
         entity_id_map = {}  # Map entity text to UUID for relationships
+        entity_text_map = {}
         entities = []
 
         # Create entities in batches
@@ -1249,7 +1268,17 @@ async def execute_knowledge_graph_writer_step(
                     "entity_text": entity.get("text", ""),
                     "entity_type": entity.get("type", ""),
                     "confidence": entity.get("confidence", 0.5),
-                    "properties": {"source_extraction_id": extraction_id},
+                    "fibo_class_id": (
+                        entity["fibo_mapping"]["fibo_class_id"]
+                        if entity["mapped"]
+                        else None
+                    ),
+                    "properties": {
+                        "source_extraction_id": extraction_id,
+                        "mapped": entity["mapped"] if "mapped" in entity else True,
+                        "chunk_index": entity.get("chunk_index", 0),
+                        "unmapped_reason": entity.get("unmapped_reason", ""),
+                    },
                     "is_verified": False,
                 }
                 entity_records.append(entity_record)
@@ -1263,16 +1292,19 @@ async def execute_knowledge_graph_writer_step(
             for i, record in enumerate(result.data):
                 entity_text = batch[i].get("text", "")
                 entity_id_map[entity_text] = record["id"]
+                entity_text_map[record["id"]] = entity_text
                 entities_created += 1
                 entities.append(record["id"])
+
+            created_entities.extend(result.data)
 
         await enrich_entities_with_embeddings(
             entity_ids=entities, batch_size=batch_size
         )
 
         # Create relationships in batches
-        for i in range(0, len(relationships), batch_size):
-            batch = relationships[i : i + batch_size]
+        for i in range(0, len(resolved_relationships), batch_size):
+            batch = resolved_relationships[i : i + batch_size]
             relationship_records = []
 
             for rel in batch:
@@ -1289,22 +1321,52 @@ async def execute_knowledge_graph_writer_step(
                         "target_entity_id": target_id,
                         "relationship_type": rel.get("type", "RELATED_TO"),
                         "confidence": rel.get("confidence", 0.5),
-                        "properties": {"source_extraction_id": extraction_id},
+                        "fibo_property_id": (
+                            rel["fibo_mapping"]["fibo_property_id"]
+                            if rel["mapped"]
+                            else None
+                        ),
+                        "properties": {
+                            "source_extraction_id": extraction_id,
+                            "mapped": rel["mapped"] if "mapped" in rel else True,
+                            "chunk_index": rel.get("chunk_index", 0),
+                            "unmapped_reason": rel.get("unmapped_reason", ""),
+                        },
                         "is_verified": False,
                     }
                     relationship_records.append(relationship_record)
 
             if relationship_records:
-                await supabase.table("kg_relationships").insert(
-                    relationship_records
-                ).execute()
+                response = (
+                    await supabase.table("kg_relationships")
+                    .insert(relationship_records)
+                    .execute()
+                )
                 relationships_created += len(relationship_records)
+
+                for record in response.data:
+                    source_text = entity_text_map.get(record["source_entity_id"], "")
+                    target_text = entity_text_map.get(record["target_entity_id"], "")
+                    created_relationships.append(
+                        {
+                            "source": source_text,
+                            "target": target_text,
+                            "type": record["relationship_type"],
+                            "confidence": record["confidence"],
+                            "id": record["id"],
+                            "properties": record["properties"],
+                        }
+                    )
 
         # Optionally sync to Neo4j (if configured)
         neo4j_status = "skipped"
-        if config.get("sync_to_neo4j", False):
+        neo4j_results: Dict[str, Any] | None = None
+        if config.get("sync_to_neo4j", True):
             try:
-                await sync_to_neo4j(resolved_entities, relationships)
+                # Store in Neo4j with FIBO metadata
+                neo4j_results = await sync_to_neo4j(
+                    entities=created_entities, relationships=created_relationships
+                )
                 neo4j_status = "completed"
             except Exception as e:
                 logger.warning(f"Neo4j sync failed: {str(e)}")
@@ -1315,6 +1377,7 @@ async def execute_knowledge_graph_writer_step(
             "entities_created": entities_created,
             "relationships_created": relationships_created,
             "batch_size": batch_size,
+            "neo4j_results": neo4j_results,
             "neo4j_status": neo4j_status,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -1333,11 +1396,15 @@ async def sync_to_neo4j(
 
         driver = get_neo4j_driver()
 
+        logger.info(
+            f"Syncing {entities} entities and {relationships} relationships to Neo4j"
+        )
+
         async with driver.session() as session:
             # Create entities
             for entity in entities:
-                entity_type = entity.get("type", "Entity").replace(" ", "_")
-                entity_text = entity.get("text", "")
+                entity_type = entity.get("entity_type", "Entity").replace(" ", "_")
+                entity_text = entity.get("entity_text", "")
                 confidence = entity.get("confidence", 0.5)
                 entity_id = entity.get("id", str(uuid4()))
 
@@ -1391,23 +1458,6 @@ async def sync_to_neo4j(
     except Exception as e:
         logger.error(f"Neo4j sync failed: {str(e)}")
         raise
-
-
-async def execute_fibo_mapper_step(
-    config: Dict[str, Any], input_data: Optional[Dict[str, Any]]
-) -> Dict[str, Any]:
-    """Execute FIBO mapper step - Simplified placeholder"""
-    mapping_confidence_threshold = config.get("mapping_confidence_threshold", 0.7)
-    domains = config.get("domains", [])
-
-    # Simple placeholder implementation
-    return {
-        "fibo_mapping_completed": True,
-        "mapping_confidence_threshold": mapping_confidence_threshold,
-        "domains_processed": domains,
-        "mappings_created": 0,  # Replace with actual count
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
 
 
 async def execute_custom_python_step(
@@ -1709,6 +1759,676 @@ def build_connection_string(
         return f"mssql://{username}:{password}@{host}:{port}/{database}"
     else:
         return f"{db_type}://{username}:{password}@{host}:{port}/{database}"
+
+
+async def execute_fibo_mapper_step(
+    config: Dict[str, Any], input_data: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Execute FIBO mapper step - Map extracted entities and relationships to FIBO ontology
+    and store in Neo4j with FIBO metadata.
+
+    This step:
+    1. Loads verified entity and relationship mappings from the database
+    2. Maps extracted entities to FIBO classes based on entity_type mappings
+    3. Maps extracted relationships to FIBO properties based on relationship_type mappings
+    4. Uses fuzzy matching for entities/relationships without exact mappings
+    5. Stores mapped data in Neo4j with FIBO metadata
+    6. Generates comprehensive mapping statistics
+
+    Args:
+        config: Configuration containing:
+            - mapping_confidence_threshold: Minimum confidence for mappings (default: 0.7)
+            - domains: List of FIBO domains to filter mappings (optional)
+            - create_unmapped: Whether to create unmapped entities/relationships (default: True)
+            - batch_size: Batch size for Neo4j operations (default: 100)
+        input_data: Data from previous pipeline steps containing:
+            - entities: List of extracted entities with type and text
+            - relationships: List of extracted relationships with type, source, target
+            - extraction_id: ID of the extraction run
+
+    Returns:
+        Dictionary with mapping results, statistics, and Neo4j storage status
+    """
+    from app.services.fibo import FIBOService
+    from app.utils.neo4j import get_neo4j_driver
+
+    # Validate input data
+    validate_fibo_mapper_input(input_data or {})
+
+    # Configuration
+    mapping_confidence_threshold = config.get("mapping_confidence_threshold", 0.7)
+    domains = config.get("domains", [])
+    create_unmapped = config.get(
+        "create_unmapped", True
+    )  # Create entities/rels even if no FIBO mapping
+    batch_size = config.get("batch_size", 100)
+
+    if not input_data:
+        raise ValueError("No data available from previous steps")
+
+    # Get extracted entities and relationships
+    entities = input_data.get("resolved_entities", [])
+    relationships = input_data.get("relationships", [])
+    extraction_id = input_data.get("extraction_id")
+
+    if not entities and not relationships:
+        raise ValueError("No entities or relationships found in input data")
+
+    try:
+        fibo_service = FIBOService()
+
+        # Get all entity mappings and relationship mappings
+        entity_mappings = await get_entity_mappings(fibo_service, domains)
+        relationship_mappings = await get_relationship_mappings(fibo_service, domains)
+
+        logger.info(
+            f"Loaded {len(entity_mappings)} entity mappings and {len(relationship_mappings)} relationship mappings"
+        )
+
+        logger.info(entities)
+
+        # Map entities to FIBO classes
+        mapped_entities, unmapped_entities = await map_entities_to_fibo(
+            entities, entity_mappings, fibo_service, mapping_confidence_threshold
+        )
+
+        # Map relationships to FIBO properties
+        mapped_relationships, unmapped_relationships = await map_relationships_to_fibo(
+            relationships,
+            relationship_mappings,
+            fibo_service,
+            mapping_confidence_threshold,
+        )
+
+        logger.info(
+            f"Mapped {len(mapped_entities)}/{len(entities)} entities and {len(mapped_relationships)}/{len(relationships)} relationships"
+        )
+
+        # Log detailed mapping results
+        await log_mapping_results(
+            mapped_entities,
+            mapped_relationships,
+            unmapped_entities,
+            unmapped_relationships,
+        )
+
+        # Generate mapping statistics
+        mapping_stats = generate_mapping_statistics(
+            entities,
+            relationships,
+            mapped_entities,
+            mapped_relationships,
+            unmapped_entities,
+            unmapped_relationships,
+        )
+
+        return {
+            "fibo_mapping_completed": True,
+            "extraction_id": extraction_id,
+            "mapping_confidence_threshold": mapping_confidence_threshold,
+            "mapped_entities": mapped_entities,
+            "unmapped_entities": unmapped_entities,
+            "mapped_relationships": mapped_relationships,
+            "unmapped_relationships": unmapped_relationships,
+            "domains_processed": domains,
+            "entities": {
+                "total": len(entities),
+                "mapped": len(mapped_entities),
+                "unmapped": len(unmapped_entities),
+                "mapping_rate": len(mapped_entities) / len(entities) if entities else 0,
+            },
+            "relationships": {
+                "total": len(relationships),
+                "mapped": len(mapped_relationships),
+                "unmapped": len(unmapped_relationships),
+                "mapping_rate": (
+                    len(mapped_relationships) / len(relationships)
+                    if relationships
+                    else 0
+                ),
+            },
+            "mapping_statistics": mapping_stats,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"FIBO mapping failed: {str(e)}")
+        raise Exception(f"FIBO mapping failed: {str(e)}")
+
+
+async def get_entity_mappings(
+    fibo_service: FIBOService, domains: List[str]
+) -> Dict[str, Dict[str, Any]]:
+    """Get all entity mappings as a lookup dictionary"""
+    try:
+        # Get all verified entity mappings
+        mappings_response = await fibo_service.get_entity_mappings(
+            is_verified=True, mapping_status="mapped", limit=1000  # Get all mappings
+        )
+
+        mappings = mappings_response.data if mappings_response else []
+
+        # Create lookup dictionary: entity_type -> mapping_info
+        entity_mapping_dict = {}
+
+        for mapping in mappings:
+            # Support both legacy entity_type and new entity_type_id
+            entity_key = None
+            if mapping.get("entity_type"):
+                entity_key = mapping["entity_type"]
+            elif mapping.get("entity_type_id") and mapping.get("entity_type_info"):
+                entity_key = mapping["entity_type_info"]["name"]
+
+            if entity_key:
+                entity_mapping_dict[entity_key.lower()] = {
+                    "fibo_class_uri": mapping["fibo_class_uri"],
+                    "confidence": mapping.get("confidence", 1.0),
+                    "mapping_id": mapping["id"],
+                    "mapping_notes": mapping.get("mapping_notes"),
+                    "auto_mapped": mapping.get("auto_mapped", False),
+                }
+
+        return entity_mapping_dict
+
+    except Exception as e:
+        logger.error(f"Error loading entity mappings: {str(e)}")
+        return {}
+
+
+async def get_relationship_mappings(
+    fibo_service: FIBOService, domains: List[str]
+) -> Dict[str, Dict[str, Any]]:
+    """Get all relationship mappings as a lookup dictionary"""
+    try:
+        # Get all verified relationship mappings
+        mappings_response = await fibo_service.get_relationship_mappings(
+            is_verified=True, mapping_status="mapped", limit=1000  # Get all mappings
+        )
+
+        mappings = mappings_response.data if mappings_response else []
+
+        # Create lookup dictionary: relationship_type -> mapping_info
+        relationship_mapping_dict = {}
+
+        for mapping in mappings:
+            # Support both legacy relationship_type and new relationship_type_id
+            rel_key = None
+            if mapping.get("relationship_type"):
+                rel_key = mapping["relationship_type"]
+            elif mapping.get("relationship_type_id") and mapping.get(
+                "relationship_type_info"
+            ):
+                rel_key = mapping["relationship_type_info"]["name"]
+
+            if rel_key:
+                relationship_mapping_dict[rel_key.lower()] = {
+                    "fibo_property_uri": mapping["fibo_property_uri"],
+                    "confidence": mapping.get("confidence", 1.0),
+                    "mapping_id": mapping["id"],
+                    "mapping_notes": mapping.get("mapping_notes"),
+                    "auto_mapped": mapping.get("auto_mapped", False),
+                }
+
+        return relationship_mapping_dict
+
+    except Exception as e:
+        logger.error(f"Error loading relationship mappings: {str(e)}")
+        return {}
+
+
+async def map_entities_to_fibo(
+    entities: List[Dict[str, Any]],
+    entity_mappings: Dict[str, Dict[str, Any]],
+    fibo_service: FIBOService,
+    confidence_threshold: float,
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Map entities to FIBO classes"""
+    mapped_entities = []
+    unmapped_entities = []
+
+    for entity in entities:
+        entity_type = entity.get("type", "").lower()
+        entity_text = entity.get("text", "")
+        entity_id = entity.get("id", str(uuid4()))
+
+        # Check if we have a mapping for this entity type
+        if entity_type in entity_mappings:
+            mapping = entity_mappings[entity_type]
+
+            # Check confidence threshold
+            if mapping["confidence"] >= confidence_threshold:
+                # Get FIBO class details
+                try:
+                    fibo_class = await fibo_service.get_fibo_class_by_uri(
+                        mapping["fibo_class_uri"]
+                    )
+
+                    mapped_entity = {
+                        **entity,  # Original entity data
+                        "fibo_mapping": {
+                            "fibo_class_id": fibo_class.get("id"),
+                            "fibo_class_uri": mapping["fibo_class_uri"],
+                            "fibo_class_label": fibo_class.get("label"),
+                            "fibo_class_domain": fibo_class.get("domain"),
+                            "mapping_confidence": mapping["confidence"],
+                            "mapping_id": mapping["mapping_id"],
+                            "mapping_notes": mapping.get("mapping_notes"),
+                            "auto_mapped": mapping.get("auto_mapped", False),
+                        },
+                    }
+                    mapped_entities.append(mapped_entity)
+                    continue
+
+                except Exception as e:
+                    logger.warning(
+                        f"Could not get FIBO class {mapping['fibo_class_uri']}: {str(e)}"
+                    )
+
+        # Try to find similar mappings if no exact match
+        similar_mapping = await find_similar_entity_mapping(
+            entity_type, entity_text, entity_mappings, fibo_service
+        )
+
+        if similar_mapping and similar_mapping["confidence"] >= confidence_threshold:
+            mapped_entity = {**entity, "fibo_mapping": similar_mapping}
+            mapped_entities.append(mapped_entity)
+        else:
+            # No mapping found
+            unmapped_entity = {
+                **entity,
+                "unmapped_reason": (
+                    "No FIBO mapping found"
+                    if not similar_mapping
+                    else f"Confidence {similar_mapping['confidence']} below threshold {confidence_threshold}"
+                ),
+            }
+            unmapped_entities.append(unmapped_entity)
+
+    return mapped_entities, unmapped_entities
+
+
+async def map_relationships_to_fibo(
+    relationships: List[Dict[str, Any]],
+    relationship_mappings: Dict[str, Dict[str, Any]],
+    fibo_service: FIBOService,
+    confidence_threshold: float,
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Map relationships to FIBO properties"""
+    mapped_relationships = []
+    unmapped_relationships = []
+
+    for relationship in relationships:
+        rel_type = relationship.get("type", "").lower()
+        source = relationship.get("source", "")
+        target = relationship.get("target", "")
+        rel_id = relationship.get("id", str(uuid4()))
+
+        # Check if we have a mapping for this relationship type
+        if rel_type in relationship_mappings:
+            mapping = relationship_mappings[rel_type]
+
+            # Check confidence threshold
+            if mapping["confidence"] >= confidence_threshold:
+                # Get FIBO property details
+                try:
+                    fibo_property = await fibo_service.get_fibo_property_by_uri(
+                        mapping["fibo_property_uri"]
+                    )
+
+                    mapped_relationship = {
+                        **relationship,  # Original relationship data
+                        "fibo_mapping": {
+                            "fibo_property_id": fibo_property.get("id"),
+                            "fibo_property_uri": mapping["fibo_property_uri"],
+                            "fibo_property_label": fibo_property.get("label"),
+                            "fibo_property_type": fibo_property.get("property_type"),
+                            "mapping_confidence": mapping["confidence"],
+                            "mapping_id": mapping["mapping_id"],
+                            "mapping_notes": mapping.get("mapping_notes"),
+                            "auto_mapped": mapping.get("auto_mapped", False),
+                        },
+                    }
+                    mapped_relationships.append(mapped_relationship)
+                    continue
+
+                except Exception as e:
+                    logger.warning(
+                        f"Could not get FIBO property {mapping['fibo_property_uri']}: {str(e)}"
+                    )
+
+        # Try to find similar mappings if no exact match
+        similar_mapping = await find_similar_relationship_mapping(
+            rel_type, source, target, relationship_mappings, fibo_service
+        )
+
+        if similar_mapping and similar_mapping["confidence"] >= confidence_threshold:
+            mapped_relationship = {**relationship, "fibo_mapping": similar_mapping}
+            mapped_relationships.append(mapped_relationship)
+        else:
+            # No mapping found
+            unmapped_relationship = {
+                **relationship,
+                "unmapped_reason": (
+                    "No FIBO mapping found"
+                    if not similar_mapping
+                    else f"Confidence {similar_mapping['confidence']:.2f} below threshold {confidence_threshold}"
+                ),
+            }
+            unmapped_relationships.append(unmapped_relationship)
+
+    return mapped_relationships, unmapped_relationships
+
+
+async def find_similar_entity_mapping(
+    entity_type: str,
+    entity_text: str,
+    entity_mappings: Dict[str, Dict[str, Any]],
+    fibo_service: FIBOService,
+) -> Optional[Dict[str, Any]]:
+    """Find similar entity mapping using fuzzy matching"""
+    from difflib import SequenceMatcher
+
+    best_match = None
+    best_similarity = 0.0
+
+    # Try fuzzy matching on entity types
+    for mapped_type, mapping in entity_mappings.items():
+        similarity = SequenceMatcher(
+            None, entity_type.lower(), mapped_type.lower()
+        ).ratio()
+
+        if (
+            similarity > best_similarity and similarity > 0.6
+        ):  # Minimum similarity threshold
+            best_similarity = similarity
+            best_match = {
+                **mapping,
+                "confidence": mapping["confidence"]
+                * similarity,  # Reduce confidence based on similarity
+                "similarity_score": similarity,
+                "matched_via": "fuzzy_entity_type",
+            }
+
+    # Also try matching on entity text keywords if no good type match
+    if best_similarity < 0.8 and entity_text:
+        entity_keywords = entity_text.lower().split()
+
+        for mapped_type, mapping in entity_mappings.items():
+            type_keywords = mapped_type.lower().split()
+
+            # Check if any keywords match
+            matching_keywords = set(entity_keywords) & set(type_keywords)
+            if matching_keywords:
+                keyword_similarity = len(matching_keywords) / max(
+                    len(entity_keywords), len(type_keywords)
+                )
+
+                if keyword_similarity > best_similarity and keyword_similarity > 0.3:
+                    best_similarity = keyword_similarity
+                    best_match = {
+                        **mapping,
+                        "confidence": mapping["confidence"] * keyword_similarity,
+                        "similarity_score": keyword_similarity,
+                        "matched_via": "keyword_matching",
+                        "matching_keywords": list(matching_keywords),
+                    }
+
+    return best_match
+
+
+async def find_similar_relationship_mapping(
+    rel_type: str,
+    source: str,
+    target: str,
+    relationship_mappings: Dict[str, Dict[str, Any]],
+    fibo_service: FIBOService,
+) -> Optional[Dict[str, Any]]:
+    """Find similar relationship mapping using fuzzy matching"""
+    from difflib import SequenceMatcher
+
+    best_match = None
+    best_similarity = 0.0
+
+    # Try fuzzy matching on relationship types
+    for mapped_type, mapping in relationship_mappings.items():
+        similarity = SequenceMatcher(
+            None, rel_type.lower(), mapped_type.lower()
+        ).ratio()
+
+        if (
+            similarity > best_similarity and similarity > 0.6
+        ):  # Minimum similarity threshold
+            best_similarity = similarity
+            best_match = {
+                **mapping,
+                "confidence": mapping["confidence"] * similarity,
+                "similarity_score": similarity,
+                "matched_via": "fuzzy_relationship_type",
+            }
+
+    return best_match
+
+
+def generate_mapping_statistics(
+    entities: List[Dict[str, Any]],
+    relationships: List[Dict[str, Any]],
+    mapped_entities: List[Dict[str, Any]],
+    mapped_relationships: List[Dict[str, Any]],
+    unmapped_entities: List[Dict[str, Any]],
+    unmapped_relationships: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Generate comprehensive mapping statistics"""
+
+    # Entity type distribution
+    entity_type_stats = {}
+    for entity in entities:
+        entity_type = entity.get("type", "unknown")
+        if entity_type not in entity_type_stats:
+            entity_type_stats[entity_type] = {"total": 0, "mapped": 0, "unmapped": 0}
+        entity_type_stats[entity_type]["total"] += 1
+
+    for entity in mapped_entities:
+        entity_type = entity.get("type", "unknown")
+        if entity_type in entity_type_stats:
+            entity_type_stats[entity_type]["mapped"] += 1
+
+    for entity in unmapped_entities:
+        entity_type = entity.get("type", "unknown")
+        if entity_type in entity_type_stats:
+            entity_type_stats[entity_type]["unmapped"] += 1
+
+    # Relationship type distribution
+    relationship_type_stats = {}
+    for rel in relationships:
+        rel_type = rel.get("type", "unknown")
+        if rel_type not in relationship_type_stats:
+            relationship_type_stats[rel_type] = {"total": 0, "mapped": 0, "unmapped": 0}
+        relationship_type_stats[rel_type]["total"] += 1
+
+    for rel in mapped_relationships:
+        rel_type = rel.get("type", "unknown")
+        if rel_type in relationship_type_stats:
+            relationship_type_stats[rel_type]["mapped"] += 1
+
+    for rel in unmapped_relationships:
+        rel_type = rel.get("type", "unknown")
+        if rel_type in relationship_type_stats:
+            relationship_type_stats[rel_type]["unmapped"] += 1
+
+    # FIBO class distribution for mapped entities
+    fibo_class_distribution = {}
+    for entity in mapped_entities:
+        fibo_class = entity["fibo_mapping"].get("fibo_class_label", "Unknown")
+        fibo_class_distribution[fibo_class] = (
+            fibo_class_distribution.get(fibo_class, 0) + 1
+        )
+
+    # FIBO property distribution for mapped relationships
+    fibo_property_distribution = {}
+    for rel in mapped_relationships:
+        fibo_property = rel["fibo_mapping"].get("fibo_property_label", "Unknown")
+        fibo_property_distribution[fibo_property] = (
+            fibo_property_distribution.get(fibo_property, 0) + 1
+        )
+
+    return {
+        "entity_type_distribution": entity_type_stats,
+        "relationship_type_distribution": relationship_type_stats,
+        "fibo_class_distribution": fibo_class_distribution,
+        "fibo_property_distribution": fibo_property_distribution,
+        "coverage": {
+            "entity_mapping_coverage": (
+                len(mapped_entities) / len(entities) if entities else 0
+            ),
+            "relationship_mapping_coverage": (
+                len(mapped_relationships) / len(relationships) if relationships else 0
+            ),
+        },
+        "quality_metrics": {
+            "avg_entity_mapping_confidence": (
+                sum(e["fibo_mapping"]["mapping_confidence"] for e in mapped_entities)
+                / len(mapped_entities)
+                if mapped_entities
+                else 0
+            ),
+            "avg_relationship_mapping_confidence": (
+                sum(
+                    r["fibo_mapping"]["mapping_confidence"]
+                    for r in mapped_relationships
+                )
+                / len(mapped_relationships)
+                if mapped_relationships
+                else 0
+            ),
+            "auto_mapped_entities": len(
+                [
+                    e
+                    for e in mapped_entities
+                    if e["fibo_mapping"].get("auto_mapped", False)
+                ]
+            ),
+            "auto_mapped_relationships": len(
+                [
+                    r
+                    for r in mapped_relationships
+                    if r["fibo_mapping"].get("auto_mapped", False)
+                ]
+            ),
+        },
+    }
+
+
+def validate_fibo_mapper_input(input_data: Dict[str, Any]) -> None:
+    """Validate input data for FIBO mapper step"""
+    required_fields = ["entities", "relationships"]
+
+    if not input_data:
+        raise ValueError("Input data is required for FIBO mapper step")
+
+    # Check if we have at least entities or relationships
+    entities = input_data.get("entities", [])
+    relationships = input_data.get("relationships", [])
+
+    if not entities and not relationships:
+        raise ValueError("Input data must contain either entities or relationships")
+
+    # Validate entity structure
+    for i, entity in enumerate(entities):
+        if not isinstance(entity, dict):
+            raise ValueError(f"Entity {i} must be a dictionary")
+
+        if "text" not in entity or "type" not in entity:
+            raise ValueError(f"Entity {i} must have 'text' and 'type' fields")
+
+    # Validate relationship structure
+    for i, relationship in enumerate(relationships):
+        if not isinstance(relationship, dict):
+            raise ValueError(f"Relationship {i} must be a dictionary")
+
+        required_rel_fields = ["source", "target", "type"]
+        for field in required_rel_fields:
+            if field not in relationship:
+                raise ValueError(f"Relationship {i} must have '{field}' field")
+
+
+def sanitize_neo4j_label(label: str) -> str:
+    """Sanitize a string to be used as a Neo4j label"""
+    if not label:
+        return "Unknown"
+
+    # Replace spaces and special characters with underscores
+    import re
+
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", label)
+
+    # Ensure it starts with a letter or underscore
+    if sanitized and not sanitized[0].isalpha() and sanitized[0] != "_":
+        sanitized = "_" + sanitized
+
+    # Remove multiple consecutive underscores
+    sanitized = re.sub(r"_+", "_", sanitized)
+
+    # Remove trailing underscores
+    sanitized = sanitized.rstrip("_")
+
+    return sanitized or "Unknown"
+
+
+async def log_mapping_results(
+    mapped_entities: List[Dict[str, Any]],
+    mapped_relationships: List[Dict[str, Any]],
+    unmapped_entities: List[Dict[str, Any]],
+    unmapped_relationships: List[Dict[str, Any]],
+) -> None:
+    """Log detailed mapping results for debugging and monitoring"""
+
+    logger.info("=== FIBO Mapping Results ===")
+    logger.info(
+        f"Entities: {len(mapped_entities)} mapped, {len(unmapped_entities)} unmapped"
+    )
+    logger.info(
+        f"Relationships: {len(mapped_relationships)} mapped, {len(unmapped_relationships)} unmapped"
+    )
+
+    # Log unmapped entity types for potential mapping improvements
+    if unmapped_entities:
+        unmapped_entity_types = {}
+        for entity in unmapped_entities:
+            entity_type = entity.get("type", "unknown")
+            unmapped_entity_types[entity_type] = (
+                unmapped_entity_types.get(entity_type, 0) + 1
+            )
+
+        logger.warning(f"Unmapped entity types: {unmapped_entity_types}")
+
+    # Log unmapped relationship types
+    if unmapped_relationships:
+        unmapped_rel_types = {}
+        for rel in unmapped_relationships:
+            rel_type = rel.get("type", "unknown")
+            unmapped_rel_types[rel_type] = unmapped_rel_types.get(rel_type, 0) + 1
+
+        logger.warning(f"Unmapped relationship types: {unmapped_rel_types}")
+
+    # Log successful FIBO mappings
+    if mapped_entities:
+        fibo_classes_used = {}
+        for entity in mapped_entities:
+            fibo_class = entity["fibo_mapping"].get("fibo_class_label", "Unknown")
+            fibo_classes_used[fibo_class] = fibo_classes_used.get(fibo_class, 0) + 1
+
+        logger.info(f"FIBO classes used: {fibo_classes_used}")
+
+    if mapped_relationships:
+        fibo_properties_used = {}
+        for rel in mapped_relationships:
+            fibo_property = rel["fibo_mapping"].get("fibo_property_label", "Unknown")
+            fibo_properties_used[fibo_property] = (
+                fibo_properties_used.get(fibo_property, 0) + 1
+            )
+
+        logger.info(f"FIBO properties used: {fibo_properties_used}")
 
 
 # =============================================

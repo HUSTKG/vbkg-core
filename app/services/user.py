@@ -15,9 +15,10 @@ class UserService:
 
     async def get_user_by_id(self, user_id: str) -> Dict[str, Any]:
         """Get a user by ID with enhanced data including permissions"""
+        from app.services.auth import AuthService
+
         try:
             supabase = await get_supabase()
-
             # Get profile from profiles table
             profile_response = (
                 await supabase.from_("profiles")
@@ -395,7 +396,7 @@ class UserService:
             supabase = await get_supabase()
 
             # Update profile data (exclude roles)
-            update_data = user_data.dict(exclude_unset=True, exclude={"roles"})
+            update_data = user_data.model_dump(exclude_unset=True, exclude={"roles"})
 
             if update_data:
                 await supabase.from_("profiles").update(update_data).eq(
@@ -558,7 +559,9 @@ class UserService:
                     "id": role["id"],
                     "name": role["name"],
                     "description": role.get("description"),
-                    "permissions": [perm["permissions"]["name"] for perm in role["role_permissions"]],
+                    "permissions": [
+                        perm["permissions"]["name"] for perm in role["role_permissions"]
+                    ],
                 }
                 for role in response.data
             ]

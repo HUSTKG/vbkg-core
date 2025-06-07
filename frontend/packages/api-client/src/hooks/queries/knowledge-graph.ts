@@ -1,25 +1,34 @@
-import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import {
-  IGetEntityRequest,
   Entity,
   IEntitySearchResponse,
-  ISearchRelationshipsRequest,
-  IGetEntityTypesResponse,
   IGetEntityNeighborsRequest,
   IGetEntityNeighborsResponse,
-  IGetRelationshipRequest,
-  Relationship,
   IGetEntityRelationshipsRequest,
-  IRelationshipSearchResponse,
-  IGetSubgraphRequest,
-  ISubgraphResponse,
-  IGetStatsResponse,
+  IGetEntityRequest,
+  IGetEntityTypesResponse,
   IGetInvestmentInsightsRequest,
   IGetInvestmentInsightsResponse,
+  IGetRelationshipRequest,
+  IGetStatsResponse,
+  IGetSubgraphRequest,
   IGlobalSearchRequest,
   IGlobalSearchResponse,
+  IRelationshipSearchResponse,
   ISearchKGEntitiesRequest,
+  ISearchRelationshipsRequest,
+  ISubgraphResponse,
+  Relationship,
+  IExecuteQueryRequest,
+  IExecuteQueryResponse,
+  IGetKnowledgeGraphStatsRequest,
+  IGetKnowledgeGraphStatsResponse,
+  IReadEntityRelationshipsRequest,
+  IReadEntityRelationshipsResponse,
+  IReadEntityRequest,
+  IReadEntityResponse,
 } from "@vbkg/types";
+
+import { UseQueryOptions, useQuery } from "@tanstack/react-query";
 import { QueryKeys } from "../../config/queryKeys";
 import { KnowledgeGraphService } from "../../services/knowledge-graph";
 
@@ -171,6 +180,55 @@ export const useKGGlobalSearch = (
     queryKey: QueryKeys.knowledgeGraph.globalSearch(input),
     queryFn: () => KnowledgeGraphService.globalSearch(input),
     enabled: !!input.query && input.query.length >= 2,
+    ...options,
+  });
+};
+
+
+// Read single entity
+export const useEntity = (
+  input: IReadEntityRequest,
+  options?: UseQueryOptions<IReadEntityResponse, Error>,
+) => {
+  return useQuery<IReadEntityResponse, Error>({
+    queryKey: ["entity", input.id],
+    queryFn: () => KnowledgeGraphService.readEntity(input),
+    ...options,
+  });
+};
+
+// Read entity relationships
+export const useEntityRelationships = (
+  input: IReadEntityRelationshipsRequest,
+  options?: UseQueryOptions<IReadEntityRelationshipsResponse, Error>,
+) => {
+  return useQuery<IReadEntityRelationshipsResponse, Error>({
+    queryKey: ["entityRelationships", input.id],
+    queryFn: () => KnowledgeGraphService.readEntityRelationships(input),
+    ...options,
+  });
+};
+
+// Execute query
+export const useExecuteQuery = (
+  input: IExecuteQueryRequest,
+  options?: UseQueryOptions<IExecuteQueryResponse, Error>,
+) => {
+  return useQuery<IExecuteQueryResponse, Error>({
+    queryKey: ["executeQuery", input],
+    queryFn: () => KnowledgeGraphService.executeQuery(input),
+    ...options,
+  });
+};
+
+// Get knowledge graph stats
+export const useKnowledgeGraphStats = (
+  input: IGetKnowledgeGraphStatsRequest,
+  options?: UseQueryOptions<IGetKnowledgeGraphStatsResponse, Error>,
+) => {
+  return useQuery<IGetKnowledgeGraphStatsResponse, Error>({
+    queryKey: ["knowledgeGraphStats", input],
+    queryFn: () => KnowledgeGraphService.getKnowledgeGraphStats(input),
     ...options,
   });
 };

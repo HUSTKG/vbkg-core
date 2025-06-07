@@ -3,11 +3,20 @@ from typing import Annotated, Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi import status as HttpStatus
 
-from app.api.deps import (RequireDataSourceDelete, RequireDataSourceRead,
-                          RequireDataSourceWrite, validate_rate_limits)
+from app.api.deps import (
+    RequireDataSourceDelete,
+    RequireDataSourceRead,
+    RequireDataSourceWrite,
+    validate_rate_limits,
+)
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.datasource import (DataSource, DataSourceCreate,
-                                    DataSourceUpdate, SourceType)
+from app.schemas.datasource import (
+    CreatePipelineFromTemplate,
+    DataSource,
+    DataSourceCreate,
+    DataSourceUpdate,
+    SourceType,
+)
 from app.services.datasource import DataSourceService
 
 router = APIRouter()
@@ -80,7 +89,9 @@ async def read_datasource(
     """
     datasource_service = DataSourceService()
 
-    response = await datasource_service.get_datasource(datasource_id=datasource_id)
+    response = await datasource_service.get_datasource_with_credentials(
+        datasource_id=datasource_id
+    )
 
     return ApiResponse(
         data=DataSource(**response),
@@ -154,8 +165,7 @@ async def get_pipeline_templates(
 @router.post("/{datasource_id}/create-pipeline")
 async def create_pipeline_from_template(
     datasource_id: str,
-    template_name: str,
-    custom_options: Optional[Dict[str, Any]] = None,
+    create_pipeline_request: CreatePipelineFromTemplate,
     current_user: Dict[str, Any] = Depends(RequireDataSourceWrite),
 ) -> ApiResponse[Dict[str, Any]]:
     """Create a pipeline from template for this data source"""
@@ -164,6 +174,9 @@ async def create_pipeline_from_template(
     from app.services.datasource import DataSourceService
 
     factory_service = DataSourceService()
+
+    template_name = create_pipeline_request.template_name
+    custom_options = create_pipeline_request.custom_options
 
     try:
         pipeline = await factory_service.create_pipeline_from_template(

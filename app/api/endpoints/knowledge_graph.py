@@ -1,20 +1,30 @@
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import status
+from fastapi import status as httpStatus
 from fastapi.security import HTTPBearer
 
-from app.api.deps import RequireKGRead
-from app.schemas.knowledge_graph import (EntityResponse, EntitySearchResponse,
-                                         GraphQueryRequest, PathResponse,
-                                         PathSearchRequest,
-                                         RelationshipResponse,
-                                         RelationshipSearchResponse,
+from app.api.deps import PermissionChecker, RequireKGRead
+from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
+from app.schemas.entity import (Entity, EntityCreate, EntityResponse,
+                                EntityUpdate)
+from app.schemas.knowledge_graph import (CypherQuery, GraphQueryRequest,
+                                         PathResponse, PathSearchRequest,
                                          StatsResponse, SubgraphResponse)
+from app.schemas.relationship import (Relationship, RelationshipCreate,
+                                      RelationshipResponse)
 from app.services.knowledge_graph import KnowledgeGraphService
 from app.utils.rate_limiter import (RateLimitConfig, RateLimitScope,
                                     get_rate_limiter)
 
 router = APIRouter()
+
+check_read_permission = PermissionChecker("kg:read")
+check_edit_permission = PermissionChecker("kg:edit")
+check_search_permission = PermissionChecker("kg:search")
+check_delete_permission = PermissionChecker("kg:delete")
+
 security = HTTPBearer()
 
 # =============================================
@@ -56,14 +66,14 @@ async def get_entity(
     return entity
 
 
-@router.get("/entities", response_model=EntitySearchResponse, tags=["Entities"])
+@router.get(
+    "/entities", response_model=PaginatedResponse[Dict[str, Any]], tags=["Entities"]
+)
 async def search_entities(
     query: Optional[str] = Query(default=None, description="Search query"),
-    entity_types: Optional[List[str]] = Query(
-        default=None, description="Filter by entity types"
-    ),
+    entity_types: Annotated[list[str] | None, Query()] = None,
     limit: int = Query(default=50, le=100000, description="Results per page"),
-    offset: int = Query(default=0, ge=0, description="Results offset"),
+    skip: int = Query(default=0, ge=0, description="Results skip"),
     min_confidence: float = Query(
         default=0.0, ge=0.0, le=1.0, description="Minimum confidence score"
     ),
@@ -71,7 +81,7 @@ async def search_entities(
     semantic_search: bool = Query(default=False, description="Use semantic search"),
     current_user: dict = Depends(RequireKGRead),
     kg_service: KnowledgeGraphService = Depends(),
-):
+) -> PaginatedResponse[Dict[str, Any]]:
     """Search entities with various filters"""
 
     # Rate limiting - semantic search is more expensive
@@ -90,14 +100,25 @@ async def search_entities(
             headers=rate_check.to_headers(),
         )
 
-    return await kg_service.search_entities(
-        query=query,
-        entity_types=entity_types,
+    response = await kg_service.search_entities(
         limit=limit,
-        offset=offset,
-        min_confidence=min_confidence,
+        entity_types=entity_types,
+        query=query,
+        skip=skip,
+        min_confidence=min_confidence if min_confidence is not None else 0.0,
         verified_only=verified_only,
         semantic_search=semantic_search,
+    )
+
+    return PaginatedResponse(
+        data=response["entities"],
+        meta=PaginatedMeta(
+            total=response["total"],
+            limit=limit,
+            skip=skip,
+        ),
+        status=httpStatus.HTTP_200_OK,
+        message="Entities retrieved successfully",
     )
 
 
@@ -142,25 +163,28 @@ async def get_entity_neighbors(
 # RELATIONSHIP ENDPOINTS
 # =============================================
 
+
 @router.get(
     "/relationships",
-    response_model=RelationshipSearchResponse,
+    response_model=PaginatedResponse[RelationshipResponse],
     tags=["Relationships"],
 )
 async def search_relationships(
     query: Optional[str] = Query(default=None, description="Search query"),
     relationship_types: Optional[List[str]] = Query(
-    default=None, description="Filter by relationship types"
-        ),
-    limit: int = Query(default=50, le=200, description="Results per page"),
-    offset: int = Query(default=0, ge=0, description="Results offset"),
+        default=None, description="Filter by relationship types"
+    ),
+    limit: int = Query(default=10, le=100000, description="Results per page"),
+    skip: int = Query(default=0, ge=0, description="Results skip"),
     min_confidence: float = Query(
-    default=0.0, ge=0.0, le=1.0, description="Minimum confidence score"
-        ),
-    verified_only: bool = Query(default=False, description="Only verified relationships"),
+        default=0.0, ge=0.0, le=1.0, description="Minimum confidence score"
+    ),
+    verified_only: bool = Query(
+        default=False, description="Only verified relationships"
+    ),
     current_user: dict = Depends(RequireKGRead),
     kg_service: KnowledgeGraphService = Depends(),
-):
+) -> PaginatedResponse[RelationshipResponse]:
     """Search relationships with various filters"""
     # Rate limiting
     rate_limiter = get_rate_limiter()
@@ -175,15 +199,25 @@ async def search_relationships(
             detail="Rate limit exceeded",
             headers=rate_check.to_headers(),
         )
-    return await kg_service.search_relationships(
+    response = await kg_service.search_relationships(
         query=query,
         relationship_types=relationship_types,
         limit=limit,
-        offset=offset,
+        skip=skip,
         min_confidence=min_confidence,
         verified_only=verified_only,
     )
 
+    return PaginatedResponse(
+        data=response["relationships"],
+        meta=PaginatedMeta(
+            total=response["total"],
+            limit=limit,
+            skip=skip,
+        ),
+        status=httpStatus.HTTP_200_OK,
+        message="Relationships retrieved successfully",
+    )
 
 
 @router.get(
@@ -208,7 +242,7 @@ async def get_relationship(
 
 @router.get(
     "/entities/{entity_id}/relationships",
-    response_model=RelationshipSearchResponse,
+    response_model=PaginatedResponse[RelationshipResponse],
     tags=["Relationships"],
 )
 async def get_entity_relationships(
@@ -222,18 +256,29 @@ async def get_entity_relationships(
         description="Relationship direction",
     ),
     limit: int = Query(default=50, le=200, description="Results per page"),
-    offset: int = Query(default=0, ge=0, description="Results offset"),
+    skip: int = Query(default=0, ge=0, description="Results skip"),
     current_user: dict = Depends(RequireKGRead),
     kg_service: KnowledgeGraphService = Depends(),
-):
+) -> PaginatedResponse[RelationshipResponse]:
     """Get relationships for an entity"""
 
-    return await kg_service.get_entity_relationships(
+    response = await kg_service.get_entity_relationships(
         entity_id=entity_id,
         relationship_types=relationship_types,
         direction=direction,
         limit=limit,
-        offset=offset,
+        skip=skip,
+    )
+
+    return PaginatedResponse(
+        data=response["relationships"],
+        meta=PaginatedMeta(
+            total=response["total"],
+            limit=limit,
+            skip=skip,
+        ),
+        status=httpStatus.HTTP_200_OK,
+        message="Entity relationships retrieved successfully",
     )
 
 
@@ -466,3 +511,203 @@ async def global_search(
         "semantic": semantic,
         "results": results,
     }
+
+
+@router.post(
+    "/entities", response_model=ApiResponse[Entity], status_code=status.HTTP_201_CREATED
+)
+async def create_entity(
+    entity_in: EntityCreate,
+    current_user: Dict[str, Any] = Depends(check_edit_permission),
+) -> ApiResponse[Entity]:
+    """
+    Create a new entity in the knowledge graph.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service._create_entity(
+        entity_data={
+            "entity_text": entity_in.entity_text,
+            "entity_type": entity_in.entity_type,
+            "properties": entity_in.properties,
+            "is_verified": entity_in.is_verified,
+            "source_document_id": entity_in.source_document_id,
+        },
+        user_id=current_user["id"],
+    )
+    return ApiResponse(
+        data=Entity(**response),
+        status=status.HTTP_201_CREATED,
+        message="Entity created successfully",
+    )
+
+
+@router.get("/entities/{entity_id}", response_model=ApiResponse[Entity])
+async def read_entity(
+    entity_id: str = Path(...),
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[Entity]:
+    """
+    Get a specific entity by ID.
+    """
+    kg_service = KnowledgeGraphService()
+
+    response = await kg_service.get_entity(entity_id=entity_id)
+
+    return ApiResponse(
+        data=Entity(**response),
+        status=status.HTTP_200_OK,
+        message="Entity retrieved successfully",
+    )
+
+
+@router.get(
+    "/entities/{entity_id}/relationships",
+    response_model=ApiResponse[List[Relationship]],
+)
+async def read_entity_relationships(
+    entity_id: str = Path(...),
+    direction: Optional[str] = Query(None, enum=["incoming", "outgoing"]),
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[List[Relationship]]:
+    """
+    Get all relationships for an entity.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service.get_entity_relationships(
+        entity_id=entity_id, direction=direction
+    )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_200_OK,
+        message="Entity relationships retrieved successfully",
+    )
+
+
+@router.put("/entities/{entity_id}", response_model=ApiResponse[Entity])
+async def update_entity(
+    entity_in: EntityUpdate,
+    entity_id: str = Path(...),
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[Entity]:
+    """
+    Update an entity's properties.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service._update_entity(
+        user_id=current_user["id"],
+        entity_data={
+            "id": entity_id,
+            "properties": entity_in.properties,
+            "is_verified": entity_in.is_verified,
+        },
+    )
+    return ApiResponse(
+        data=Entity(**response),
+        status=status.HTTP_200_OK,
+        message="Entity updated successfully",
+    )
+
+
+@router.delete("/entities/{entity_id}", response_model=ApiResponse[Dict[str, Any]])
+async def delete_entity(
+    entity_id: str = Path(...),
+    current_user: Dict[str, Any] = Depends(check_delete_permission),
+) -> ApiResponse[Dict[str, Any]]:
+    """
+    Delete an entity and all its relationships.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service._delete_entity(
+        entity_id=entity_id, user_id=current_user["id"]
+    )
+    return ApiResponse(
+        data=response, status=status.HTTP_200_OK, message="Entity deleted successfully"
+    )
+
+
+@router.post(
+    "/relationships",
+    response_model=ApiResponse[Relationship],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_relationship(
+    relationship_in: RelationshipCreate,
+    current_user: Dict[str, Any] = Depends(check_edit_permission),
+) -> ApiResponse[Relationship]:
+    """
+    Create a relationship between two entities.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service._create_relationship(
+        user_id=current_user["id"],
+        relationship_data={
+            "source_entity_id": relationship_in.source_entity_id,
+            "target_entity_id": relationship_in.target_entity_id,
+            "relationship_type": relationship_in.relationship_type,
+            "properties": relationship_in.properties,
+            "source_document_id": relationship_in.source_document_id,
+            "confidence": relationship_in.confidence,
+            "is_verified": relationship_in.is_verified,
+            "verification_notes": relationship_in.verification_notes,
+        },
+    )
+    return ApiResponse(
+        data=Relationship(**response),
+        status=status.HTTP_201_CREATED,
+        message="Relationship created successfully",
+    )
+
+
+@router.post("/query", response_model=ApiResponse[List[Dict[str, Any]]])
+async def execute_query(
+    query_in: CypherQuery, current_user: Dict[str, Any] = Depends(check_read_permission)
+) -> ApiResponse[List[Dict[str, Any]]]:
+    """
+    Execute a Cypher query against the knowledge graph.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service.execute_query(
+        query=query_in.query, parameters=query_in.parameters
+    )
+    return ApiResponse(
+        data=response, status=status.HTTP_200_OK, message="Query executed successfully"
+    )
+
+
+@router.get("/stats", response_model=ApiResponse[Dict[str, Any]])
+async def get_knowledge_graph_stats(
+    current_user: Dict[str, Any] = Depends(check_read_permission),
+) -> ApiResponse[Dict[str, Any]]:
+    """
+    Get statistics about the knowledge graph entities.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service.get_entity_stats()
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_200_OK,
+        message="Knowledge graph statistics retrieved successfully",
+    )
+
+
+@router.post("/entities/merge", response_model=ApiResponse[Entity])
+async def create_or_merge_entity(
+    entity_in: EntityCreate,
+    current_user: Dict[str, Any] = Depends(check_edit_permission),
+) -> ApiResponse[Entity]:
+    """
+    Create a new entity or merge with existing one if found.
+    """
+    kg_service = KnowledgeGraphService()
+    response = await kg_service.create_or_merge_entity(
+        entity_text=entity_in.text,
+        entity_type=entity_in.type,
+        properties=entity_in.properties,
+        fibo_class=entity_in.fibo_class,
+        source_document_id=entity_in.source_document_id,
+    )
+    return ApiResponse(
+        data=response,
+        status=status.HTTP_201_CREATED,
+        message="Entity created or merged successfully",
+    )

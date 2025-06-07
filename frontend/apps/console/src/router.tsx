@@ -81,9 +81,6 @@ const DomainFibo = lazy(() => import("./pages/expert/domain-management/fibo"));
 const DomainFiboMapping = lazy(
   () => import("./pages/expert/domain-management/fibo-mapping"),
 );
-const DomainExtractionTemplate = lazy(
-  () => import("./pages/expert/domain-management/extraction-templates"),
-);
 
 // User Pages
 const UserSearch = lazy(() => import("./pages/user/search"));
@@ -300,11 +297,47 @@ const routes: RouteObject[] = [
               </Suspense>
             ),
           },
+        ],
+      },
+      {
+        path: "data/sources",
+        children: [
           {
-            path: "extraction-templates",
+            path: "",
+            index: true,
             element: (
               <Suspense fallback={<PageLoading />}>
-                <DomainExtractionTemplate />
+                <ConfigureDataSource />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoading />}>
+                <DataSourceDetail />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+      {
+        path: "data/pipelines",
+        children: [
+          {
+            path: "",
+            index: true,
+            element: (
+              <Suspense fallback={<PageLoading />}>
+                <ConfigureDataPipeline />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoading />}>
+                <DataPipelineDetail />
               </Suspense>
             ),
           },
@@ -347,7 +380,7 @@ const routes: RouteObject[] = [
             ),
           },
           {
-            path: "user/:id",
+            path: ":id",
             element: (
               <Suspense fallback={<PageLoading />}>
                 <UserDetail />

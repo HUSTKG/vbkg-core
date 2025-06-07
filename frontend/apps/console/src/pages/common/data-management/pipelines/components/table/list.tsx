@@ -6,7 +6,7 @@ import {
   DataTable,
   SimpleColumnDef,
   toast,
-} from "@vbkg/ui";
+} from "@/components";
 import { CheckCircle2, Clock, Edit, Eye, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";

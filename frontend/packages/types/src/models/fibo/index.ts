@@ -29,6 +29,7 @@ export type FIBOPropertyBase = {
   uri: string;
   label?: string;
   description?: string;
+  domain?: string;
   property_type: "object" | "datatype";
 };
 

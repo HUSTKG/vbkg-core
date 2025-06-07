@@ -1,4 +1,4 @@
 .turbo
-documents
-node_modules
-references
+documents/
+node_modules/
+references/

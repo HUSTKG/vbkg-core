@@ -1,5 +1,5 @@
 import { FIBOClass, FIBOProperty } from "@vbkg/types";
-import { ActionButton, Badge, DataTable, SimpleColumnDef } from "@vbkg/ui";
+import { ActionButton, Badge, DataTable, SimpleColumnDef } from "@/components";
 import { Edit, ExternalLink, Eye, Trash2 } from "lucide-react";
 import { useState } from "react";
 import EditFiboPropertyDialog from "../dialog/edit-property";

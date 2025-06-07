@@ -6,7 +6,6 @@ from app.api.endpoints import (
     domain,
     fibo,
     file_upload,
-    knowledge,
     knowledge_graph,
     notifications,
     pipelines,
@@ -31,7 +30,6 @@ api_router.include_router(
 api_router.include_router(fibo.router, prefix="/fibo", tags=["fibo"])
 api_router.include_router(pipelines.router, prefix="/pipelines", tags=["pipelines"])
 
-api_router.include_router(knowledge.router, prefix="/knowledge", tags=["knowledge"])
 api_router.include_router(
     knowledge_graph.router, prefix="/knowledge-graph", tags=["knowledge_graph"]
 )

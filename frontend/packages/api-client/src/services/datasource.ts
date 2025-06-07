@@ -93,10 +93,7 @@ const createPipelineFromTemplate = async ({
   return await api()
     .post<ICreatePipelineFromTemplateResponse>(
       API_ENDPOINTS.CREATE_PIPELINE_FROM_TEMPLATE(datasource_id),
-      null,
-      {
-        params: input,
-      },
+      input,
     )
     .then((res) => res.data);
 };

@@ -88,7 +88,7 @@ async def create_fibo_class(
     )
 
 
-@router.patch("/classes/{class_id}", response_model=ApiResponse[FIBOClass])
+@router.put("/classes/{class_id}", response_model=ApiResponse[FIBOClass])
 async def update_fibo_class(
     fibo_class_in: FIBOClassUpdate,
     class_id: int = Path(...),

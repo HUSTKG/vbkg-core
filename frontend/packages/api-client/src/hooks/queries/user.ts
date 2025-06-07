@@ -30,7 +30,7 @@ export const useUsers = (
 // Fetch specific user
 export const useUser = (
   input: IGetUserRequest,
-  options?: UseQueryOptions<IGetUserResponse, Error>,
+  options?: Partial<UseQueryOptions<IGetUserResponse, Error>>,
 ) => {
   return useQuery<IGetUserResponse, Error>({
     queryKey: QueryKeys.users.detail(input.user_id),
@@ -101,7 +101,7 @@ export const useMyActivity = (
 // Fetch specific user activity
 export const useUserActivity = (
   input: IGetUserActivityRequest,
-  options?: UseQueryOptions<IGetUserActivityResponse, Error>,
+  options?: Partial<UseQueryOptions<IGetUserActivityResponse, Error>>,
 ) => {
   return useQuery<IGetUserActivityResponse, Error>({
     queryKey: QueryKeys.users.activity.user(input.user_id!, input),

@@ -1,6 +1,5 @@
 export * from "./datasource";
 export * from "./fibo";
-export * from "./knowledge";
 export * from "./celery";
 export * from "./validation-rules";
 export * from "./knowledge-graph";

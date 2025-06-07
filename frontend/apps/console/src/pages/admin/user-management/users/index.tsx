@@ -8,7 +8,6 @@ import {
   ShieldCheck,
   ShieldX,
   Eye,
-  Filter,
 } from "lucide-react";
 import {
   Avatar,
@@ -33,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
   FieldConfig,
-} from "@vbkg/ui";
+} from "@/components";
 import { useNavigate } from "react-router";
 import { User, UserUpdate } from "@vbkg/types";
 import {
@@ -53,10 +52,6 @@ const updateUserSchema = z.object({
   position: z.string().optional(),
   bio: z.string().optional(),
   avatar_url: z.string().url().optional().or(z.literal("")),
-});
-
-const assignRoleSchema = z.object({
-  role_name: z.string().min(1, "Please select a role"),
 });
 
 // Edit User Dialog
@@ -396,9 +391,6 @@ export default function UserManagementPage() {
             Manage user accounts, roles, and permissions.
           </p>
         </div>
-        <Button onClick={() => navigate("/users/create")}>
-          <UserPlus className="mr-2 h-4 w-4" /> Add User
-        </Button>
       </div>
 
       {/* Users Table */}
@@ -426,7 +418,7 @@ export default function UserManagementPage() {
                   {
                     label: "View",
                     icon: <Eye className="h-4 w-4" />,
-                    onClick: (user) => navigate(`/users/${user.id}`),
+                    onClick: (user) => navigate(`/admin/users/${user.id}`),
                     variant: "ghost",
                   },
                   {
