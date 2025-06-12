@@ -27,7 +27,6 @@ import {
 	ApiConnectionConfig,
 	DatabaseConnectionConfig,
 	FileConnectionConfig,
-	FileUpload,
 	SourceType,
 	UrlConnectionConfig,
 } from "@vbkg/types";
@@ -55,7 +54,6 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-	Separator,
 	Switch,
 	Table,
 	TableBody,
@@ -81,6 +79,7 @@ import FileSelectorDialog, {
 	SelectedFile,
 } from "../../../../../components/dialog/file-selector";
 import { PipelineTemplateDialog } from "../components/dialog/pipeline-template";
+import { formatBytes } from "@/utils/formatBytes";
 
 // Định nghĩa kiểu dữ liệu cho lịch sử kết nối
 interface ConnectionLog {
@@ -296,36 +295,6 @@ const DataSourceDetailPage: React.FC = () => {
 	const handleTestConnection = async () => {
 		setIsLoading(true);
 		setTestConnectionStatus(null);
-
-		// Giả lập API call
-		setTimeout(() => {
-			// Random success/error để demo
-			const isSuccess = Math.random() > 0.3;
-
-			setTestConnectionStatus(isSuccess ? "success" : "error");
-
-			// Thêm log mới
-			const newLog: ConnectionLog = {
-				id: `log-${Date.now()}`,
-				datasource_id: id!,
-				status: isSuccess ? "success" : "error",
-				message: isSuccess ? "Kết nối thành công" : "Lỗi kết nối",
-				details: isSuccess
-					? "Đã đọc được 1,245 dòng dữ liệu"
-					: "Không thể mở file: File không tồn tại hoặc không có quyền truy cập",
-				created_at: new Date().toISOString(),
-			};
-
-			setConnectionLogs([newLog, ...connectionLogs]);
-			setIsLoading(false);
-
-			toast(isSuccess ? "Kết nối thành công" : "Kết nối thất bại", {
-				description: isSuccess
-					? "Đã kiểm tra kết nối thành công đến nguồn dữ liệu"
-					: "Không thể kết nối đến nguồn dữ liệu. Vui lòng kiểm tra lại cấu hình",
-				className: isSuccess ? "bg-green-500" : "bg-red-500",
-			});
-		}, 2000);
 	};
 
 	const { mutateAsync: uploadFileMutation } = useUploadFile({
@@ -468,16 +437,6 @@ const DataSourceDetailPage: React.FC = () => {
 											</p>
 										)}
 									</div>
-									{source_type === "file" && (
-										<Button
-											variant="outline"
-											className="ml-2"
-											onClick={() => setShowUploadDialog(true)}
-										>
-											<Upload className="h-4 w-4 mr-1" />
-											Tải lên
-										</Button>
-									)}
 								</div>
 							</div>
 							<div className="space-y-2">
@@ -712,7 +671,7 @@ const DataSourceDetailPage: React.FC = () => {
 					<div className="space-y-4">
 						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 							<div className="space-y-2">
-								<Label>Loại database</Label>
+								<Label>Loại CSDL</Label>
 								<Select
 									value={dbDetails.db_type}
 									onValueChange={(value) =>
@@ -1179,7 +1138,7 @@ const DataSourceDetailPage: React.FC = () => {
 				</Alert>
 			)}
 
-			<div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+			<div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
 				{/* Sidebar */}
 				<div className="lg:col-span-1 space-y-6">
 					<Card>
@@ -1188,16 +1147,13 @@ const DataSourceDetailPage: React.FC = () => {
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="flex items-center">
-								{getSourceTypeIcon(source_type)}
-								<div className="ml-3">
+								<div>
 									<p className="text-sm font-medium">Loại nguồn</p>
-									<p className="text-sm capitalize">{source_type}</p>
+									<p className="text-sm flex items-center capitalize">
+										{getSourceTypeIcon(source_type)}
+										<span className="ml-3">{source_type}</span>
+									</p>
 								</div>
-							</div>
-
-							<div>
-								<p className="text-sm font-medium">ID</p>
-								<p className="text-sm font-mono">{id}</p>
 							</div>
 
 							<div>
@@ -1212,7 +1168,20 @@ const DataSourceDetailPage: React.FC = () => {
 
 							<div>
 								<p className="text-sm font-medium">Người tạo</p>
-								<p className="text-sm">{created_by}</p>
+								<p className="text-sm">
+									{created_by?.full_name} -
+									<span className="inline-flex">
+										{created_by?.roles.map((role) => (
+											<Badge
+												key={role}
+												variant="secondary"
+												className="ml-1 uppercase text-[10px]"
+											>
+												{role}
+											</Badge>
+										))}
+									</span>
+								</p>
 							</div>
 
 							<div className="flex items-center justify-between pt-2">
@@ -1271,7 +1240,7 @@ const DataSourceDetailPage: React.FC = () => {
 
 							<Button variant="outline" className="w-full justify-start">
 								<Trash className="mr-2 h-4 w-4" />
-								Xóa nguồn dữ liệu
+								Xóa
 							</Button>
 						</CardContent>
 					</Card>
@@ -1351,14 +1320,7 @@ const DataSourceDetailPage: React.FC = () => {
 
 						<CardContent>
 							<Tabs defaultValue="details">
-								<TabsList
-									className={cn(
-										"grid mb-8",
-										source_type === SourceType.FILE
-											? "grid-cols-3"
-											: "grid-cols-4",
-									)}
-								>
+								<TabsList className={cn("grid mb-8 grid-cols-5")}>
 									<TabsTrigger value="details" className="flex items-center">
 										<Info className="h-4 w-4 mr-2" />
 										<span>Thông tin</span>
@@ -1370,27 +1332,20 @@ const DataSourceDetailPage: React.FC = () => {
 										<Shield className="h-4 w-4 mr-2" />
 										<span>Xác thực</span>
 									</TabsTrigger>
-									{source_type !== SourceType.FILE && (
-										<TabsTrigger
-											value="connection"
-											className="flex items-center"
-										>
-											<Terminal className="h-4 w-4 mr-2" />
-											<span>Kiểm tra kết nối</span>
-										</TabsTrigger>
-									)}
+									<TabsTrigger value="connection" className="flex items-center">
+										<Terminal className="h-4 w-4 mr-2" />
+										<span>Kiểm tra kết nối</span>
+									</TabsTrigger>
 									{source_type === SourceType.FILE && (
 										<TabsTrigger value="files" className="flex items-center">
 											<Files className="h-4 w-4 mr-2" />
 											<span>Files</span>
 										</TabsTrigger>
 									)}
-									{source_type !== SourceType.FILE && (
-										<TabsTrigger value="logs" className="flex items-center">
-											<Clock className="h-4 w-4 mr-2" />
-											<span>Lịch sử</span>
-										</TabsTrigger>
-									)}
+									<TabsTrigger value="logs" className="flex items-center">
+										<Clock className="h-4 w-4 mr-2" />
+										<span>Lịch sử</span>
+									</TabsTrigger>
 								</TabsList>
 
 								<TabsContent value="details">
@@ -1416,6 +1371,17 @@ const DataSourceDetailPage: React.FC = () => {
 								</TabsContent>
 
 								<TabsContent value="files">
+									<div className="flex items-center gap-4 mb-4">
+										<h3 className="text-lg font-medium">Files</h3>
+										<Button
+											variant="outline"
+											className="ml-2"
+											onClick={() => setShowUploadDialog(true)}
+										>
+											<Upload className="h-4 w-4 mr-1" />
+											Tải lên
+										</Button>
+									</div>
 									<div className="space-y-8">
 										{files?.data && files?.data.length > 0 ? (
 											<div>
@@ -1426,7 +1392,12 @@ const DataSourceDetailPage: React.FC = () => {
 													>
 														<div className="flex items-center">
 															<Files className="h-5 w-5 text-blue-500 mr-2" />
-															<span>{file.file_name}</span>
+															<span className="text-sm">{file.file_name}</span>
+															<p className="text-sm ml-2">
+																{file.file_size
+																	? `(${formatBytes(file.file_size)})`
+																	: ""}
+															</p>
 														</div>
 														<DownloadFileButton file_id={file.id} />
 													</div>
@@ -1434,7 +1405,6 @@ const DataSourceDetailPage: React.FC = () => {
 											</div>
 										) : (
 											<div>
-												<h3 className="text-lg font-medium mb-4">Files</h3>
 												<p className="text-sm text-muted-foreground">
 													Chưa có file nào được tải lên
 												</p>
@@ -1491,25 +1461,6 @@ const DataSourceDetailPage: React.FC = () => {
 											)}
 										</div>
 
-										{source_type === "file" && (
-											<div className="space-y-4">
-												<div className="flex justify-between items-center">
-													<h3 className="text-lg font-medium">Upload file</h3>
-													<Button onClick={() => setShowUploadDialog(true)}>
-														<Upload className="mr-2 h-4 w-4" />
-														<span>Tải lên file mới</span>
-													</Button>
-												</div>
-
-												<p className="text-sm text-muted-foreground">
-													Tải lên file mới để thay thế file hiện tại. Hệ thống
-													sẽ tự động cập nhật đường dẫn file.
-												</p>
-											</div>
-										)}
-
-										<Separator />
-
 										{renderConnectionLogs()}
 									</div>
 								</TabsContent>
@@ -1530,7 +1481,6 @@ const DataSourceDetailPage: React.FC = () => {
 				open={showUploadDialog}
 				onOpenChange={setShowUploadDialog}
 				onSelect={(file) => handleUploadFile(file)}
-				datasource_id={id}
 			/>
 			<PipelineTemplateDialog
 				open={showPipelineTemplateDialog}

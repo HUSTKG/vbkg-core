@@ -20,7 +20,9 @@ class UploadService:
 
     async def upload_file(
         self,
-        file: UploadFile,
+        file: bytes,
+        file_name: str,
+        file_type: str,
         datasource_id: Optional[str],
         user_id: str,
         metadata: Optional[Dict[str, Any]] = None,
@@ -47,14 +49,14 @@ class UploadService:
                         detail="Data source is not of type 'file'",
                     )
 
-            if not file.filename:
+            if not file_name:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="File name is required",
                 )
 
             # Generate a unique file path in storage
-            file_ext = file.filename.split(".")[-1] if "." in file.filename else ""
+            file_ext = file_name.split(".")[-1] if "." in file_name else ""
 
             if not file_ext or (file_format and file_ext.lower() != file_format):
                 # If file extension does not match expected format, use the provided format
@@ -63,16 +65,16 @@ class UploadService:
                     detail=f"File extension '{file_ext}' does not match expected format '{file_format}'",
                 )
 
-            storage_path = f"{file_path}/{file.filename}.{file_ext}"
+            storage_path = f"{file_path}/{file_name}.{file_ext}"
 
             # Read file content
-            file_content = await file.read()
+            file_content = file
 
             # Register in database
             file_upload = FileUploadCreate(
                 data_source_id=datasource_id if datasource_id else None,
-                file_name=file.filename,
-                file_type=get_file_type(file.filename, file.content_type),
+                file_name=file_name,
+                file_type=get_file_type(file_name, file_type),
                 file_size=len(file_content),
                 uploaded_by=user_id,
                 storage_path=storage_path,
@@ -115,7 +117,7 @@ class UploadService:
             await self.user_service._log_user_activity(
                 user_id,
                 "file_upload",
-                f"Uploaded file '{file.filename}' to data source '{datasource_id}'",
+                f"Uploaded file '{file_name}' to data source '{datasource_id}'",
             )
 
             return response.data[0]

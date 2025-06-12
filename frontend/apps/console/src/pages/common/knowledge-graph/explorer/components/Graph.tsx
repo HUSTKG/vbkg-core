@@ -14,7 +14,6 @@ interface GraphVisualizationProps {
 	graphData?: ISubgraphResponse;
 }
 
-// Enhanced Graph Visualization with simplified node dragging
 export default function GraphVisualization({
 	loading,
 	graphData,

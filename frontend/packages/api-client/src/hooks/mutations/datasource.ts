@@ -82,7 +82,7 @@ export const useDeleteDatasource = (
 		mutationFn: DatasourceService.deleteDatasource,
 		...options,
 		onSuccess: (...params) => {
-			queryClient.invalidateQueries({ queryKey: QueryKeys.datasources.list() });
+			queryClient.invalidateQueries({ queryKey: QueryKeys.datasources.list({}) });
 			options.onSuccess?.(...params);
 		},
 	});

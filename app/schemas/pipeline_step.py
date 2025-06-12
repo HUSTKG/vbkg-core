@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import AnyHttpUrl, BaseModel, Field, field_validator
 
@@ -14,116 +14,227 @@ class PipelineRunStatus(str, Enum):
 
 
 class PipelineStepType(str, Enum):
-    FILE_READER = "file_reader"
-    API_FETCHER = "api_fetcher"
-    DATABASE_EXTRACTOR = "database_extractor"
-    TEXT_EXTRACTOR = "text_extractor"
-    LLM_ENTITY_EXTRACTOR = "llm_entity_extractor"
-    FIBO_MAPPER = "fibo_mapper"
+    # Data Acquisition Steps
+    FILE_INGESTION = "file_ingestion"
+    API_INGESTION = "api_ingestion"
+    DATABASE_INGESTION = "database_ingestion"
+    
+    # Data Preprocessing Steps
+    TEXT_CHUNKING = "text_chunking"
+    DATA_CLEANER = "data_cleaner"
+    DATA_VALIDATOR = "data_validator"
+    
+    # Knowledge Extraction Steps
+    KNOWLEDGE_EXTRACTOR = "knowledge_extractor"  # for structured data
+    KNOWLEDGE_MAPPING = "knowledge_mapping"  # for unstructured data
+    
+    # Ontology Management Steps
+    ONTOLOGY_ENRICHMENT = "ontology_enrichment"
+    
+    # Entity Processing Steps
     ENTITY_RESOLUTION = "entity_resolution"
-    KNOWLEDGE_GRAPH_WRITER = "knowledge_graph_writer"
-    DATA_VALIDATION = "data_validation"
-    DATA_TRANSFORMATION = "data_transformation"
+    ENTITY_FUSION = "entity_fusion"
+    ENTITY_ENRICHMENT = "entity_enrichment"  # e.g., adding attributes
+    
+    # Knowledge Graph Operations
+    KG_WRITER = "kg_writer"
+    KG_COMPLETION = "kg_completion"
+    
+    # Quality Assurance Steps
+    QUALITY_MONITORING = "quality_monitoring"
+    
+    # Custom and Utility Steps
     CUSTOM_PYTHON = "custom_python"
 
 
 class StepConfig(BaseModel):
     """Base model for step configurations"""
 
-    pass
+    # Common configuration
+    datasource_id: Optional[str] = None
+    trust_score: Optional[float] = 0.5
+    metadata_tracking: bool = True
+    error_handling: str = "stop"  # stop, skip, retry
+    max_retries: int = 3
+    timeout: int = 300  # seconds
+
+    # Incremental processing
+    is_incremental: bool = False
+    incremental_field: Optional[str] = None
+    last_processed_value: Optional[str] = None
 
 
-class FileReaderConfig(StepConfig):
-    """Configuration for reading files from storage"""
+class FileIngestionConfig(StepConfig):
+    """Configuration for file ingestion"""
 
-    datasource_id: Optional[str] = None  # Reference to data source
-    file_id: Optional[str] = None  # Direct file ID (alternative to datasource)
+    file_paths: List[str] = []
+    file_pattern: Optional[str] = None
     encoding: str = "utf-8"
     chunk_size: Optional[int] = None
-    file_filter: Optional[str] = None  # Pattern to filter files
+    supported_formats: List[str] = ["txt", "pdf", "docx", "json", "xml", "csv"]
+    extract_metadata: bool = True
+    recursive: bool = False
 
 
-class ApiFetcherConfig(StepConfig):
-    """Configuration for fetching data from APIs"""
+class ApiIngestionConfig(StepConfig):
+    """Configuration for API data ingestion"""
 
-    datasource_id: Optional[str] = None  # Reference to data source
-    url: Optional[AnyHttpUrl] = None  # Direct URL (alternative to datasource)
+    url: Optional[AnyHttpUrl] = None
     method: str = "GET"
     headers: Optional[Dict[str, str]] = None
     params: Optional[Dict[str, Any]] = None
     body: Optional[Dict[str, Any]] = None
-    auth_type: Optional[str] = None
+    auth_type: Optional[str] = None  # bearer, basic, api_key
     auth_config: Optional[Dict[str, Any]] = None
     pagination: Optional[Dict[str, Any]] = None
-    use_datasource_auth: bool = True  # Use auth from data source
+    rate_limit: Optional[Dict[str, Any]] = None
+    response_format: str = "json"
 
 
-class DatabaseExtractorConfig(StepConfig):
-    """Configuration for extracting data from databases"""
+class DatabaseIngestionConfig(StepConfig):
+    """Configuration for database data ingestion"""
 
-    datasource_id: Optional[str] = None  # Reference to data source
-    connection_string: Optional[str] = None  # Direct connection (alternative)
+    connection_string: Optional[str] = None
     query: str
     params: Optional[Dict[str, Any]] = None
     batch_size: int = 1000
-    use_datasource_connection: bool = True  # Use connection from data source
+    parallel_connections: int = 1
+    streaming: bool = False
+    incremental_column: Optional[str] = None
 
 
-class TextExtractorConfig(StepConfig):
-    """Configuration for extracting text from documents"""
+class TextChunkingConfig(StepConfig):
+    """Configuration for text chunking"""
 
-    input_format: str  # pdf, docx, html, etc.
-    extract_tables: bool = False
-    extract_metadata: bool = True
-    language: Optional[str] = None
     chunk_size: int = 1000
     chunk_overlap: int = 200
+    chunking_strategy: str = "recursive"  # recursive, semantic, sentence
+    preserve_structure: bool = True
+    min_chunk_size: int = 100
+    max_chunk_size: int = 2000
 
 
-class LlmEntityExtractorConfig(StepConfig):
-    """Configuration for extracting entities using LLM"""
+class DataCleanerConfig(StepConfig):
+    """Configuration for data cleaning"""
 
-    model: str = "gpt-3.5-turbo-0125"
+    remove_duplicates: bool = True
+    normalize_text: bool = True
+    remove_empty_values: bool = True
+    standardize_formats: bool = True
+    custom_cleaning_rules: Optional[List[Dict]] = None
+    preserve_original: bool = False
+
+
+class DataValidatorConfig(StepConfig):
+    """Configuration for data validation"""
+
+    validation_rules: List[Dict[str, Any]] = []
+    schema_validation: bool = True
+    quality_thresholds: Dict[str, float] = {}
+    report_violations: bool = True
+    auto_fix: bool = False
+
+
+class KnowledgeExtractorConfig(StepConfig):
+    """Configuration for structured knowledge extraction"""
+
+    extraction_method: str = "rule_based"  # rule_based, ml, hybrid
+    entity_types: List[str] = []
+    relation_types: List[str] = []
+    extraction_rules: Optional[List[Dict]] = None
+    confidence_threshold: float = 0.7
+
+
+class KnowledgeMappingConfig(StepConfig):
+    """Configuration for unstructured knowledge mapping"""
+
+    model: str = "gpt-4o-mini"
     temperature: float = 0.2
     entity_types: List[str] = []
+    relation_types: List[str] = []
     prompt_template: Optional[str] = None
     max_tokens: int = 1000
-    extract_relationships: bool = False
     context_window: int = 4000
+    batch_size: int = 10
+    confidence_threshold: float = 0.7
 
 
-class FiboMapperConfig(StepConfig):
-    """Configuration for mapping to FIBO ontology"""
+class OntologyEnrichmentConfig(StepConfig):
+    """Configuration for ontology enrichment"""
 
-    mapping_confidence_threshold: float = 0.7
-    save_mappings: bool = True
-    suggest_mappings: bool = True
-    domains: List[str] = []
-    verify_mappings: bool = False
+    ontology_source: str = "custom"  # custom, dbpedia, wikidata, fibo
+    enrichment_strategy: str = "mapping"  # mapping, alignment, merging
+    similarity_threshold: float = 0.8
+    auto_enrichment: bool = True
+    manual_mappings: Optional[Dict[str, str]] = None
+    preserve_existing: bool = True
 
 
 class EntityResolutionConfig(StepConfig):
-    """Configuration for resolving duplicate entities"""
+    """Configuration for entity resolution"""
 
-    resolution_strategy: str = "exact_match"  # exact_match, fuzzy_match, embedding
+    resolution_strategy: str = "exact_match"  # exact_match, fuzzy_match, embedding, ml
     similarity_threshold: float = 0.8
-    match_on: List[str] = ["text"]
-    fuzzy_algorithm: Optional[str] = None
-    handle_conflicts: str = (
-        "keep_both"  # keep_both, keep_newest, keep_highest_confidence
-    )
+    blocking_strategy: str = "standard"  # standard, sorted_neighborhood, canopy
+    blocking_keys: List[str] = []
+    match_attributes: List[str] = []
+    fuzzy_algorithm: Optional[str] = "levenshtein"
     embedding_model: Optional[str] = None
+    batch_size: int = 1000
 
 
-class KnowledgeGraphWriterConfig(StepConfig):
-    """Configuration for writing to knowledge graph"""
+class EntityFusionConfig(StepConfig):
+    """Configuration for entity fusion"""
 
-    batch_size: int = 100
+    fusion_strategy: str = "most_recent"  # most_recent, most_frequent, weighted, custom
+    conflict_resolution: str = "keep_all"  # keep_all, prioritize_source, vote
+    source_weights: Optional[Dict[str, float]] = None
+    preserve_provenance: bool = True
+    quality_threshold: float = 0.5
+
+
+class EntityEnrichmentConfig(StepConfig):
+    """Configuration for entity enrichment"""
+
+    enrichment_sources: List[str] = []  # external APIs, knowledge bases
+    enrichment_types: List[str] = []  # attributes, relationships, metadata
+    enrichment_strategy: str = "append"  # append, merge, replace
+    confidence_threshold: float = 0.7
+    rate_limit: Optional[Dict[str, Any]] = None
+
+
+class KgWriterConfig(StepConfig):
+    """Configuration for knowledge graph writing"""
+
+    graph_format: str = "rdf"  # rdf, property_graph
+    serialization: str = "turtle"  # turtle, n3, json-ld, etc.
+    batch_size: int = 1000
     create_if_not_exists: bool = True
-    update_if_exists: bool = False
-    store_metadata: bool = True
-    track_provenance: bool = True
-    commit_strategy: str = "batch"  # batch, single, transaction
+    update_if_exists: str = "merge"  # merge, replace, skip
+    validate_before_write: bool = True
+    namespace_config: Optional[Dict[str, str]] = None
+    compression: bool = False
+
+
+class KgCompletionConfig(StepConfig):
+    """Configuration for knowledge graph completion"""
+
+    completion_method: str = "embedding"  # embedding, rule_based, ml
+    link_prediction: bool = True
+    entity_prediction: bool = False
+    confidence_threshold: float = 0.8
+    max_predictions: int = 1000
+    validation_rules: Optional[List[Dict]] = None
+
+
+class QualityMonitoringConfig(StepConfig):
+    """Configuration for quality monitoring"""
+
+    metrics: List[str] = ["completeness", "consistency", "accuracy"]
+    quality_threshold: float = 0.8
+    monitoring_frequency: str = "batch"  # batch, real_time, scheduled
+    alert_thresholds: Dict[str, float] = {}
+    report_format: str = "json"
 
 
 class CustomPythonConfig(StepConfig):
@@ -133,61 +244,112 @@ class CustomPythonConfig(StepConfig):
     requirements: List[str] = []
     input_mapping: Dict[str, str] = {}
     output_mapping: Dict[str, str] = {}
-    timeout: int = 60  # seconds
+    environment: str = "sandbox"  # sandbox, container, native
+    resource_limits: Optional[Dict[str, Any]] = None
+
+
+class IncrementalConfig(BaseModel):
+    """Configuration for incremental processing"""
+
+    enabled: bool = False
+    strategy: str = "timestamp"  # timestamp, sequence, custom
+    checkpoint_field: str
+    checkpoint_value: Optional[Union[str, int, datetime]] = None
+    full_refresh_interval: Optional[str] = None  # cron expression
+    change_detection: str = "polling"  # polling, event, log_based
+
+
+class StepDependency(BaseModel):
+    """Step dependency configuration"""
+
+    step_id: str
+    condition: str = "completed"  # completed, any_output, custom
+    custom_condition: Optional[str] = None
 
 
 class PipelineStepBase(BaseModel):
     name: str = Field(..., description="Human-readable name for this step")
     step_type: PipelineStepType
     config: Dict[str, Any] = Field(..., description="Configuration for this step")
-    run_order: int = Field(..., description="Execution run_order of this step")
-    inputs: Optional[List[str]] = None
+    run_order: int = Field(..., description="Execution order of this step")
+    description: Optional[str] = None
     enabled: bool = True
-    datasource_id: Optional[str] = None  # Direct reference to data source
+
+    # Dependencies and flow control
+    depends_on: List[str] = []  # List of step IDs this step depends on
+    inputs: Optional[List[str]] = None
+    parallel_execution: bool = False
+
+    # Incremental processing
+    is_incremental_capable: bool = False
+    incremental_config: Optional[IncrementalConfig] = None
+
+    # Error handling
+    on_failure: str = "stop"  # stop, skip, retry
+    max_retries: int = 3
+    retry_delay: int = 60  # seconds
+
+    # Resource management
+    resource_requirements: Optional[Dict[str, Any]] = None
+    timeout: int = 3600  # seconds
 
     @field_validator("config")
-    def validate_config_with_datasource(cls, v, values):
+    def validate_step_config(cls, v, values):
         step_type = values.data.get("step_type")
-        datasource_id = values.data.get("datasource_id")
-
         if not step_type:
             return v
 
-        # If datasource_id is provided, some config fields become optional
-        if isinstance(v, dict):
-            if step_type == PipelineStepType.FILE_READER:
-                config = FileReaderConfig(**v)
-                if datasource_id and not config.datasource_id:
-                    config.datasource_id = datasource_id
-                return config
-            elif step_type == PipelineStepType.API_FETCHER:
-                config = ApiFetcherConfig(**v)
-                if datasource_id and not config.datasource_id:
-                    config.datasource_id = datasource_id
-                return config
-            elif step_type == PipelineStepType.DATABASE_EXTRACTOR:
-                config = DatabaseExtractorConfig(**v)
-                if datasource_id and not config.datasource_id:
-                    config.datasource_id = datasource_id
-                return config
+        # Validate config based on step type
+        config_classes = {
+            PipelineStepType.FILE_INGESTION: FileIngestionConfig,
+            PipelineStepType.API_INGESTION: ApiIngestionConfig,
+            PipelineStepType.DATABASE_INGESTION: DatabaseIngestionConfig,
+            PipelineStepType.TEXT_CHUNKING: TextChunkingConfig,
+            PipelineStepType.DATA_CLEANER: DataCleanerConfig,
+            PipelineStepType.DATA_VALIDATOR: DataValidatorConfig,
+            PipelineStepType.KNOWLEDGE_EXTRACTOR: KnowledgeExtractorConfig,
+            PipelineStepType.KNOWLEDGE_MAPPING: KnowledgeMappingConfig,
+            PipelineStepType.ONTOLOGY_ENRICHMENT: OntologyEnrichmentConfig,
+            PipelineStepType.ENTITY_RESOLUTION: EntityResolutionConfig,
+            PipelineStepType.ENTITY_FUSION: EntityFusionConfig,
+            PipelineStepType.ENTITY_ENRICHMENT: EntityEnrichmentConfig,
+            PipelineStepType.KG_WRITER: KgWriterConfig,
+            PipelineStepType.KG_COMPLETION: KgCompletionConfig,
+            PipelineStepType.QUALITY_MONITORING: QualityMonitoringConfig,
+            PipelineStepType.CUSTOM_PYTHON: CustomPythonConfig,
+        }
+
+        config_class = config_classes.get(step_type)
+        if config_class and isinstance(v, dict):
+            try:
+                validated_config = config_class(**v)
+                return validated_config.model_dump()
+            except Exception as e:
+                raise ValueError(f"Invalid config for {step_type}: {e}")
 
         return v
 
+
 class PipelineStepRunBase(BaseModel):
+    pipeline_run_id: str
+    step_id: str
     status: PipelineRunStatus = PipelineRunStatus.PENDING
     run_order: int
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
     input_data: Optional[Dict[str, Any]] = None
+    output_data: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    retry_count: int = 0
+    celery_task_id: Optional[str] = None
 
 
-# Create Models
 class PipelineStepCreate(PipelineStepBase):
     id: Optional[str] = None
 
 
 class PipelineStepRunCreate(PipelineStepRunBase):
-    pipeline_run_id: str
-    step_id: str
-    celery_task_id: Optional[str] = None
+    pass
 
 
 # Update Models
@@ -196,24 +358,26 @@ class PipelineStepUpdate(BaseModel):
     step_type: Optional[PipelineStepType] = None
     config: Optional[Dict[str, Any]] = None
     run_order: Optional[int] = None
+    description: Optional[str] = None
     enabled: Optional[bool] = None
-    inputs: Optional[List[str]] = None
+    depends_on: Optional[List[str]] = None
+    incremental_config: Optional[IncrementalConfig] = None
 
 
 class PipelineStepRunUpdate(BaseModel):
     status: Optional[PipelineRunStatus] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    input_data: Optional[Dict[str, Any]] = None
     output_data: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
     retry_count: Optional[int] = None
     celery_task_id: Optional[str] = None
 
 
-# Response Models
 class PipelineStep(PipelineStepBase):
-    id: Optional[str] = None
-    pipeline_id: Optional[str] = None
+    id: str
+    pipeline_id: str
     created_at: datetime
     updated_at: datetime
 
@@ -223,21 +387,12 @@ class PipelineStep(PipelineStepBase):
 
 class PipelineStepRun(PipelineStepRunBase):
     id: str
-    pipeline_run_id: str
-    step_id: str
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    output_data: Optional[Dict[str, Any]] = None
-    error_message: Optional[str] = None
-    retry_count: int = 0
-    celery_task_id: Optional[str] = None
     created_at: datetime
 
     class Config:
         from_attributes = True
 
 
-# Operational Models
 class PipelineStepResult(BaseModel):
     step_id: str
     status: PipelineRunStatus
@@ -246,3 +401,4 @@ class PipelineStepResult(BaseModel):
     start_time: datetime
     end_time: Optional[datetime] = None
     duration: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None

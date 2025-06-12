@@ -1,251 +1,254 @@
-from typing import List, Optional, Dict, Any
 import logging
 import re
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
-# Try to import spaCy for better sentence segmentation
-try:
-    import spacy
-    SPACY_AVAILABLE = True
-except ImportError:
-    SPACY_AVAILABLE = False
-    logger.warning("spaCy is not installed. Text chunking will use simple methods.")
 
-# Default parameters for chunking
-DEFAULT_CHUNK_SIZE = 1000  # characters
-DEFAULT_CHUNK_OVERLAP = 200  # characters
-DEFAULT_CHUNK_MIN_SIZE = 100  # minimum characters for a valid chunk
-
-# Load spaCy model for sentence splitting if available
-nlp_sentences = None
-if SPACY_AVAILABLE:
-    try:
-        # Use a small model just for sentence segmentation
-        nlp_sentences = spacy.load("xx_ent_wiki_sm")
-        logger.info("Loaded spaCy model for sentence segmentation")
-    except OSError:
-        logger.warning("spaCy model not found for sentence segmentation")
-
-def chunk_text(
-    text: str,
-    chunk_size: int = DEFAULT_CHUNK_SIZE,
-    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
-    min_chunk_size: int = DEFAULT_CHUNK_MIN_SIZE
-) -> List[str]:
+class TextChunker:
     """
-    Split text into overlapping chunks, trying to respect sentence boundaries.
+    Specialized chunker for Vietnamese text with domain awareness
+    """
     
-    Args:
-        text: Input text
-        chunk_size: Maximum size of each chunk in characters
-        chunk_overlap: Number of overlapping characters between chunks
-        min_chunk_size: Minimum size of a chunk to be included
+    def __init__(self):
+        # Vietnamese sentence endings
+        self.sentence_endings = ['.', '!', '?', '。', '！', '？']
         
-    Returns:
-        List of text chunks
-    """
-    if not text:
-        return []
+        # Vietnamese financial document section markers
+        self.financial_sections = [
+            'thông tin tài khoản', 'thông tin khách hàng', 'lịch sử giao dịch',
+            'số dư tài khoản', 'thông tin thẻ', 'khoản vay', 'tiết kiệm',
+            'bảo hiểm', 'đầu tư', 'chuyển khoản', 'nạp tiền', 'rút tiền',
+            'thanh toán', 'phí dịch vụ', 'lãi suất', 'hạn mức'
+        ]
     
-    # Use spaCy for better sentence splitting if available
-    if SPACY_AVAILABLE and nlp_sentences:
-        return chunk_text_with_spacy(text, chunk_size, chunk_overlap, min_chunk_size)
-    else:
-        return chunk_text_simple(text, chunk_size, chunk_overlap, min_chunk_size)
-
-def chunk_text_with_spacy(
-    text: str,
-    chunk_size: int,
-    chunk_overlap: int,
-    min_chunk_size: int
-) -> List[str]:
-    """
-    Split text into chunks using spaCy for sentence segmentation.
-    
-    Args:
-        text: Input text
-        chunk_size: Maximum size of each chunk in characters
-        chunk_overlap: Number of overlapping characters between chunks
-        min_chunk_size: Minimum size of a chunk to be included
+    def text_chunk(
+        self, 
+        text: str, 
+        max_tokens: int = 3000, 
+        overlap_tokens: int = 300,
+        preserve_entities: bool = True
+    ) -> List[Dict[str, Any]]:
+        """
+        Text chunking for Vietnamese financial text
         
-    Returns:
-        List of text chunks
-    """
-    try:
-        # Process the text to get sentence boundaries
-        doc = nlp_sentences(text)
-        sentences = list(doc.sents)
+        Args:
+            text: Vietnamese text to chunk
+            max_tokens: Maximum tokens per chunk (roughly 4 chars = 1 token)
+            overlap_tokens: Tokens to overlap between chunks
+            preserve_entities: Whether to avoid splitting entities
+            
+        Returns:
+            List of chunks with metadata
+        """
+        max_chars = max_tokens * 4  # Rough conversion
+        overlap_chars = overlap_tokens * 4
+        
+        # First, try to split by financial sections
+        section_chunks = self._split_by_financial_sections(text, max_chars)
+        
+        if len(section_chunks) > 1:
+            logger.info(f"Split text into {len(section_chunks)} financial sections")
+            return self._add_overlap_to_chunks(section_chunks, overlap_chars)
+        
+        # If no clear sections, split by paragraphs
+        paragraph_chunks = self._split_by_paragraphs(text, max_chars)
+        
+        if len(paragraph_chunks) > 1:
+            logger.info(f"Split text into {len(paragraph_chunks)} paragraph chunks")
+            return self._add_overlap_to_chunks(paragraph_chunks, overlap_chars)
+        
+        # Finally, split by sentences
+        sentence_chunks = self._split_by_sentences(text, max_chars)
+        
+        logger.info(f"Split text into {len(sentence_chunks)} sentence chunks")
+        return self._add_overlap_to_chunks(sentence_chunks, overlap_chars)
+    
+    def _split_by_financial_sections(
+        self, 
+        text: str, 
+        max_chars: int
+    ) -> List[Dict[str, Any]]:
+        """Split text by Vietnamese financial document sections"""
+        chunks = []
+        current_chunk = ""
+        current_section = "general"
+        
+        lines = text.split('\n')
+        
+        for line in lines:
+            line_lower = line.lower().strip()
+            
+            # Check if line indicates a new financial section
+            detected_section = None
+            for section in self.financial_sections:
+                if section in line_lower:
+                    detected_section = section
+                    break
+            
+            # If we found a new section and current chunk is not empty
+            if detected_section and current_chunk.strip():
+                chunks.append({
+                    'text': current_chunk.strip(),
+                    'section': current_section,
+                    'chunk_type': 'financial_section',
+                    'char_count': len(current_chunk),
+                    'estimated_tokens': len(current_chunk) // 4
+                })
+                current_chunk = ""
+                current_section = detected_section
+            
+            current_chunk += line + "\n"
+            
+            # If chunk is getting too large, split it
+            if len(current_chunk) > max_chars:
+                chunks.append({
+                    'text': current_chunk.strip(),
+                    'section': current_section,
+                    'chunk_type': 'financial_section',
+                    'char_count': len(current_chunk),
+                    'estimated_tokens': len(current_chunk) // 4
+                })
+                current_chunk = ""
+        
+        # Add final chunk
+        if current_chunk.strip():
+            chunks.append({
+                'text': current_chunk.strip(),
+                'section': current_section,
+                'chunk_type': 'financial_section',
+                'char_count': len(current_chunk),
+                'estimated_tokens': len(current_chunk) // 4
+            })
+        
+        return chunks
+    
+    def _split_by_paragraphs(
+        self, 
+        text: str, 
+        max_chars: int
+    ) -> List[Dict[str, Any]]:
+        """Split text by paragraphs"""
+        paragraphs = re.split(r'\n\s*\n', text)
+        chunks = []
+        current_chunk = ""
+        
+        for para in paragraphs:
+            if len(current_chunk + para) < max_chars:
+                current_chunk += para + "\n\n"
+            else:
+                if current_chunk.strip():
+                    chunks.append({
+                        'text': current_chunk.strip(),
+                        'section': 'paragraph',
+                        'chunk_type': 'paragraph',
+                        'char_count': len(current_chunk),
+                        'estimated_tokens': len(current_chunk) // 4
+                    })
+                current_chunk = para + "\n\n"
+        
+        if current_chunk.strip():
+            chunks.append({
+                'text': current_chunk.strip(),
+                'section': 'paragraph',
+                'chunk_type': 'paragraph',
+                'char_count': len(current_chunk),
+                'estimated_tokens': len(current_chunk) // 4
+            })
+        
+        return chunks
+    
+    def _split_by_sentences(
+        self, 
+        text: str, 
+        max_chars: int
+    ) -> List[Dict[str, Any]]:
+        """Split text by Vietnamese sentences"""
+        # Vietnamese sentence splitting regex
+        sentence_pattern = r'[.!?。！？]+(?:\s|$)'
+        sentences = re.split(sentence_pattern, text)
         
         chunks = []
         current_chunk = ""
         
         for sentence in sentences:
-            sentence_text = sentence.text
-            
-            # If adding this sentence would exceed the chunk size
-            if len(current_chunk) + len(sentence_text) > chunk_size and current_chunk:
-                # Add the current chunk if it's large enough
-                if len(current_chunk) >= min_chunk_size:
-                    chunks.append(current_chunk.strip())
+            sentence = sentence.strip()
+            if not sentence:
+                continue
                 
-                # Start a new chunk with overlap
-                overlap_start = max(0, len(current_chunk) - chunk_overlap)
-                current_chunk = current_chunk[overlap_start:] + sentence_text
+            if len(current_chunk + sentence) < max_chars:
+                current_chunk += sentence + ". "
             else:
-                # Add the sentence to the current chunk
-                current_chunk += sentence_text
+                if current_chunk.strip():
+                    chunks.append({
+                        'text': current_chunk.strip(),
+                        'section': 'sentence',
+                        'chunk_type': 'sentence',
+                        'char_count': len(current_chunk),
+                        'estimated_tokens': len(current_chunk) // 4
+                    })
+                current_chunk = sentence + ". "
         
-        # Add the last chunk if it's not empty and large enough
-        if current_chunk and len(current_chunk) >= min_chunk_size:
-            chunks.append(current_chunk.strip())
+        if current_chunk.strip():
+            chunks.append({
+                'text': current_chunk.strip(),
+                'section': 'sentence',
+                'chunk_type': 'sentence',
+                'char_count': len(current_chunk),
+                'estimated_tokens': len(current_chunk) // 4
+            })
         
         return chunks
     
-    except Exception as e:
-        logger.error(f"Error in spaCy text chunking: {e}")
-        # Fall back to simple chunking
-        return chunk_text_simple(text, chunk_size, chunk_overlap, min_chunk_size)
-
-def chunk_text_simple(
-    text: str,
-    chunk_size: int,
-    chunk_overlap: int,
-    min_chunk_size: int
-) -> List[str]:
-    """
-    Split text into chunks using simple regex-based sentence splitting.
-    
-    Args:
-        text: Input text
-        chunk_size: Maximum size of each chunk in characters
-        chunk_overlap: Number of overlapping characters between chunks
-        min_chunk_size: Minimum size of a chunk to be included
+    def _add_overlap_to_chunks(
+        self, 
+        chunks: List[Dict[str, Any]], 
+        overlap_chars: int
+    ) -> List[Dict[str, Any]]:
+        """Add overlapping context between chunks"""
+        if len(chunks) <= 1:
+            return chunks
         
-    Returns:
-        List of text chunks
-    """
-    # Split text into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', text)
-    
-    chunks = []
-    current_chunk = ""
-    
-    for sentence in sentences:
-        # If adding this sentence would exceed the chunk size
-        if len(current_chunk) + len(sentence) > chunk_size and current_chunk:
-            # Add the current chunk if it's large enough
-            if len(current_chunk) >= min_chunk_size:
-                chunks.append(current_chunk.strip())
+        overlapped_chunks = []
+        
+        for i, chunk in enumerate(chunks):
+            text = chunk['text']
             
-            # Start a new chunk with overlap
-            overlap_start = max(0, len(current_chunk) - chunk_overlap)
-            current_chunk = current_chunk[overlap_start:] + sentence
-        else:
-            # Add the sentence to the current chunk
-            current_chunk += " " + sentence if current_chunk else sentence
-    
-    # Add the last chunk if it's not empty and large enough
-    if current_chunk and len(current_chunk) >= min_chunk_size:
-        chunks.append(current_chunk.strip())
-    
-    # If the text is too short to generate any chunks, just return the whole text
-    if not chunks and len(text) >= min_chunk_size:
-        chunks.append(text.strip())
-    
-    return chunks
+            # Add overlap from previous chunk
+            if i > 0 and overlap_chars > 0:
+                prev_text = chunks[i-1]['text']
+                if len(prev_text) > overlap_chars:
+                    overlap_start = prev_text[-overlap_chars:]
+                    # Find a good break point (sentence ending)
+                    for ending in self.sentence_endings:
+                        last_ending = overlap_start.rfind(ending)
+                        if last_ending > overlap_chars // 2:
+                            overlap_start = overlap_start[last_ending+1:].strip()
+                            break
+                    text = overlap_start + " " + text
+            
+            # Add overlap to next chunk
+            if i < len(chunks) - 1 and overlap_chars > 0:
+                next_text = chunks[i+1]['text']
+                if len(next_text) > overlap_chars:
+                    overlap_end = next_text[:overlap_chars]
+                    # Find a good break point
+                    for ending in self.sentence_endings:
+                        first_ending = overlap_end.find(ending)
+                        if first_ending > overlap_chars // 2:
+                            overlap_end = overlap_end[:first_ending+1].strip()
+                            break
+                    text = text + " " + overlap_end
+            
+            overlapped_chunk = chunk.copy()
+            overlapped_chunk['text'] = text
+            overlapped_chunk['has_overlap'] = i > 0 or i < len(chunks) - 1
+            overlapped_chunk['original_char_count'] = chunk['char_count']
+            overlapped_chunk['char_count'] = len(text)
+            overlapped_chunk['estimated_tokens'] = len(text) // 4
+            
+            overlapped_chunks.append(overlapped_chunk)
+        
+        return overlapped_chunks
 
-def chunk_by_paragraphs(
-    text: str,
-    max_paragraphs_per_chunk: int = 5,
-    min_paragraphs_per_chunk: int = 1
-) -> List[str]:
-    """
-    Split text into chunks by paragraphs.
-    
-    Args:
-        text: Input text
-        max_paragraphs_per_chunk: Maximum number of paragraphs per chunk
-        min_paragraphs_per_chunk: Minimum number of paragraphs per chunk
-        
-    Returns:
-        List of text chunks
-    """
-    # Split text into paragraphs
-    paragraphs = re.split(r'\n\s*\n', text)
-    
-    # Filter out empty paragraphs
-    paragraphs = [p.strip() for p in paragraphs if p.strip()]
-    
-    if not paragraphs:
-        return []
-    
-    # If there are fewer paragraphs than the minimum, return the whole text
-    if len(paragraphs) <= min_paragraphs_per_chunk:
-        return [text.strip()]
-    
-    chunks = []
-    current_paragraphs = []
-    
-    for paragraph in paragraphs:
-        current_paragraphs.append(paragraph)
-        
-        if len(current_paragraphs) >= max_paragraphs_per_chunk:
-            chunks.append("\n\n".join(current_paragraphs))
-            current_paragraphs = []
-    
-    # Add the last chunk if not empty
-    if current_paragraphs:
-        chunks.append("\n\n".join(current_paragraphs))
-    
-    return chunks
 
-def chunk_structured_data(data: Dict[str, Any], chunk_size: int = 50) -> List[Dict[str, Any]]:
-    """
-    Split structured data into chunks.
-    
-    Args:
-        data: Structured data (e.g., from JSON or CSV)
-        chunk_size: Maximum number of items per chunk
-        
-    Returns:
-        List of data chunks
-    """
-    # Handle list of records (e.g., CSV rows or JSON array)
-    if isinstance(data, list):
-        chunks = []
-        for i in range(0, len(data), chunk_size):
-            chunks.append(data[i:i+chunk_size])
-        return chunks
-    
-    # Handle nested dictionaries
-    if isinstance(data, dict):
-        # For simple key-value dictionaries, just return as is
-        if all(not isinstance(v, (dict, list)) for v in data.values()):
-            return [data]
-        
-        # For complex nested structures, split into chunks based on keys
-        chunks = []
-        current_chunk = {}
-        current_size = 0
-        
-        for key, value in data.items():
-            if isinstance(value, list) and len(value) > chunk_size:
-                # Split large lists into chunks
-                for i in range(0, len(value), chunk_size):
-                    chunks.append({key: value[i:i+chunk_size]})
-            elif current_size >= chunk_size:
-                chunks.append(current_chunk)
-                current_chunk = {key: value}
-                current_size = 1
-            else:
-                current_chunk[key] = value
-                current_size += 1
-        
-        if current_chunk:
-            chunks.append(current_chunk)
-        
-        return chunks
-    
-    # Default: return as a single chunk
-    return [data]

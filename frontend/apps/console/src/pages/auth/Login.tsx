@@ -66,7 +66,7 @@ export default function Login() {
 							{
 								label: "Email",
 								name: "email",
-								placeholder: "Nhập địa ch email của bạn",
+								placeholder: "Nhập địa chỉ email của bạn",
 								type: "email",
 							},
 							{

@@ -1,0 +1,194 @@
+id: http://w3id.org/ontogpt/vietnam-banking
+name: vietnam-banking
+title: Vietnam Banking Template
+description: OntoGPT compatible template for Vietnam banking domain
+license: https://creativecommons.org/publicdomain/zero/1.0/
+version: 0.1.0
+
+prefixes:
+  linkml: https://w3id.org/linkml/
+  vn: http://w3id.org/ontogpt/vietnam-banking/
+
+default_prefix: vn
+default_range: string
+
+imports:
+  - linkml:types
+
+classes:
+  Document:
+    tree_root: true
+    description: A document containing banking information
+    attributes:
+      banks:
+        description: Banks mentioned in the document
+        multivalued: true
+        range: Bank
+      products:
+        description: Financial products mentioned
+        multivalued: true  
+        range: Product
+      transactions:
+        description: Transactions mentioned
+        multivalued: true
+        range: Transaction
+      rates:
+        description: Interest rates mentioned
+        multivalued: true
+        range: Rate
+
+  Bank:
+    description: A bank or financial institution
+    attributes:
+      name:
+        description: Name of the bank
+        range: string
+        required: true
+        identifier: true
+        annotations:
+          prompt: The full name of the bank
+      code:
+        description: Bank code such as VCB, TCB, BIDV
+        range: string
+        annotations:
+          prompt: Short code or abbreviation for the bank
+      type:
+        description: Type of bank
+        range: BankType
+        annotations:
+          prompt: Classification of the bank type
+
+  Product:
+    description: A financial product or service
+    attributes:
+      name:
+        description: Name of the product
+        range: string
+        required: true
+        identifier: true
+        annotations:
+          prompt: Name of the financial product
+      type:
+        description: Type of product
+        range: ProductType
+        annotations:
+          prompt: Category of the financial product
+      bank:
+        description: Bank offering this product
+        range: string
+        annotations:
+          prompt: Which bank offers this product
+
+  Transaction:
+    description: A financial transaction
+    attributes:
+      type:
+        description: Type of transaction
+        range: TransactionType
+        annotations:
+          prompt: What kind of transaction is this
+      amount:
+        description: Amount of money
+        range: float
+        annotations:
+          prompt: Numerical amount of the transaction
+      currency:
+        description: Currency type
+        range: Currency
+        annotations:
+          prompt: What currency is used
+      sender:
+        description: Who sent the money
+        range: string
+        annotations:
+          prompt: Person or entity sending money
+      receiver:
+        description: Who received the money
+        range: string
+        annotations:
+          prompt: Person or entity receiving money
+
+  Rate:
+    description: An interest rate
+    attributes:
+      value:
+        description: Rate percentage
+        range: float
+        annotations:
+          prompt: Numerical value of the interest rate
+      type:
+        description: Type of rate
+        range: RateType
+        annotations:
+          prompt: What type of interest rate is this
+      term:
+        description: Term period
+        range: string
+        annotations:
+          prompt: Duration or term for this rate
+      product:
+        description: Associated product
+        range: string
+        annotations:
+          prompt: What product does this rate apply to
+
+enums:
+
+  BankType:
+    permissible_values:
+      COMMERCIAL:
+        description: Commercial bank
+      STATE:
+        description: State bank  
+      POLICY:
+        description: Policy bank
+      FOREIGN:
+        description: Foreign bank
+      DEVELOPMENT:
+        description: Development bank
+
+  ProductType:
+    permissible_values:
+      SAVINGS:
+        description: Savings account
+      LOAN:
+        description: Loan product
+      CREDIT_CARD:
+        description: Credit card
+      DEBIT_CARD:
+        description: Debit card
+      INSURANCE:
+        description: Insurance product
+      INVESTMENT:
+        description: Investment product
+
+  TransactionType:
+    permissible_values:
+      TRANSFER:
+        description: Money transfer
+      WITHDRAWAL:
+        description: Cash withdrawal
+      DEPOSIT:
+        description: Money deposit
+      PAYMENT:
+        description: Payment transaction
+      LOAN:
+        description: Loan transaction
+
+  Currency:
+    permissible_values:
+      VND:
+        description: Vietnamese Dong
+      USD:
+        description: US Dollar
+      EUR:
+        description: Euro
+
+  RateType:
+    permissible_values:
+      FIXED:
+        description: Fixed interest rate
+      VARIABLE:
+        description: Variable interest rate
+      STANDARD:
+        description: Standard rate

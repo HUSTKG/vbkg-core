@@ -1,15 +1,19 @@
-import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import {
+	UseMutationOptions,
+	useMutation,
+	useQueryClient,
+} from "@tanstack/react-query";
+import {
+	ICancelPipelineRunRequest,
+	ICancelPipelineRunResponse,
 	ICreatePipelineRequest,
 	ICreatePipelineResponse,
-	IUpdatePipelineRequest,
-	IUpdatePipelineResponse,
 	IDeletePipelineRequest,
 	IDeletePipelineResponse,
 	IRunPipelineRequest,
 	IRunPipelineResponse,
-	ICancelPipelineRunRequest,
-	ICancelPipelineRunResponse,
+	IUpdatePipelineRequest,
+	IUpdatePipelineResponse,
 } from "@vbkg/types";
 import { PipelineService } from "../../services/pipeline";
 
@@ -59,9 +63,16 @@ export const useDeletePipeline = (
 export const useRunPipeline = (
 	options: UseMutationOptions<IRunPipelineResponse, Error, IRunPipelineRequest>,
 ) => {
+	const queryClient = useQueryClient();
 	return useMutation<IRunPipelineResponse, Error, IRunPipelineRequest>({
 		mutationFn: PipelineService.runPipeline,
 		...options,
+		onSuccess: (data, variables, context) => {
+			queryClient.invalidateQueries({
+				queryKey: ["pipelineRuns", { pipeline_id: variables.id }],
+			});
+			options.onSuccess?.(data, variables, context);
+		},
 	});
 };
 

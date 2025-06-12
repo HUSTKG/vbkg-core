@@ -77,11 +77,6 @@ const getPipelineTemplates = async (
   return await api()
     .get<IGetPipelineTemplatesResponse>(
       API_ENDPOINTS.GET_PIPELINE_TEMPLATES(input.datasource_id),
-      {
-        params: {
-          ...input,
-        },
-      },
     )
     .then((res) => res.data);
 };

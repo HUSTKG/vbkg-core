@@ -1,44 +1,37 @@
-import logging
-from typing import Dict, Any, List, Optional, Union
-from uuid import UUID
-import os
-import json
-from datetime import datetime
 import asyncio
+import logging
+import os
+from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+from uuid import UUID
 
 from app.core.supabase import get_supabase
-from app.utils.s3 import upload_file_to_s3
-from app.utils.file_handler import save_upload_file
-from app.tasks.extraction import process_file
+from app.utils.file_processor import process_file
 
 logger = logging.getLogger(__name__)
 
 
 async def ingest_file(
-    file_path: str,
+    file_id: Optional[str],
     file_name: str,
-    content_type: str,
     datasource_id: UUID,
-    user_id: Optional[UUID] = None,
-    metadata: Optional[Dict[str, Any]] = None,
-    process_immediately: bool = True,
 ) -> Optional[Dict[str, Any]]:
     """
     Ingest a file into the system.
 
     Args:
-        file_path: Path to the local file
+        file_id: File upload id
         file_name: Original file name
-        content_type: MIME type of the file
         datasource_id: ID of the data source
-        user_id: ID of the user uploading the file
-        metadata: Additional metadata
         process_immediately: Whether to process the file immediately
 
     Returns:
         File record or None if ingestion failed
     """
     try:
+        from app.services.file_upload import UploadService
+
+        file_service = UploadService()
         supabase = await get_supabase()
 
         # Check if data source exists
@@ -53,53 +46,24 @@ async def ingest_file(
             logger.error(f"Data source {datasource_id} not found")
             return None
 
-        # Calculate file size
-        file_size = os.path.getsize(file_path)
 
-        # Upload to S3
-        s3_object_name = f"uploads/{datasource_id}/{file_name}"
-        s3_path = await upload_file_to_s3(
-            file_path=file_path,
-            bucket_name="knowledge-graph-files",
-            object_name=s3_object_name,
-        )
+        file_record = await supabase.table("file_uploads").update({"upload_status": "pending"}).eq(
+            "id", file_id 
+        ).execute()
 
-        if not s3_path:
-            logger.error(f"Failed to upload file to S3: {file_path}")
-            return None
+        text_content = await process_file(UUID(file_id))
 
-        # Create file upload record
-        file_data = {
-            "data_source_id": str(datasource_id),
-            "file_name": file_name,
-            "file_type": content_type,
-            "file_size": file_size,
-            "storage_path": s3_path,
-            "upload_status": "pending" if process_immediately else "uploaded",
-            "processed": False,
-            "metadata": metadata or {},
-            "uploaded_by": str(user_id) if user_id else None,
+        file_record = file_record.data[0] if file_record.data else None
+
+        file_record = {
+                "id": file_id,
+                "file_name": file_name,
+                "datasource_id": str(datasource_id),
+                "upload_status": "processed",
+                "text_content": text_content,
         }
 
-        response = await supabase.table("file_uploads").insert(file_data).execute()
-
-        if not response.data:
-            logger.error(f"Failed to create file upload record for {file_name}")
-            return None
-
-        file_record = response.data[0]
-
-        # Process file immediately if requested
-        if process_immediately:
-            # Update status
-            await supabase.table("file_uploads").update({"upload_status": "queued"}).eq(
-                "id", file_record["id"]
-            ).execute()
-
-            # Start processing
-            asyncio.create_task(process_file(UUID(file_record["id"])))
-
-        return file_record
+        return file_record 
 
     except Exception as e:
         logger.error(f"Error ingesting file {file_name}: {str(e)}")
@@ -135,7 +99,11 @@ async def ingest_api_data(
     try:
         import httpx
 
+        from app.services.file_upload import UploadService
+
         supabase = await get_supabase()
+
+        upload_service = UploadService()
 
         # Check if data source exists
         response = (
@@ -192,7 +160,7 @@ async def ingest_api_data(
                 return None
 
             # Save response content to a temporary file
-            now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+            now = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
             file_name = f"api_data_{now}.{data_format}"
             temp_path = os.path.join(os.getcwd(), "temp", file_name)
 
@@ -201,20 +169,26 @@ async def ingest_api_data(
             with open(temp_path, "wb") as f:
                 f.write(response.content)
 
-            # Ingest the file
-            return await ingest_file(
-                file_path=temp_path,
+            # store in supabase storage and update the file_uploads
+            upload_response = await upload_service.upload_file(
+                file=response.content,
                 file_name=file_name,
-                content_type=f"application/{data_format}",
-                datasource_id=datasource_id,
-                user_id=user_id,
+                file_type=data_format,
+                datasource_id=str(datasource_id),
+                user_id=str(user_id),
                 metadata={
                     "source_url": api_url,
                     "content_length": len(response.content),
                     "http_status": response.status_code,
                     "headers": dict(response.headers),
                 },
-                process_immediately=process_immediately,
+            )
+
+            # Ingest the file
+            return await ingest_file(
+                file_id=upload_response["id"],
+                file_name=file_name,
+                datasource_id=datasource_id,
             )
 
     except Exception as e:
@@ -245,9 +219,13 @@ async def ingest_database_data(
         Data record or None if ingestion failed
     """
     try:
-        import sqlalchemy
         import pandas as pd
+        import sqlalchemy
         from sqlalchemy import create_engine, text
+
+        from app.services.file_upload import UploadService
+
+        upload_service = UploadService()
 
         supabase = await get_supabase()
 
@@ -274,7 +252,7 @@ async def ingest_database_data(
             df = pd.DataFrame(result.fetchall(), columns=result.keys())
 
             # Save to file
-            now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+            now = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
             file_name = f"db_export_{now}.{output_format}"
             temp_path = os.path.join(os.getcwd(), "temp", file_name)
 
@@ -283,24 +261,37 @@ async def ingest_database_data(
             if output_format == "csv":
                 df.to_csv(temp_path, index=False)
                 content_type = "text/csv"
+            elif output_format == "parquet":
+                df.to_parquet(temp_path, index=False)
+                content_type = "application/parquet"
             else:
                 df.to_json(temp_path, orient="records")
                 content_type = "application/json"
 
-            # Ingest the file
-            return await ingest_file(
-                file_path=temp_path,
+            # read file
+            with open(temp_path, "rb") as f:
+                file_content = f.read()
+
+            # store in supabase storage and update the file_uploads
+            upload_response = await upload_service.upload_file(
+                file=file_content,
                 file_name=file_name,
-                content_type=content_type,
-                datasource_id=datasource_id,
-                user_id=user_id,
+                file_type=content_type,
+                datasource_id=str(datasource_id),
+                user_id=str(user_id),
                 metadata={
                     "row_count": len(df),
                     "column_count": len(df.columns),
                     "columns": df.columns.tolist(),
                     "query": query,
                 },
-                process_immediately=process_immediately,
+            )
+
+            # Ingest the file
+            return await ingest_file(
+                file_id=upload_response["id"],
+                file_name=file_name,
+                datasource_id=datasource_id,
             )
 
     except Exception as e:

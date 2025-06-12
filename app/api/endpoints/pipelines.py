@@ -1,6 +1,6 @@
 from typing import Annotated, Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi import status as HttpStatus
 
 from app.api.deps import PermissionChecker
@@ -8,7 +8,8 @@ from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.pipeline import (Pipeline, PipelineCreate,
                                   PipelineCreateFromTemplate, PipelineRun,
                                   PipelineUpdate, StartPipelineRequest)
-from app.schemas.pipeline_step import PipelineStep, PipelineStepRun
+from app.schemas.pipeline_step import (PipelineStep, PipelineStepRun,
+                                       PipelineStepType)
 from app.schemas.user import User
 from app.services.pipeline import PipelineService
 from app.services.pipeline_step import PipelineStepService
@@ -165,7 +166,9 @@ async def get_pipeline_run_status(
     """
     try:
         # Get pipeline run details
-        pipeline_run = await pipeline_service.get_pipeline_run(run_id)
+        pipeline_run = await pipeline_service.get_pipeline_run(
+            run_id=run_id, pipeline_id=pipeline_id
+        )
 
         # Get step runs for this pipeline run
         step_runs_response = await step_service.get_pipeline_step_runs(run_id)
@@ -350,6 +353,19 @@ async def execute_pipeline(
         )
 
 
+@router.get("/{pipeline_id}/metrics", response_model=Dict[str, Any])
+async def get_pipeline_metrics(
+    pipeline_id: str, current_user: Dict = Depends(check_read_permission)
+):
+    """Get pipeline execution metrics"""
+    try:
+        pipeline_service = PipelineService()
+        metrics = await pipeline_service.get_pipeline_execution_metrics(pipeline_id)
+        return {"success": True, "data": metrics}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{pipeline_id}/steps", response_model=PaginatedResponse[PipelineStep])
 async def get_pipeline_steps(
     pipeline_id: Annotated[str, Path()],
@@ -414,7 +430,7 @@ async def get_pipeline_step(
     "/runs/{pipeline_run_id}/steps", response_model=PaginatedResponse[PipelineStepRun]
 )
 async def get_pipeline_step_runs(
-    pipeline_run_id: Optional[str] = None,
+    pipeline_run_id: Annotated[str, Path()],
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(check_read_permission),
@@ -433,6 +449,7 @@ async def get_pipeline_step_runs(
             status_code=404,
             detail="Pipeline step not found",
         )
+
     return PaginatedResponse(
         data=[PipelineStepRun(**data) for data in step.data],
         meta=PaginatedMeta(
@@ -573,3 +590,212 @@ async def get_compatible_datasources_for_step(
             status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get compatible data sources: {str(e)}",
         )
+
+
+@router.get("/step-types/", response_model=Dict[str, Any])
+async def get_available_step_types(current_user: Dict = Depends(check_read_permission)):
+    """Get all available pipeline step types"""
+    try:
+        step_types = [
+            {
+                "value": step_type.value,
+                "name": step_type.name,
+                "category": _get_step_category(step_type),
+                "description": _get_step_description(step_type),
+                "supports_incremental": _supports_incremental(step_type),
+                "complexity": _get_step_complexity(step_type),
+            }
+            for step_type in PipelineStepType
+        ]
+
+        # Group by category
+        categorized_steps = {}
+        for step in step_types:
+            category = step["category"]
+            if category not in categorized_steps:
+                categorized_steps[category] = []
+            categorized_steps[category].append(step)
+
+        return {
+            "success": True,
+            "data": {"step_types": step_types, "categories": categorized_steps},
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/validate-config", response_model=Dict[str, Any])
+async def validate_pipeline_config(
+    config_data: Dict[str, Any] = Body(...),
+    current_user: Dict = Depends(check_read_permission),
+):
+    """Validate pipeline configuration"""
+    try:
+        # Basic validation
+        errors = []
+        warnings = []
+
+        # Validate pipeline structure
+        if "steps" not in config_data:
+            errors.append("Pipeline must have steps")
+        else:
+            steps = config_data["steps"]
+            if not isinstance(steps, list) or len(steps) == 0:
+                errors.append("Pipeline must have at least one step")
+
+            # Validate step dependencies
+            step_ids = {step.get("id") for step in steps if step.get("id")}
+            for step in steps:
+                depends_on = step.get("depends_on", [])
+                for dep_id in depends_on:
+                    if dep_id not in step_ids:
+                        errors.append(
+                            f"Step dependency '{dep_id}' not found in pipeline"
+                        )
+
+        # Check for circular dependencies
+        if "steps" in config_data:
+            try:
+                # This would need the actual dependency checking logic
+                # For now, just a placeholder
+                pass
+            except Exception as e:
+                errors.append(f"Circular dependency detected: {str(e)}")
+
+        is_valid = len(errors) == 0
+
+        return {
+            "success": True,
+            "data": {"is_valid": is_valid, "errors": errors, "warnings": warnings},
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================== HELPER FUNCTIONS ==================
+
+
+def _get_step_category(step_type: PipelineStepType) -> str:
+    """Get category for step type"""
+    categories = {
+        # Data Acquisition
+        PipelineStepType.FILE_READER: "Data Acquisition",
+        PipelineStepType.API_FETCHER: "Data Acquisition",
+        PipelineStepType.DATABASE_EXTRACTOR: "Data Acquisition",
+        PipelineStepType.WEB_SCRAPER: "Data Acquisition",
+        # Data Preprocessing
+        PipelineStepType.TEXT_EXTRACTOR: "Data Preprocessing",
+        PipelineStepType.DATA_CLEANER: "Data Preprocessing",
+        PipelineStepType.DATA_VALIDATOR: "Data Preprocessing",
+        PipelineStepType.FORMAT_CONVERTER: "Data Preprocessing",
+        # Knowledge Extraction
+        PipelineStepType.LLM_ENTITY_EXTRACTOR: "Knowledge Extraction",
+        PipelineStepType.NER_EXTRACTOR: "Knowledge Extraction",
+        PipelineStepType.RELATION_EXTRACTOR: "Knowledge Extraction",
+        PipelineStepType.ENTITY_LINKER: "Knowledge Extraction",
+        # Ontology Management
+        PipelineStepType.ONTOLOGY_MAPPER: "Ontology Management",
+        PipelineStepType.FIBO_MAPPER: "Ontology Management",
+        PipelineStepType.SCHEMA_MATCHER: "Ontology Management",
+        PipelineStepType.ONTOLOGY_MERGER: "Ontology Management",
+        # Entity Processing
+        PipelineStepType.ENTITY_RESOLUTION: "Entity Processing",
+        PipelineStepType.ENTITY_FUSION: "Entity Processing",
+        PipelineStepType.ENTITY_CLUSTERING: "Entity Processing",
+        PipelineStepType.DUPLICATE_DETECTION: "Entity Processing",
+        # Knowledge Graph Operations
+        PipelineStepType.KNOWLEDGE_GRAPH_WRITER: "Knowledge Graph Operations",
+        PipelineStepType.GRAPH_VALIDATOR: "Knowledge Graph Operations",
+        PipelineStepType.GRAPH_REASONER: "Knowledge Graph Operations",
+        PipelineStepType.LINK_PREDICTOR: "Knowledge Graph Operations",
+        # Quality Assurance
+        PipelineStepType.QUALITY_CHECKER: "Quality Assurance",
+        PipelineStepType.CONSISTENCY_VALIDATOR: "Quality Assurance",
+        PipelineStepType.COMPLETENESS_CHECKER: "Quality Assurance",
+        PipelineStepType.PROVENANCE_TRACKER: "Quality Assurance",
+        # Utilities
+        PipelineStepType.CUSTOM_PYTHON: "Utilities",
+        PipelineStepType.WORKFLOW_CONTROLLER: "Utilities",
+        PipelineStepType.NOTIFICATION_SENDER: "Utilities",
+    }
+    return categories.get(step_type, "Other")
+
+
+def _get_step_description(step_type: PipelineStepType) -> str:
+    """Get description for step type"""
+    descriptions = {
+        PipelineStepType.FILE_READER: "Read and process files from various sources",
+        PipelineStepType.API_FETCHER: "Fetch data from REST APIs and web services",
+        PipelineStepType.DATABASE_EXTRACTOR: "Extract data from relational databases",
+        PipelineStepType.WEB_SCRAPER: "Scrape and extract data from web pages",
+        PipelineStepType.TEXT_EXTRACTOR: "Extract text content from documents",
+        PipelineStepType.DATA_CLEANER: "Clean and normalize data",
+        PipelineStepType.DATA_VALIDATOR: "Validate data quality and integrity",
+        PipelineStepType.FORMAT_CONVERTER: "Convert data between different formats",
+        PipelineStepType.LLM_ENTITY_EXTRACTOR: "Extract entities using Large Language Models",
+        PipelineStepType.NER_EXTRACTOR: "Named Entity Recognition using NLP models",
+        PipelineStepType.RELATION_EXTRACTOR: "Extract relationships between entities",
+        PipelineStepType.ENTITY_LINKER: "Link entities to knowledge bases",
+        PipelineStepType.ONTOLOGY_MAPPER: "Map data to ontology concepts",
+        PipelineStepType.FIBO_MAPPER: "Map financial data to FIBO ontology",
+        PipelineStepType.SCHEMA_MATCHER: "Match schemas between data sources",
+        PipelineStepType.ONTOLOGY_MERGER: "Merge multiple ontologies",
+        PipelineStepType.ENTITY_RESOLUTION: "Resolve duplicate entities",
+        PipelineStepType.ENTITY_FUSION: "Fuse information from multiple entities",
+        PipelineStepType.ENTITY_CLUSTERING: "Cluster similar entities",
+        PipelineStepType.DUPLICATE_DETECTION: "Detect duplicate records",
+        PipelineStepType.KNOWLEDGE_GRAPH_WRITER: "Write data to knowledge graph",
+        PipelineStepType.GRAPH_VALIDATOR: "Validate knowledge graph structure",
+        PipelineStepType.GRAPH_REASONER: "Apply reasoning rules to graph",
+        PipelineStepType.LINK_PREDICTOR: "Predict missing links in graph",
+        PipelineStepType.QUALITY_CHECKER: "Assess overall data quality",
+        PipelineStepType.CONSISTENCY_VALIDATOR: "Check data consistency",
+        PipelineStepType.COMPLETENESS_CHECKER: "Check data completeness",
+        PipelineStepType.PROVENANCE_TRACKER: "Track data lineage and provenance",
+        PipelineStepType.CUSTOM_PYTHON: "Execute custom Python code",
+        PipelineStepType.WORKFLOW_CONTROLLER: "Control workflow execution",
+        PipelineStepType.NOTIFICATION_SENDER: "Send notifications and alerts",
+    }
+    return descriptions.get(step_type, "Custom pipeline step")
+
+
+def _supports_incremental(step_type: PipelineStepType) -> bool:
+    """Check if step type supports incremental processing"""
+    incremental_types = {
+        PipelineStepType.FILE_READER,
+        PipelineStepType.API_FETCHER,
+        PipelineStepType.DATABASE_EXTRACTOR,
+        PipelineStepType.WEB_SCRAPER,
+        PipelineStepType.LLM_ENTITY_EXTRACTOR,
+        PipelineStepType.ENTITY_RESOLUTION,
+        PipelineStepType.KNOWLEDGE_GRAPH_WRITER,
+        PipelineStepType.QUALITY_CHECKER,
+    }
+    return step_type in incremental_types
+
+
+def _get_step_complexity(step_type: PipelineStepType) -> str:
+    """Get complexity level for step type"""
+    high_complexity = {
+        PipelineStepType.LLM_ENTITY_EXTRACTOR,
+        PipelineStepType.ENTITY_RESOLUTION,
+        PipelineStepType.ONTOLOGY_MERGER,
+        PipelineStepType.GRAPH_REASONER,
+        PipelineStepType.CUSTOM_PYTHON,
+    }
+
+    medium_complexity = {
+        PipelineStepType.RELATION_EXTRACTOR,
+        PipelineStepType.ENTITY_LINKER,
+        PipelineStepType.ONTOLOGY_MAPPER,
+        PipelineStepType.ENTITY_FUSION,
+        PipelineStepType.GRAPH_VALIDATOR,
+        PipelineStepType.QUALITY_CHECKER,
+    }
+
+    if step_type in high_complexity:
+        return "high"
+    elif step_type in medium_complexity:
+        return "medium"
+    else:
+        return "low"

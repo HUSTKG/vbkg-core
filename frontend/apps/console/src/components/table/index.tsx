@@ -585,7 +585,7 @@ function DataTable<TData extends RowData, TValue>({
 
       {/* Pagination */}
       {showPagination && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center flex-wrap gap-2 justify-between">
           <div className="flex-1 text-sm text-muted-foreground">
             {table.getFilteredRowModel().rows.length > 0 && (
               <>

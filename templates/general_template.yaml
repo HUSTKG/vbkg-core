@@ -1,0 +1,34 @@
+classes:
+  ExtractionResult:
+    description: A result of extracting general knowledge from text
+    is_a: ontogpt:ExtractionResult
+    slots:
+    - entities
+    - relationships
+default_prefix: general
+description: Template for extracting general knowledge using OntoGPT
+id: http://example.org/general_extraction
+imports:
+- linkml:types
+- ontogpt:core
+license: CC0
+name: general_extraction
+prefixes:
+  biolink: https://w3id.org/biolink/
+  general: http://example.org/general/
+  linkml: https://w3id.org/linkml/
+  ontogpt: http://w3id.org/ontogpt/
+slots:
+  entities:
+    description: List of extracted entities
+    inlined: true
+    inlined_as_list: true
+    multivalued: true
+    range: ontogpt:Any
+  relationships:
+    description: List of extracted relationships
+    inlined: true
+    inlined_as_list: true
+    multivalued: true
+    range: ontogpt:Triple
+title: General Knowledge Extraction Template

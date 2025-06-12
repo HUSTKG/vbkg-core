@@ -34,7 +34,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-class FileProcessor:
+class FileHandler:
     """Comprehensive file processing for various formats"""
     
     def __init__(self):
@@ -565,16 +565,16 @@ class FileProcessor:
 # =============================================
 
 # Global processor instance
-_file_processor: Optional[FileProcessor] = None
+_file_processor: Optional[FileHandler] = None
 
 
-def get_file_processor() -> FileProcessor:
+def get_file_processor() -> FileHandler:
     """Get global file processor instance"""
     
     global _file_processor
     
     if _file_processor is None:
-        _file_processor = FileProcessor()
+        _file_processor = FileHandler()
     
     return _file_processor
 

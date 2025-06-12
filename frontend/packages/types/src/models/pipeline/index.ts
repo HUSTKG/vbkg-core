@@ -1,7 +1,6 @@
 import {
   PipelineStep,
   PipelineStepCreate,
-  PipelineStepResult,
   PipelineStepRun,
 } from "../pipeline-step";
 
@@ -12,22 +11,23 @@ export enum PipelineType {
   COMPLETE = "complete",
 }
 
-export enum PipelineStatus {
+export enum PipelineRunStatus {
   PENDING = "pending",
   RUNNING = "running",
   COMPLETED = "completed",
   FAILED = "failed",
+  CANCELLED = "cancelled",
 }
 
 export interface PipelineBase {
   name: string;
   description?: string;
   pipeline_type: PipelineType;
-  steps: PipelineStep[];
-  schedule?: string;
+  schedule?: string; // CRON expression
+  is_active?: boolean;
 }
 
-export interface PipelineCreate extends Omit<PipelineBase, "steps"> {
+export interface PipelineCreate extends PipelineBase {
   steps: PipelineStepCreate[];
 }
 
@@ -35,54 +35,28 @@ export interface PipelineUpdate {
   name?: string;
   description?: string;
   pipeline_type?: PipelineType;
-  steps?: PipelineStep[];
   schedule?: string;
   is_active?: boolean;
 }
 
 export interface Pipeline extends PipelineBase {
-  id: string; // UUID
-  is_active: boolean;
+  id: string;
   created_by?: string;
   created_at: string;
   updated_at: string;
+  steps?: PipelineStep[];
 }
 
 export interface PipelineRunBase {
-  pipeline_id: string; // UUID
-  status: PipelineStatus;
+  pipeline_id: string;
+  status: PipelineRunStatus;
+  start_time?: string;
+  input_parameters?: Record<string, any>;
   triggered_by?: string;
 }
 
 export interface PipelineRunCreate extends PipelineRunBase {
-  // No additional fields
-}
-
-export interface PipelineRunLog {
-  pipeline_id: string; // UUID
-  run_id: string;
-  logs: Record<string, any>[];
-  step_results: Record<string, PipelineStepResult>;
-}
-
-export interface PipelineRunStatus {
-  status: PipelineStatus;
-  start_time: string;
-  end_time?: string;
-  duration?: number; // in seconds
-  stats?: Record<string, any>;
-}
-
-export interface PipelineRunCreate extends PipelineRunBase {
   celery_task_id?: string;
-}
-
-export interface PipelineUpdate {
-  name?: string;
-  description?: string;
-  pipeline_type?: PipelineType;
-  schedule?: string;
-  is_active?: boolean;
 }
 
 export interface PipelineRunUpdate {
@@ -98,7 +72,6 @@ export interface PipelineRunUpdate {
 
 export interface PipelineRun extends PipelineRunBase {
   id: string;
-  start_time?: string;
   end_time?: string;
   duration?: number;
   result?: Record<string, any>;
@@ -109,12 +82,13 @@ export interface PipelineRun extends PipelineRunBase {
   created_at: string;
 }
 
-export interface PipelineWithSteps {
+// Extended Response Models (with relationships)
+export interface PipelineWithSteps extends Pipeline {
   steps: PipelineStep[];
 }
 
 export interface PipelineRunWithSteps extends PipelineRun {
-  step_runs: Array<PipelineStepRun>;
+  step_runs: PipelineStepRun[];
 }
 
 export interface StartPipelineRequest {
@@ -126,4 +100,19 @@ export interface PipelineRunResult {
   celery_task_id?: string;
   status: PipelineRunStatus;
   message: string;
+}
+
+export interface PipelineCreateFromTemplate {
+  datasource_id: string;
+  template_name: string;
+  custom_options?: Record<string, any>;
+  name_override?: string;
+  description_override?: string;
+  schedule?: string;
+}
+
+export interface PipelineStepWithDataSource extends PipelineStep {
+  datasource_id?: string;
+  datasource_name?: string;
+  datasource_type?: string;
 }

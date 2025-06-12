@@ -3,7 +3,6 @@ import {
 	CheckCircle2,
 	XCircle,
 	AlertCircle,
-	FileCode,
 	Database,
 	File,
 	Globe,
@@ -15,12 +14,25 @@ import {
 	ChevronRight,
 	ArrowLeft,
 	Play,
+	Settings,
+	Layers,
+	Filter,
+	GitBranch,
+	Shield,
+	BarChart3,
+	FileText,
+	Zap,
+	Timer,
+	RefreshCw,
+	Eye,
+	Loader2,
 } from "lucide-react";
 import {
 	PipelineRun,
-	PipelineStatus,
+	PipelineRunStatus,
 	PipelineStep,
 	PipelineStepType,
+	PipelineStepRun,
 	PipelineType,
 } from "@vbkg/types";
 import {
@@ -33,7 +45,6 @@ import {
 	Card,
 	CardContent,
 	CardDescription,
-	CardFooter,
 	CardHeader,
 	CardTitle,
 	cn,
@@ -53,49 +64,60 @@ import {
 	usePipeline,
 	usePipelineRuns,
 	usePipelineSteps,
+	usePipelineStepRuns,
 	useRunPipeline,
 } from "@vbkg/api-client";
 
-const RunStatusBadge = ({ status }: { status?: PipelineStatus }) => {
+const RunStatusBadge = ({ status }: { status?: PipelineRunStatus }) => {
 	switch (status) {
-		case PipelineStatus.COMPLETED:
+		case PipelineRunStatus.COMPLETED:
 			return (
 				<Badge
 					variant="outline"
 					className="bg-green-50 text-green-700 border-green-200"
 				>
 					<CheckCircle2 className="w-3 h-3 mr-1" />
-					Completed
+					Hoàn thành
 				</Badge>
 			);
-		case PipelineStatus.RUNNING:
+		case PipelineRunStatus.RUNNING:
 			return (
 				<Badge
 					variant="outline"
-					className="bg-blue-50 text-blue-700 border-blue-200"
+					className="bg-blue-50 animate-pulse text-blue-700 border-blue-200"
 				>
 					<Clock className="w-3 h-3 mr-1" />
-					Running
+					Đang chạy
 				</Badge>
 			);
-		case PipelineStatus.PENDING:
+		case PipelineRunStatus.PENDING:
 			return (
 				<Badge
 					variant="outline"
-					className="bg-amber-50 text-amber-700 border-amber-200"
+					className="bg-amber-50 animate-pulse text-amber-700 border-amber-200"
 				>
 					<Clock className="w-3 h-3 mr-1" />
-					Pending
+					Đang chờ
 				</Badge>
 			);
-		case PipelineStatus.FAILED:
+		case PipelineRunStatus.FAILED:
 			return (
 				<Badge
 					variant="outline"
 					className="bg-red-50 text-red-700 border-red-200"
 				>
 					<XCircle className="w-3 h-3 mr-1" />
-					Failed
+					Thất bại
+				</Badge>
+			);
+		case PipelineRunStatus.CANCELLED:
+			return (
+				<Badge
+					variant="outline"
+					className="bg-gray-50 text-gray-700 border-gray-200"
+				>
+					<XCircle className="w-3 h-3 mr-1" />
+					Hủy
 				</Badge>
 			);
 		default:
@@ -103,25 +125,39 @@ const RunStatusBadge = ({ status }: { status?: PipelineStatus }) => {
 	}
 };
 
-// Get step type icon
+// Get step type icon with updated mapping
 const getStepTypeIcon = (stepType: PipelineStepType) => {
 	switch (stepType) {
-		case PipelineStepType.FILE_READER:
+		case PipelineStepType.FILE_INGESTION:
 			return <File className="w-4 h-4 mr-1" />;
-		case PipelineStepType.API_FETCHER:
+		case PipelineStepType.API_INGESTION:
 			return <Globe className="w-4 h-4 mr-1" />;
-		case PipelineStepType.DATABASE_EXTRACTOR:
+		case PipelineStepType.DATABASE_INGESTION:
 			return <Database className="w-4 h-4 mr-1" />;
-		case PipelineStepType.TEXT_EXTRACTOR:
-			return <FileCode className="w-4 h-4 mr-1" />;
-		case PipelineStepType.LLM_ENTITY_EXTRACTOR:
+		case PipelineStepType.TEXT_CHUNKING:
+			return <FileText className="w-4 h-4 mr-1" />;
+		case PipelineStepType.DATA_CLEANER:
+			return <Filter className="w-4 h-4 mr-1" />;
+		case PipelineStepType.DATA_VALIDATOR:
+			return <Shield className="w-4 h-4 mr-1" />;
+		case PipelineStepType.KNOWLEDGE_EXTRACTOR:
 			return <Brain className="w-4 h-4 mr-1" />;
-		case PipelineStepType.FIBO_MAPPER:
+		case PipelineStepType.KNOWLEDGE_MAPPING:
 			return <Braces className="w-4 h-4 mr-1" />;
+		case PipelineStepType.ONTOLOGY_ENRICHMENT:
+			return <Layers className="w-4 h-4 mr-1" />;
 		case PipelineStepType.ENTITY_RESOLUTION:
 			return <Network className="w-4 h-4 mr-1" />;
-		case PipelineStepType.KNOWLEDGE_GRAPH_WRITER:
+		case PipelineStepType.ENTITY_FUSION:
+			return <GitBranch className="w-4 h-4 mr-1" />;
+		case PipelineStepType.ENTITY_ENRICHMENT:
+			return <Zap className="w-4 h-4 mr-1" />;
+		case PipelineStepType.KG_WRITER:
 			return <Database className="w-4 h-4 mr-1" />;
+		case PipelineStepType.KG_COMPLETION:
+			return <BarChart3 className="w-4 h-4 mr-1" />;
+		case PipelineStepType.QUALITY_MONITORING:
+			return <Eye className="w-4 h-4 mr-1" />;
 		case PipelineStepType.CUSTOM_PYTHON:
 			return <Code className="w-4 h-4 mr-1" />;
 		default:
@@ -194,7 +230,7 @@ const TypeBadge = ({
 
 // Format duration from seconds to human readable
 const formatDuration = (seconds: number) => {
-	if (!seconds) return "N/A";
+	if (!seconds && seconds !== 0) return "N/A";
 
 	const minutes = Math.floor(seconds / 60);
 	const remainingSeconds = seconds % 60;
@@ -215,7 +251,7 @@ const JsonViewer = ({ data }: { data: any }) => {
 	);
 };
 
-// Pipeline step card component
+// Pipeline step card component with enhanced information
 const PipelineStepCard = ({
 	step,
 	index,
@@ -236,82 +272,319 @@ const PipelineStepCard = ({
 							{step.name}
 						</CardTitle>
 					</div>
-					<Badge
-						variant={step.enabled ? "default" : "outline"}
-						className={
-							step.enabled
-								? "bg-green-100 text-green-800 hover:bg-green-100"
-								: "bg-gray-100 text-gray-800 hover:bg-gray-100"
-						}
-					>
-						{step.enabled ? "Enabled" : "Disabled"}
-					</Badge>
+					<div className="flex gap-2">
+						<Badge
+							variant={step.enabled ? "default" : "outline"}
+							className={
+								step.enabled
+									? "bg-green-100 text-green-800 hover:bg-green-100"
+									: "bg-gray-100 text-gray-800 hover:bg-gray-100"
+							}
+						>
+							{step.enabled ? "Enabled" : "Disabled"}
+						</Badge>
+						{step.parallel_execution && (
+							<Badge variant="outline" className="bg-blue-50 text-blue-700">
+								Parallel
+							</Badge>
+						)}
+						{step.is_incremental_capable && (
+							<Badge variant="outline" className="bg-purple-50 text-purple-700">
+								Incremental
+							</Badge>
+						)}
+					</div>
 				</div>
 				<CardDescription className="flex items-center text-sm">
 					{step.step_type}
-					{step.inputs && step.inputs?.length > 0 && (
+					{step.description && (
 						<span className="ml-2 text-xs text-muted-foreground">
-							Inputs: {step.inputs.join(", ")}
+							• {step.description}
 						</span>
 					)}
 				</CardDescription>
 			</CardHeader>
 			<CardContent>
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+					{/* Dependencies */}
+					{step.depends_on && step.depends_on.length > 0 && (
+						<div>
+							<h4 className="text-sm font-medium text-muted-foreground mb-1">
+								Dependencies
+							</h4>
+							<div className="flex flex-wrap gap-1">
+								{step.depends_on.map((dep) => (
+									<Badge key={dep} variant="outline" className="text-xs">
+										{dep}
+									</Badge>
+								))}
+							</div>
+						</div>
+					)}
+
+					{/* Error Handling */}
+					<div>
+						<h4 className="text-sm font-medium text-muted-foreground mb-1">
+							Error Handling
+						</h4>
+						<div className="flex gap-2 text-xs">
+							<Badge variant="outline">
+								On Failure: {step.on_failure || "stop"}
+							</Badge>
+							<Badge variant="outline">
+								Max Retries: {step.max_retries || 3}
+							</Badge>
+						</div>
+					</div>
+
+					{/* Timeout */}
+					{step.timeout && (
+						<div>
+							<h4 className="text-sm font-medium text-muted-foreground mb-1">
+								Timeout
+							</h4>
+							<Badge variant="outline" className="text-xs">
+								<Timer className="w-3 h-3 mr-1" />
+								{formatDuration(step.timeout)}
+							</Badge>
+						</div>
+					)}
+
+					{/* Inputs */}
+					{step.inputs && step.inputs.length > 0 && (
+						<div>
+							<h4 className="text-sm font-medium text-muted-foreground mb-1">
+								Inputs
+							</h4>
+							<div className="flex flex-wrap gap-1">
+								{step.inputs.map((input) => (
+									<Badge key={input} variant="outline" className="text-xs">
+										{input}
+									</Badge>
+								))}
+							</div>
+						</div>
+					)}
+				</div>
+
 				<Accordion type="single" collapsible className="w-full">
 					<AccordionItem value="config">
 						<AccordionTrigger className="text-sm py-2">
+							<Settings className="w-4 h-4 mr-1" />
 							Configuration
 						</AccordionTrigger>
 						<AccordionContent>
 							<JsonViewer data={step.config} />
 						</AccordionContent>
 					</AccordionItem>
+					{step.incremental_config && (
+						<AccordionItem value="incremental">
+							<AccordionTrigger className="text-sm py-2">
+								<RefreshCw className="w-4 h-4 mr-1" />
+								Incremental Configuration
+							</AccordionTrigger>
+							<AccordionContent>
+								<JsonViewer data={step.incremental_config} />
+							</AccordionContent>
+						</AccordionItem>
+					)}
+					{step.resource_requirements && (
+						<AccordionItem value="resources">
+							<AccordionTrigger className="text-sm py-2">
+								Resources
+							</AccordionTrigger>
+							<AccordionContent>
+								<JsonViewer data={step.resource_requirements} />
+							</AccordionContent>
+						</AccordionItem>
+					)}
 				</Accordion>
 			</CardContent>
 		</Card>
 	);
 };
 
-// Mock logs for a run
-const MockLogContent = () => (
-	<pre className="text-xs font-mono p-4 bg-black text-green-400 rounded-md h-[300px] overflow-auto">
-		{`[2024-05-18T01:00:00] INFO: Starting pipeline run for "Customer Data ETL"
-[2024-05-18T01:00:01] INFO: Executing step "Extract CRM Data"
-[2024-05-18T01:00:02] INFO: Making API request to https://api.crm.example.com/customers
-[2024-05-18T01:01:15] INFO: Received 1,532 customer records
-[2024-05-18T01:01:16] INFO: Step "Extract CRM Data" completed successfully
-[2024-05-18T01:01:16] INFO: Executing step "Transform Customer Data"
-[2024-05-18T01:01:17] INFO: Running Python transformation
-[2024-05-18T01:01:18] INFO: Removed sensitive fields from customer records
-[2024-05-18T01:02:45] INFO: Step "Transform Customer Data" completed successfully
-[2024-05-18T01:02:46] INFO: Executing step "Load to Data Warehouse"
-[2024-05-18T01:02:47] INFO: Inserting data into knowledge graph
-[2024-05-18T01:02:48] INFO: Processing batch 1/16
-[2024-05-18T01:03:15] INFO: Processing batch 2/16
-[2024-05-18T01:03:42] INFO: Processing batch 3/16
-[2024-05-18T01:04:10] INFO: Processing batch 4/16
-[2024-05-18T01:04:45] INFO: Processing batch 5/16
-[2024-05-18T01:05:12] INFO: Processing batch 16/16
-[2024-05-18T01:05:22] INFO: Step "Load to Data Warehouse" completed successfully
-[2024-05-18T01:05:23] INFO: Pipeline run completed successfully`}
-	</pre>
-);
+// Step run card for showing individual step execution details
+const StepRunCard = ({
+	stepRun,
+	step,
+}: { stepRun: PipelineStepRun; step?: PipelineStep }) => {
+	const duration =
+		stepRun.start_time && stepRun.end_time
+			? Math.floor(
+					(new Date(stepRun.end_time).getTime() -
+						new Date(stepRun.start_time).getTime()) /
+						1000,
+				)
+			: undefined;
 
-// Run detail dialog component
+	return (
+		<Card className="mb-3">
+			<CardHeader className="pb-2">
+				<div className="flex justify-between items-center">
+					<div className="flex items-center">
+						<Badge className="mr-2 bg-slate-200 text-slate-800 hover:bg-slate-200">
+							{stepRun.run_order}
+						</Badge>
+						<CardTitle className="text-base flex items-center">
+							{step && getStepTypeIcon(step.step_type as PipelineStepType)}
+							{step?.name || stepRun.step_id}
+						</CardTitle>
+					</div>
+					<div className="flex gap-2 items-center">
+						<RunStatusBadge status={stepRun.status} />
+						{Number(stepRun?.retry_count) > 0 && (
+							<Badge variant="outline" className="text-xs">
+								Retry: {stepRun.retry_count}
+							</Badge>
+						)}
+					</div>
+				</div>
+			</CardHeader>
+			<CardContent>
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+					<div>
+						<h4 className="font-medium text-muted-foreground">Start Time</h4>
+						<p>
+							{stepRun.start_time
+								? new Date(stepRun.start_time).toLocaleString()
+								: "N/A"}
+						</p>
+					</div>
+					<div>
+						<h4 className="font-medium text-muted-foreground">End Time</h4>
+						<p>
+							{stepRun.end_time
+								? new Date(stepRun.end_time).toLocaleString()
+								: "N/A"}
+						</p>
+					</div>
+					<div>
+						<h4 className="font-medium text-muted-foreground">Duration</h4>
+						<p>{duration ? formatDuration(duration) : "N/A"}</p>
+					</div>
+					<div>
+						<h4 className="font-medium text-muted-foreground">Task ID</h4>
+						<p className="font-mono text-xs">
+							{stepRun.celery_task_id || "N/A"}
+						</p>
+					</div>
+				</div>
+
+				{stepRun.error_message && (
+					<div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md mb-3">
+						<h4 className="text-sm font-medium flex items-center">
+							<AlertCircle className="w-4 h-4 mr-1" /> Error
+						</h4>
+						<p className="text-sm mt-1">{stepRun.error_message}</p>
+					</div>
+				)}
+
+				{(stepRun.input_data || stepRun.output_data) && (
+					<Accordion type="single" collapsible className="w-full">
+						{stepRun.input_data && (
+							<AccordionItem value="input">
+								<AccordionTrigger className="text-sm py-2">
+									Input Data
+								</AccordionTrigger>
+								<AccordionContent>
+									<JsonViewer data={stepRun.input_data} />
+								</AccordionContent>
+							</AccordionItem>
+						)}
+						{stepRun.output_data && (
+							<AccordionItem value="output">
+								<AccordionTrigger className="text-sm py-2">
+									Output Data
+								</AccordionTrigger>
+								<AccordionContent>
+									<JsonViewer data={stepRun.output_data} />
+								</AccordionContent>
+							</AccordionItem>
+						)}
+					</Accordion>
+				)}
+			</CardContent>
+		</Card>
+	);
+};
+
+const getStepRunStats = (
+	stepRuns: PipelineStepRun[],
+): {
+	total: number;
+	completed: number;
+	failed: number;
+	running: number;
+	pending: number;
+	cancelled: number;
+	successRate: number;
+} => {
+	const stats = stepRuns.reduce(
+		(acc, run) => {
+			acc.total++;
+			switch (run.status) {
+				case "completed":
+					acc.completed++;
+					break;
+				case "failed":
+					acc.failed++;
+					break;
+				case "running":
+					acc.running++;
+					break;
+				case "pending":
+					acc.pending++;
+					break;
+				case "cancelled":
+					acc.cancelled++;
+					break;
+			}
+			return acc;
+		},
+		{
+			total: 0,
+			completed: 0,
+			failed: 0,
+			running: 0,
+			pending: 0,
+			cancelled: 0,
+			successRate: 0,
+		},
+	);
+	stats.successRate =
+		stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
+	return stats;
+};
+
+// Run detail dialog component with step runs
 const RunDetailDialog = ({
 	isOpen,
 	onClose,
 	run,
+	steps,
 }: {
 	isOpen: boolean;
 	onClose: () => void;
 	run: PipelineRun | null;
+	steps?: PipelineStep[];
 }) => {
+	// Fetch step runs for the selected run
+	const {
+		data: { data: stepRuns } = {},
+		isFetching: loadingStepRuns,
+	} = usePipelineStepRuns(
+		{ pipeline_run_id: run?.id || "", limit: 100 },
+		{ enabled: !!run?.id && isOpen },
+	);
+
+	const stepRunStats = getStepRunStats(stepRuns || []);
+
 	if (!run) return null;
 
 	return (
 		<Dialog title="Run Details" open={isOpen} size="3xl" onOpenChange={onClose}>
-			<div className="space-y-4">
+			<div className="space-y-6">
 				<div className="grid grid-cols-2 gap-4">
 					<div>
 						<h3 className="text-sm font-medium">Status</h3>
@@ -324,7 +597,9 @@ const RunDetailDialog = ({
 					<div>
 						<h3 className="text-sm font-medium">Start Time</h3>
 						<p>
-							{run?.start_time ? new Date(run.start_time).toLocaleString() : ""}
+							{run?.start_time
+								? new Date(run.start_time).toLocaleString()
+								: "N/A"}
 						</p>
 					</div>
 					<div>
@@ -335,6 +610,46 @@ const RunDetailDialog = ({
 					</div>
 				</div>
 
+				{/* Step Run Statistics */}
+				{stepRuns && stepRuns.length > 0 && (
+					<div className="grid grid-cols-6 gap-2">
+						<div className="text-center">
+							<div className="text-2xl font-bold">{stepRunStats.total}</div>
+							<div className="text-xs text-muted-foreground">Total Steps</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-green-600">
+								{stepRunStats.completed}
+							</div>
+							<div className="text-xs text-muted-foreground">Completed</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-red-600">
+								{stepRunStats.failed}
+							</div>
+							<div className="text-xs text-muted-foreground">Failed</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-blue-600">
+								{stepRunStats.running}
+							</div>
+							<div className="text-xs text-muted-foreground">Running</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold text-amber-600">
+								{stepRunStats.pending}
+							</div>
+							<div className="text-xs text-muted-foreground">Pending</div>
+						</div>
+						<div className="text-center">
+							<div className="text-2xl font-bold">
+								{stepRunStats.successRate.toFixed(1)}%
+							</div>
+							<div className="text-xs text-muted-foreground">Success Rate</div>
+						</div>
+					</div>
+				)}
+
 				{run.error_message && (
 					<div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-md">
 						<h3 className="text-sm font-medium flex items-center">
@@ -344,14 +659,56 @@ const RunDetailDialog = ({
 					</div>
 				)}
 
+				{/* Step Runs */}
 				<div>
-					<h3 className="text-sm font-medium mb-2">Logs</h3>
-					<MockLogContent />
+					<h3 className="font-medium mb-4">Step Execution Details</h3>
+					{loadingStepRuns ? (
+						<div className="flex justify-center py-6">
+							<div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+						</div>
+					) : stepRuns && stepRuns.length > 0 ? (
+						<div className="space-y-3">
+							{stepRuns
+								.sort((a, b) => a.run_order - b.run_order)
+								.map((stepRun) => {
+									const step = steps?.find((s) => s.id === stepRun.step_id);
+									return (
+										<StepRunCard
+											key={stepRun.id}
+											stepRun={stepRun}
+											step={step}
+										/>
+									);
+								})}
+						</div>
+					) : (
+						<div className="text-center py-6 text-muted-foreground">
+							No step execution details available.
+						</div>
+					)}
 				</div>
+
+				{run.stats && (
+					<div>
+						<h3 className="text-sm font-medium mb-2">Statistics</h3>
+						<JsonViewer data={run.stats} />
+					</div>
+				)}
+
+				{run.log && (
+					<div>
+						<h3 className="text-sm font-medium mb-2">Logs</h3>
+						<pre className="bg-black text-green-400 p-4 rounded-md overflow-x-auto text-xs h-[200px] overflow-y-auto">
+							{run.log}
+						</pre>
+					</div>
+				)}
 			</div>
 
-			<div>
-				<Button onClick={onClose}>Close</Button>
+			<div className="flex justify-end mt-4">
+				<Button onClick={onClose} variant="outline">
+					Đóng
+				</Button>
 			</div>
 		</Dialog>
 	);
@@ -362,7 +719,6 @@ export default function PipelineDetailsPage() {
 	const { id } = useParams() as { id: string };
 
 	const [selectedRun, setSelectedRun] = useState<PipelineRun | null>(null);
-
 	const [showRunDialog, setShowRunDialog] = useState(false);
 
 	const {
@@ -385,19 +741,14 @@ export default function PipelineDetailsPage() {
 		pipeline_id: id,
 	});
 
-	const { mutate: runPipeline } = useRunPipeline({
+	const { mutate: runPipeline, isPending: isRunning } = useRunPipeline({
 		onSuccess: () => {
-			toast("Success", {
-				description: `Pipeline "${pipeline?.name}" started successfully.`,
-			});
+			toast.success("Bắt đầu pipeline thành công!");
 		},
 
 		onError: (error) => {
 			console.error("Failed to run pipeline:", error);
-			toast("Error", {
-				description: "Failed to start pipeline. Please try again.",
-				className: "bg-red-500 text-white",
-			});
+			toast.error("Lỗi khi bắt đầu pipeline. Vui lòng thử lại sau.");
 		},
 	});
 
@@ -441,6 +792,13 @@ export default function PipelineDetailsPage() {
 			header: "Duration",
 			accessorKey: "duration",
 			cell: (row) => <div>{formatDuration(row?.duration || 0)}</div>,
+		},
+		{
+			header: "Triggered By",
+			accessorKey: "triggered_by",
+			cell: (row) => (
+				<div className="text-sm">{row?.triggered_by || "System"}</div>
+			),
 		},
 		{
 			header: "Error",
@@ -511,25 +869,26 @@ export default function PipelineDetailsPage() {
 				</Button>
 			</div>
 
-			<div className="flex justify-between items-start">
+			<div className="flex justify-between items-start gap-6">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight flex items-center">
+					<h1 className="text-3xl font-bold tracking-tight gap-4 flex-col flex">
 						{pipeline.name}
-						<TypeBadge type={pipeline.pipeline_type} className="ml-3" />
-						<Badge
-							variant={pipeline.is_active ? "default" : "outline"}
-							className={`ml-3 ${pipeline.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
-						>
-							{pipeline.is_active ? "Active" : "Inactive"}
-						</Badge>
 					</h1>
 					<p className="text-muted-foreground mt-1 text-lg">
 						{pipeline.description}
 					</p>
 				</div>
 				<div className="flex gap-2">
-					<Button onClick={handleRunPipeline}>
-						<Play className="mr-2 h-4 w-4" /> Run Now
+					<Button
+						onClick={handleRunPipeline}
+						disabled={!pipeline.is_active || isRunning}
+					>
+						{isRunning ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							<Play className="mr-2 h-4 w-4" />
+						)}{" "}
+						Chạy
 					</Button>
 				</div>
 			</div>
@@ -573,6 +932,22 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
+											Total Steps
+										</dt>
+										<dd className="text-sm">
+											{steps?.length || pipeline.steps?.length || 0}
+										</dd>
+									</div>
+									<div>
+										<dt className="text-sm font-medium text-muted-foreground">
+											Created By
+										</dt>
+										<dd className="text-sm">
+											{pipeline.created_by || "System"}
+										</dd>
+									</div>
+									<div>
+										<dt className="text-sm font-medium text-muted-foreground">
 											Created
 										</dt>
 										<dd className="text-sm">
@@ -598,9 +973,12 @@ export default function PipelineDetailsPage() {
 						<Card>
 							<CardHeader>
 								<CardTitle>Recent Runs</CardTitle>
+								<CardDescription>
+									Latest {runs?.slice(0, 5).length || 0} pipeline executions
+								</CardDescription>
 							</CardHeader>
 							<CardContent>
-								{runs?.length === 0 ? (
+								{!runs || runs.length === 0 ? (
 									<div className="text-center py-6">
 										<p className="text-muted-foreground">
 											No runs recorded for this pipeline.
@@ -608,34 +986,32 @@ export default function PipelineDetailsPage() {
 									</div>
 								) : (
 									<div className="space-y-4">
-										{runs?.slice(0, 3).map((run) => (
+										{runs.slice(0, 5).map((run) => (
 											<div
 												key={run.id}
-												className="flex justify-between items-center border-b pb-4 last:border-0"
+												className="flex flex-wrap justify-between items-center overflow-hidden border-b pb-4 last:border-0"
 											>
 												<div>
 													<div className="flex items-center">
 														<RunStatusBadge status={run.status} />
-														<span className="ml-2 text-sm font-mono">
-															{run.id}
-														</span>
 													</div>
+													<div className="text-sm mt-1 text-neutral-600 font-light">
+														Thời gian {formatDuration(run.duration || 0)}
+													</div>
+												</div>
+												<div className="text-right">
 													<div className="text-sm text-muted-foreground mt-1">
 														{run.start_time
 															? new Date(run.start_time).toLocaleString()
 															: ""}
 													</div>
-												</div>
-												<div className="text-right">
-													<div className="text-sm">
-														{formatDuration(run.duration || 0)}
-													</div>
 													<Button
 														size="sm"
 														className="text-xs mt-1"
+														variant="outline"
 														onClick={() => handleViewRun(run)}
 													>
-														View Details
+														Chi tiết
 													</Button>
 												</div>
 											</div>
@@ -650,16 +1026,31 @@ export default function PipelineDetailsPage() {
 				<TabsContent value="steps">
 					<Card>
 						<CardHeader>
-							<CardTitle>Steps ({pipeline.steps?.length})</CardTitle>
+							<CardTitle>Steps ({steps?.length || 0})</CardTitle>
 							<CardDescription>
-								The sequence of operations in this pipeline.
+								The sequence of operations in this pipeline, showing
+								dependencies, error handling, and configuration.
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<div className="space-y-2">
-								{steps?.map((step: PipelineStep, index: number) => (
-									<PipelineStepCard key={step.id} step={step} index={index} />
-								))}
+								{steps && steps.length > 0 ? (
+									steps
+										.sort((a, b) => a.run_order - b.run_order)
+										.map((step: PipelineStep, index: number) => (
+											<PipelineStepCard
+												key={step.id}
+												step={step}
+												index={index}
+											/>
+										))
+								) : (
+									<div className="text-center py-6">
+										<p className="text-muted-foreground">
+											No steps configured for this pipeline.
+										</p>
+									</div>
+								)}
 							</div>
 						</CardContent>
 					</Card>
@@ -668,14 +1059,15 @@ export default function PipelineDetailsPage() {
 				<TabsContent value="runs" id="runs-tab">
 					<Card>
 						<CardHeader>
-							<CardTitle>Run History</CardTitle>
+							<CardTitle>Run History ({runs?.length || 0})</CardTitle>
 							<CardDescription>
-								Previous executions of this pipeline.
+								Previous executions of this pipeline with detailed step-by-step
+								results.
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
 							<DataTable<PipelineRun, any>
-								data={runs}
+								data={runs || []}
 								columns={runColumns}
 								showPagination={true}
 								actionsOptions={{
@@ -700,6 +1092,7 @@ export default function PipelineDetailsPage() {
 				isOpen={showRunDialog}
 				onClose={() => setShowRunDialog(false)}
 				run={selectedRun}
+				steps={steps}
 			/>
 		</div>
 	);

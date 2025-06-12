@@ -97,7 +97,7 @@ const DialogComponent: React.FC<DialogProps> = ({
 
       <DialogContent
         className={cn(
-          "max-h-[80vh] overflow-y-auto p-0",
+          "max-h-[80vh] overflow-y-auto gap-0 p-0",
           size === "sm" && "sm:max-w-sm",
           size === "md" && "sm:max-w-md",
           size === "lg" && "sm:max-w-lg",

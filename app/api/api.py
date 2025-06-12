@@ -4,10 +4,10 @@ from app.api.endpoints import (
     auth,
     datasources,
     domain,
-    fibo,
     file_upload,
     knowledge_graph,
     notifications,
+    ontology,
     pipelines,
     quality_management,
     search,
@@ -27,7 +27,7 @@ api_router.include_router(
 api_router.include_router(
     datasources.router, prefix="/datasources", tags=["datasources"]
 )
-api_router.include_router(fibo.router, prefix="/fibo", tags=["fibo"])
+api_router.include_router(ontology.router, prefix="/ontology", tags=["ontology"])
 api_router.include_router(pipelines.router, prefix="/pipelines", tags=["pipelines"])
 
 api_router.include_router(

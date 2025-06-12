@@ -1,6 +1,6 @@
 import { SourceType } from "@vbkg/types";
 import { z } from "zod";
-import { jsonSchema } from "./common";
+import { stringToJSONSchema } from "./common";
 
 const ConnectionDetailsSchema = z.object({
   name: z.string().min(1), // Name must be a non-empty string
@@ -54,7 +54,7 @@ const _ApiConnectionDetailsSchema = z
       method: z.enum(["GET", "POST", "PUT", "DELETE"]), // HTTP method must be one of the specified
       headers: z.record(z.string()).optional(), // Optional headers for the API request
       query_params: z.record(z.string()).optional(), // Optional query parameters for the API request
-      body: jsonSchema.optional(), // Optional body for the API request
+      body: stringToJSONSchema.optional(), // Optional body for the API request
       auth_type: z.enum(["BASIC", "BEARER"]).optional(), // Optional authentication type
       auth_config: z.record(z.any()).optional(), // Optional authentication configuration
     }),

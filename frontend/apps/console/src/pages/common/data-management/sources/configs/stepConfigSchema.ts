@@ -28,34 +28,7 @@ export const useStepConfigSchema = (stepType: string): StepConfigField[] => {
 };
 
 export const stepConfigSchemas: Record<string, StepConfigField[]> = {
-	file_reader: [
-		{
-			key: "encoding",
-			label: "File Encoding",
-			type: "select",
-			options: [
-				{ value: "utf-8", label: "UTF-8" },
-				{ value: "ascii", label: "ASCII" },
-				{ value: "latin-1", label: "Latin-1" },
-			],
-			defaultValue: "utf-8",
-			description: "Character encoding of the file",
-		},
-		{
-			key: "file_format",
-			label: "File Format",
-			type: "select",
-			options: [
-				{ value: "auto", label: "Auto-detect" },
-				{ value: "csv", label: "CSV" },
-				{ value: "json", label: "JSON" },
-				{ value: "xml", label: "XML" },
-				{ value: "txt", label: "Text" },
-			],
-			defaultValue: "auto",
-			description: "Expected file format",
-		},
-	],
+	file_reader: [ ],
 	api_fetcher: [
 		{
 			key: "method",
@@ -70,7 +43,7 @@ export const stepConfigSchemas: Record<string, StepConfigField[]> = {
 		},
 		{
 			key: "data_format",
-			label: "Data Format",
+			label: "Định dạng dữ liệu",
 			type: "select",
 			options: [
 				{ value: "json", label: "JSON" },
@@ -93,7 +66,7 @@ export const stepConfigSchemas: Record<string, StepConfigField[]> = {
 			label: "SQL Query",
 			type: "textarea",
 			defaultValue: "SELECT * FROM your_table",
-			description: "SQL query to extract data",
+			description: "SQL truy vấn để trích xuất dữ liệu",
 			required: true,
 		},
 		{
@@ -101,13 +74,13 @@ export const stepConfigSchemas: Record<string, StepConfigField[]> = {
 			label: "Batch Size",
 			type: "number",
 			defaultValue: 1000,
-			description: "Number of rows to process in each batch",
+			description: "Số lượng bản ghi để truy xuất trong mỗi lô",
 		},
 	],
 	text_extractor: [
 		{
 			key: "input_format",
-			label: "Input Format",
+			label: "Định dạng đầu vào",
 			type: "select",
 			options: [
 				{ value: "auto", label: "Auto-detect" },
@@ -120,30 +93,30 @@ export const stepConfigSchemas: Record<string, StepConfigField[]> = {
 		},
 		{
 			key: "extract_tables",
-			label: "Extract Tables",
+			label: "Trích xuất bảng",
 			type: "boolean",
 			defaultValue: true,
-			description: "Extract table data from documents",
+			description: "Trích xuất bảng từ tài liệu",
 		},
 		{
 			key: "extract_metadata",
 			label: "Extract Metadata",
 			type: "boolean",
 			defaultValue: true,
-			description: "Extract document metadata",
+			description: "Trích xuất metadata từ tài liệu",
 		},
 		{
 			key: "chunk_size",
 			label: "Chunk Size",
 			type: "number",
 			defaultValue: 1000,
-			description: "Size of text chunks for processing",
+			description: "Kích thước của mỗi đoạn văn bản (số ký tự)",
 		},
 	],
 	llm_entity_extractor: [
 		{
 			key: "llm_model",
-			label: "Language Model",
+			label: "Mô hình LLM",
 			type: "select",
 			options: [
 				{ value: "gpt-4o-mini", label: "GPT-4o Mini" },
@@ -158,14 +131,14 @@ export const stepConfigSchemas: Record<string, StepConfigField[]> = {
 			label: "Domain",
 			type: "select",
 			options: [],
-			description: "Types of entities to extract (comma-separated)",
+			description: "Miền để trích xuất thực thể (cách dấu phẩy)",
 		},
 		{
 			key: "extract_relationships",
-			label: "Extract Relationships",
+			label: "Trích xuất mối quan hệ",
 			type: "boolean",
 			defaultValue: true,
-			description: "Extract relationships between entities",
+			description: "Trích xuất mối quan hệ giữa các thực thể",
 		},
 		{
 			key: "temperature",

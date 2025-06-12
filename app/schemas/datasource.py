@@ -73,6 +73,16 @@ class DataSourceBase(BaseModel):
         ..., description="Connection details specific to the source type"
     )
     credentials: Optional[Dict[str, Any]] = None
+    trust_score: Optional[float] = Field(
+        None, 
+        ge=0.0, 
+        le=1.0, 
+        description="Trust score of the data source (0.0 to 1.0)"
+    )
+    refresh_interval: Optional[str] = Field(
+        None,
+        description="Cron schedule for automatic data refresh"
+    )
 
     @field_validator("connection_details")
     def validate_connection_details(cls, v, values):
@@ -98,12 +108,14 @@ class DataSourceUpdate(BaseModel):
     connection_details: Optional[Dict[str, Any]] = None
     credentials: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
+    trust_score: Optional[float] = Field(None, ge=0.0, le=1.0)
+    refresh_interval: Optional[str] = None
 
 
 class DataSource(DataSourceBase):
     id: str
     is_active: bool = True
-    created_by: Optional[str] = None
+    created_by: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
 

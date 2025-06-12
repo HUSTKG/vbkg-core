@@ -35,11 +35,3 @@ export interface IGetPipelineTemplatesRequest {
 }
 
 export interface IGetPipelineTemplatesResponse extends ApiResponse<any> {}
-
-export interface ICreatePipelineFromTemplateRequest {
-  datasource_id: string;
-  template_name: string;
-  custom_options: Record<string, any>;
-}
-
-export interface ICreatePipelineFromTemplateResponse extends ApiResponse<any> {}

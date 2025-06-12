@@ -7,10 +7,8 @@ import {
 	CheckCircle,
 	Search,
 	Star,
-	Settings,
 	ChevronDown,
 	ChevronRight,
-	Edit3,
 } from "lucide-react";
 import {
 	Button,
@@ -39,10 +37,12 @@ import {
 } from "@/components";
 import {
 	useCreatePipelineFromTemplate,
-	useDomains,
 	usePipelineTemplates,
 } from "@vbkg/api-client";
-import { StepConfigField, stepConfigSchemas } from "../../configs/stepConfigSchema";
+import {
+	StepConfigField,
+	stepConfigSchemas,
+} from "../../configs/stepConfigSchema";
 import { stepDisplayMap } from "../../configs/stepDisplayMap";
 
 // Types for pipeline templates (updated to match actual schema)
@@ -69,7 +69,6 @@ interface PipelineTemplate {
 	created_at?: string;
 }
 
-
 interface PipelineTemplateDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -88,15 +87,16 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 	const [selectedTemplate, setSelectedTemplate] =
 		useState<PipelineTemplate | null>(null);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [showOnlyRecommended, setShowOnlyRecommended] = useState(false);
 	const [step, setStep] = useState<"browse" | "configure" | "confirm">(
 		"browse",
 	);
-	const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
+	const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>(
+		{},
+	);
 
-	const [stepConfigs, setStepConfigs] = useState<Record<string, Record<string, any>>>({});
-
-	const {data: domains} = useDomains({})
+	const [stepConfigs, setStepConfigs] = useState<
+		Record<string, Record<string, any>>
+	>({});
 
 	const { data: templates = [] } = usePipelineTemplates({
 		datasource_id: dataSourceId,
@@ -124,15 +124,6 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 		const configs: Record<string, Record<string, any>> = {};
 		template.steps.forEach((stepName, index) => {
 			let schema = stepConfigSchemas[stepName] || [];
-		if (stepName === "llm_entity_extractor") {
-			// Add domain options for LLM entity extractor
-			const domainOptions = domains?.data.map((d) => ({
-				value: String(d.id),
-				label: d.display_name,
-			}));
-
-			schema[1].options = domainOptions;
-		}
 			const config: Record<string, any> = {};
 			schema.forEach((field) => {
 				config[field.key] = field.defaultValue;
@@ -212,8 +203,12 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 		setStep("configure");
 	};
 
-	const handleStepConfigChange = (stepKey: string, fieldKey: string, value: any) => {
-		setStepConfigs(prev => ({
+	const handleStepConfigChange = (
+		stepKey: string,
+		fieldKey: string,
+		value: any,
+	) => {
+		setStepConfigs((prev) => ({
 			...prev,
 			[stepKey]: {
 				...prev[stepKey],
@@ -223,42 +218,56 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 	};
 
 	const toggleStepExpanded = (stepKey: string) => {
-		setExpandedSteps(prev => ({
+		setExpandedSteps((prev) => ({
 			...prev,
 			[stepKey]: !prev[stepKey],
 		}));
 	};
 
-	const renderConfigField = (field: StepConfigField, stepKey: string, value: any) => {
+	const renderConfigField = (
+		field: StepConfigField,
+		stepKey: string,
+		value: any,
+	) => {
 		const fieldId = `${stepKey}_${field.key}`;
-		
+
 		switch (field.type) {
 			case "text":
 				return (
 					<Input
 						id={fieldId}
 						value={value || ""}
-						onChange={(e) => handleStepConfigChange(stepKey, field.key, e.target.value)}
+						onChange={(e) =>
+							handleStepConfigChange(stepKey, field.key, e.target.value)
+						}
 						placeholder={`Enter ${field.label.toLowerCase()}...`}
 					/>
 				);
-			
+
 			case "number":
 				return (
 					<Input
 						id={fieldId}
 						type="number"
 						value={value || ""}
-						onChange={(e) => handleStepConfigChange(stepKey, field.key, parseFloat(e.target.value) || 0)}
+						onChange={(e) =>
+							handleStepConfigChange(
+								stepKey,
+								field.key,
+								parseFloat(e.target.value) || 0,
+							)
+						}
 						placeholder={`Enter ${field.label.toLowerCase()}...`}
 					/>
 				);
-			
+
 			case "select":
 				return (
 					<Select
 						value={value || field.defaultValue}
-						onValueChange={(val) => handleStepConfigChange(stepKey, field.key, val)}
+						onValueChange={(val) =>
+							handleStepConfigChange(stepKey, field.key, val)
+						}
 					>
 						<SelectTrigger>
 							<SelectValue placeholder="Select" />
@@ -272,40 +281,47 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 						</SelectContent>
 					</Select>
 				);
-			
+
 			case "boolean":
 				return (
 					<Switch
 						id={fieldId}
 						checked={value !== undefined ? value : field.defaultValue}
-						onCheckedChange={(checked) => handleStepConfigChange(stepKey, field.key, checked)}
+						onCheckedChange={(checked) =>
+							handleStepConfigChange(stepKey, field.key, checked)
+						}
 					/>
 				);
-			
+
 			case "textarea":
 				return (
 					<Textarea
 						id={fieldId}
 						value={value || ""}
-						onChange={(e) => handleStepConfigChange(stepKey, field.key, e.target.value)}
+						onChange={(e) =>
+							handleStepConfigChange(stepKey, field.key, e.target.value)
+						}
 						placeholder={`Enter ${field.label.toLowerCase()}...`}
 						rows={3}
 					/>
 				);
-			
+
 			case "array":
 				return (
 					<Input
 						id={fieldId}
-						value={Array.isArray(value) ? value.join(", ") : (value || "")}
+						value={Array.isArray(value) ? value.join(", ") : value || ""}
 						onChange={(e) => {
-							const arrayValue = e.target.value.split(",").map(item => item.trim()).filter(Boolean);
+							const arrayValue = e.target.value
+								.split(",")
+								.map((item) => item.trim())
+								.filter(Boolean);
 							handleStepConfigChange(stepKey, field.key, arrayValue);
 						}}
 						placeholder="Enter values separated by commas..."
 					/>
 				);
-			
+
 			default:
 				return null;
 		}
@@ -324,7 +340,7 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 				datasource_id: dataSourceId,
 				custom_options: customOptions,
 			});
-			
+
 			onCreatePipeline?.(selectedTemplate.id, {
 				...customOptions,
 				template: selectedTemplate,
@@ -357,26 +373,16 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 							size={16}
 						/>
 						<Input
-							placeholder="Search templates..."
+							placeholder="Tìm templates..."
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
 							className="pl-10"
 						/>
 					</div>
-					<div className="flex items-center space-x-2">
-						<Switch
-							id="recommended"
-							checked={showOnlyRecommended}
-							onCheckedChange={setShowOnlyRecommended}
-						/>
-						<Label htmlFor="recommended" className="text-sm">
-							Recommended only
-						</Label>
-					</div>
 				</div>
 
 				{/* Templates Grid */}
-				<ScrollArea className="h-96">
+				<ScrollArea className="h-90">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pr-4">
 						{filteredTemplates?.map((template: any) => (
 							<Card
@@ -389,12 +395,6 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 											<CardTitle className="text-base">
 												{template.name}
 											</CardTitle>
-											{template.is_popular && (
-												<Badge variant={"outline"} className="text-xs">
-													<Star size={10} className="mr-1" />
-													Popular
-												</Badge>
-											)}
 										</div>
 									</div>
 									<CardDescription className="text-sm">
@@ -447,7 +447,7 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 										variant="outline"
 										onClick={() => handleTemplateSelect(template)}
 									>
-										Use Template
+										Sử dụng
 									</Button>
 								</CardContent>
 							</Card>
@@ -519,8 +519,8 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 
 										return (
 											<Card key={stepKey} className="p-0">
-												<Collapsible 
-													open={isExpanded} 
+												<Collapsible
+													open={isExpanded}
 													onOpenChange={() => toggleStepExpanded(stepKey)}
 												>
 													<CollapsibleTrigger asChild>
@@ -534,15 +534,12 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 																	<span className="font-medium text-sm">
 																		{getStepDisplayName(stepName)}
 																	</span>
-																	<Badge variant={"outline"} className="text-xs">
+																	<Badge
+																		variant={"outline"}
+																		className="text-xs"
+																	>
 																		{stepType}
 																	</Badge>
-																	{hasConfig && (
-																		<Badge variant={"secondary"} className="text-xs">
-																			<Settings size={10} className="mr-1" />
-																			Configurable
-																		</Badge>
-																	)}
 																</div>
 																<p className="text-xs text-muted-foreground">
 																	{getStepDescription(stepName)}
@@ -550,29 +547,42 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 															</div>
 															{hasConfig && (
 																<div className="flex items-center gap-2">
-																	<Edit3 size={14} className="text-muted-foreground" />
-																	{isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+																	{isExpanded ? (
+																		<ChevronDown size={14} />
+																	) : (
+																		<ChevronRight size={14} />
+																	)}
 																</div>
 															)}
 														</div>
 													</CollapsibleTrigger>
-													
+
 													{hasConfig && (
 														<CollapsibleContent>
 															<div className="px-3 pb-3 pt-0 border-t bg-gray-50/50">
 																<div className="space-y-3 pt-3">
-																	<div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-																		<Settings size={14} />
-																		Step Configuration
-																	</div>
 																	<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 																		{configSchema.map((field) => (
-																			<div key={field.key} className="space-y-1">
-																				<Label htmlFor={`${stepKey}_${field.key}`} className="text-xs font-medium">
+																			<div
+																				key={field.key}
+																				className="space-y-1"
+																			>
+																				<Label
+																					htmlFor={`${stepKey}_${field.key}`}
+																					className="text-xs font-medium"
+																				>
 																					{field.label}
-																					{field.required && <span className="text-red-500 ml-1">*</span>}
+																					{field.required && (
+																						<span className="text-red-500 ml-1">
+																							*
+																						</span>
+																					)}
 																				</Label>
-																				{renderConfigField(field, stepKey, stepConfigs[stepKey]?.[field.key])}
+																				{renderConfigField(
+																					field,
+																					stepKey,
+																					stepConfigs[stepKey]?.[field.key],
+																				)}
 																				{field.description && (
 																					<p className="text-xs text-muted-foreground">
 																						{field.description}
@@ -685,16 +695,16 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="0 0 * * *">
-												Daily at midnight
+												Hàng ngày lúc 00:00
 											</SelectItem>
 											<SelectItem value="0 0 * * 0">
-												Weekly on Sunday
+												Hàng tuần vào Chủ nhật
 											</SelectItem>
-											<SelectItem value="0 0 1 * *">Monthly on 1st</SelectItem>
-											<SelectItem value="0 */6 * * *">Every 6 hours</SelectItem>
-											<SelectItem value="*/30 * * * *">
-												Every 30 minutes
+											<SelectItem value="0 0 1 * *">
+												Ngày 1 hàng tháng
 											</SelectItem>
+											<SelectItem value="0 */6 * * *">Mỗi 6h</SelectItem>
+											<SelectItem value="*/30 * * * *">Mỗi 30 phút</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
@@ -702,9 +712,9 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 
 							<div className="flex items-center justify-between">
 								<div>
-									<Label htmlFor="auto-retry">Auto Retry on Failure</Label>
+									<Label htmlFor="auto-retry">Tự động thử lại</Label>
 									<p className="text-sm text-muted-foreground">
-										Automatically retry failed pipeline runs
+										Tự động thử lại nếu bước nào thất bại
 									</p>
 								</div>
 								<Switch
@@ -837,7 +847,10 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 									const hasCustomConfig = Object.keys(config).length > 0;
 
 									return (
-										<div key={stepKey} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+										<div
+											key={stepKey}
+											className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+										>
 											<div className="flex items-center gap-2">
 												{getStepIcon(stepName)}
 												<span>{getStepDisplayName(stepName)}</span>
@@ -860,8 +873,8 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 
 	return (
 		<Dialog
-			title="Create Pipeline from Template"
-			description="Choose a template and configure your data pipeline"
+			title="Tạo Pipeline từ Template"
+			description="Chọn một template để tạo pipeline mới"
 			size={"3xl"}
 			open={open}
 			onOpenChange={onOpenChange}
@@ -872,7 +885,7 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 				{step === "confirm" && renderConfirmStep()}
 			</div>
 
-			<div className="flex justify-between items-center pt-4 border-t">
+			<div className="flex justify-between items-center mt-4 pt-4 border-t">
 				<div className="flex items-center gap-2">
 					{step !== "browse" && (
 						<Button
@@ -882,38 +895,29 @@ const PipelineTemplateDialog: React.FC<PipelineTemplateDialogProps> = ({
 								if (step === "confirm") setStep("configure");
 							}}
 						>
-							Back
+							Quay lại
 						</Button>
 					)}
 				</div>
 
 				<div className="flex items-center gap-2">
 					<Button variant="outline" onClick={() => onOpenChange(false)}>
-						Cancel
+						Hủy
 					</Button>
-
-					{step === "browse" && (
-						<Button
-							variant="outline"
-							disabled={filteredTemplates?.length === 0}
-						>
-							Select Template
-						</Button>
-					)}
 
 					{step === "configure" && (
 						<Button
 							onClick={() => setStep("confirm")}
 							disabled={!pipelineConfig.name.trim()}
 						>
-							Review & Create
+							Xem lại & Xác nhận
 						</Button>
 					)}
 
 					{step === "confirm" && (
 						<Button onClick={handleCreatePipeline}>
 							<Play size={16} className="mr-2" />
-							Create Pipeline
+							Tạo Pipeline
 						</Button>
 					)}
 				</div>
@@ -959,7 +963,7 @@ const DataSourcePipelineSection: React.FC<{
 				<h3 className="text-lg font-medium">Pipelines</h3>
 				<Button onClick={() => setShowTemplateDialog(true)}>
 					<Plus size={16} className="mr-2" />
-					Create Pipeline
+					Tạo Pipeline
 				</Button>
 			</div>
 
@@ -989,13 +993,13 @@ const DataSourcePipelineSection: React.FC<{
 			) : (
 				<div className="text-center py-8">
 					<GitBranch className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-					<h3 className="text-lg font-medium mb-2">No pipelines yet</h3>
+					<h3 className="text-lg font-medium mb-2">Chưa có Pipeline nào</h3>
 					<p className="text-muted-foreground mb-4">
-						Create your first pipeline from a template
+						Tạo một pipeline mới để bắt đầu xử lý dữ liệu từ nguồn này.
 					</p>
 					<Button onClick={() => setShowTemplateDialog(true)}>
 						<Plus size={16} className="mr-2" />
-						Create Pipeline
+						Tạo Pipeline
 					</Button>
 				</div>
 			)}

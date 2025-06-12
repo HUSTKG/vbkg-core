@@ -6,27 +6,27 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from app.schemas.domain import EntityTypeResponse, RelationshipTypeResponse
 
 
-class FIBOClassBase(BaseModel):
-    uri: str = Field(..., description="URI of the FIBO class")
+class OntologyClassBase(BaseModel):
+    uri: str = Field(..., description="URI of the Ontology class")
     label: Optional[str] = None
     description: Optional[str] = None
     domain: Optional[str] = None
     properties: Optional[Dict[str, Any]] = None
 
 
-class FIBOClassCreate(FIBOClassBase):
+class OntologyClassCreate(OntologyClassBase):
     parent_class_uri: Optional[str] = None
     is_custom: bool = False
 
 
-class FIBOClassUpdate(BaseModel):
+class OntologyClassUpdate(BaseModel):
     label: Optional[str] = None
     description: Optional[str] = None
     parent_class_uri: Optional[str] = None
     properties: Optional[Dict[str, Any]] = None
 
 
-class FIBOClass(FIBOClassBase):
+class OntologyClass(OntologyClassBase):
     id: int
     parent_class_id: Optional[int] = None
     is_custom: bool = False
@@ -37,8 +37,8 @@ class FIBOClass(FIBOClassBase):
         from_attributes = True
 
 
-class FIBOPropertyBase(BaseModel):
-    uri: str = Field(..., description="URI of the FIBO property")
+class OntologyPropertyBase(BaseModel):
+    uri: str = Field(..., description="URI of the Ontology property")
     label: Optional[str] = None
     domain: Optional[str] = None
     description: Optional[str] = None
@@ -47,13 +47,13 @@ class FIBOPropertyBase(BaseModel):
     )
 
 
-class FIBOPropertyCreate(FIBOPropertyBase):
+class OntologyPropertyCreate(OntologyPropertyBase):
     domain_class_uri: Optional[str] = None
     range_class_uri: Optional[str] = None
     is_custom: bool = False
 
 
-class FIBOPropertyUpdate(BaseModel):
+class OntologyPropertyUpdate(BaseModel):
     label: Optional[str] = None
     description: Optional[str] = None
     domain_class_uri: Optional[str] = None
@@ -61,7 +61,7 @@ class FIBOPropertyUpdate(BaseModel):
     property_type: Optional[str] = None
 
 
-class FIBOProperty(FIBOPropertyBase):
+class OntologyProperty(OntologyPropertyBase):
     id: int
     domain_class_id: Optional[int] = None
     range_class_id: Optional[int] = None
@@ -77,7 +77,7 @@ class FIBOProperty(FIBOPropertyBase):
 class EntityMappingBase(BaseModel):
     entity_type: Optional[str] = Field(None, description="Legacy entity type string")
     entity_type_id: Optional[int] = Field(None, description="Entity type ID reference")
-    fibo_class_uri: str = Field(..., description="FIBO class URI")
+    fibo_class_uri: str = Field(..., description="Ontology class URI")
     confidence: Optional[float] = None
     is_verified: bool = False
     mapping_status: str = Field(
@@ -129,7 +129,7 @@ class RelationshipMappingBase(BaseModel):
     relationship_type_id: Optional[int] = Field(
         None, description="Relationship type ID reference"
     )
-    fibo_property_uri: str = Field(..., description="FIBO property URI")
+    fibo_property_uri: str = Field(..., description="Ontology property URI")
     confidence: Optional[float] = None
     is_verified: bool = False
     mapping_status: str = Field(
@@ -169,7 +169,7 @@ class RelationshipMapping(RelationshipMappingBase):
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[datetime] = None
     relationship_type_info: Optional[RelationshipTypeResponse] = None  # Joined data
-    fibo_property: Optional[FIBOProperty] = None  # Joined FIBO property
+    fibo_property: Optional[OntologyProperty] = None  # Joined Ontology property
 
     class Config:
         from_attributes = True
@@ -216,13 +216,13 @@ class RelationshipTypeSuggestion(BaseModel):
     reason: str
 
 
-class FIBOClassSuggestion(BaseModel):
-    fibo_class: FIBOClass
+class OntologyClassSuggestion(BaseModel):
+    fibo_class: OntologyClass
     confidence: float
     reason: str
 
 
-class FIBOPropertySuggestion(BaseModel):
-    fibo_property: FIBOProperty
+class OntologyPropertySuggestion(BaseModel):
+    fibo_property: OntologyProperty
     confidence: float
     reason: str

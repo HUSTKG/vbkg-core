@@ -1,4 +1,4 @@
-import { Button, Dialog, Input, ScrollArea } from "@/components";
+import { Button, cn, Dialog, Input, ScrollArea } from "@/components";
 import { ListIcon, Plus, Upload, X } from "lucide-react";
 import React, { useState } from "react";
 import { formatBytes } from "../../utils/formatBytes";
@@ -27,6 +27,7 @@ const FileSelectorDialog = ({
 	const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
 	const [metadataDialogOpen, setMetadataDialogOpen] = useState(false);
 	const [editingFile, setEditingFile] = useState<SelectedFile | null>(null);
+	const [viewingFile, setViewingFile] = useState<SelectedFile | null>(null);
 	const [currentMetadata, setCurrentMetadata] = useState<
 		Record<string, string>
 	>({});
@@ -75,7 +76,6 @@ const FileSelectorDialog = ({
 					}
 					return updatedFiles;
 				});
-
 			}
 		}
 	};
@@ -83,11 +83,13 @@ const FileSelectorDialog = ({
 	// Clear uploaded files
 	const clearUploadedFiles = () => {
 		setSelectedFiles([]);
+		setViewingFile(null);
 	};
 
 	// Remove a specific uploaded file
 	const removeUploadedFile = (index: number) => {
 		setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+		setViewingFile(null);
 	};
 
 	// Open metadata dialog for a file
@@ -129,7 +131,17 @@ const FileSelectorDialog = ({
 	// Save metadata to the file
 	const saveMetadata = () => {
 		if (editingFile) {
-			// TODO: Add API call to save metadata
+			setSelectedFiles((prev) =>
+				prev.map((file) =>
+					file.file.name === editingFile.file.name
+						? { ...file, metadata: currentMetadata }
+						: file,
+				),
+			);
+			setViewingFile({
+				...editingFile,
+				metadata: currentMetadata,
+			});
 			setMetadataDialogOpen(false);
 			setEditingFile(null);
 		}
@@ -140,15 +152,8 @@ const FileSelectorDialog = ({
 		if (selectedFiles.length > 0) {
 			onSelect(selectedFiles);
 			setSelectedFiles([]);
+			setViewingFile(null);
 		}
-	};
-
-	// Get currently selected file for details view
-	const getSelectedFileForDetails = () => {
-		if (selectedFiles.length > 0) {
-			return selectedFiles[selectedFiles.length - 1]; // Show details of last selected file
-		}
-		return null;
 	};
 
 	return (
@@ -156,8 +161,8 @@ const FileSelectorDialog = ({
 			open={open}
 			showFooter={false}
 			onOpenChange={onOpenChange}
-			title="File Selection"
-			description="Choose existing files or upload new ones"
+			title="Chọn File"
+			description="Chọn file để tải lên"
 			size="2xl"
 		>
 			<div className="space-y-4">
@@ -166,15 +171,17 @@ const FileSelectorDialog = ({
 						<Upload className="mx-auto h-12 w-12 text-gray-400" />
 						<div className="mt-4 flex flex-col items-center">
 							<p className="text-sm font-medium text-gray-900">
-								Drag and drop or click to upload
+								Kéo và thả hoặc{" "}
+								<span className="text-blue-600 cursor-pointer">chọn tệp</span>{" "}
+								để tải lên
 							</p>
-							<p className="text-xs text-gray-500">Up to 10MB per file</p>
+							<p className="text-xs text-gray-500">Giới hạn tối đa 10MB</p>
 							<label htmlFor="file-upload" className="mt-4 cursor-pointer">
 								<div
 									role="button"
-									className="rounded-md bg-black/70 hover:bg-black p-2 text-white"
+									className="rounded-md bg-black/70 text-sm hover:bg-black p-2 text-white"
 								>
-									Select Files
+									Chọn tệp
 								</div>
 								<input
 									id="file-upload"
@@ -194,10 +201,10 @@ const FileSelectorDialog = ({
 					<div className="border rounded-md">
 						<div className="p-3 border-b bg-gray-50 flex justify-between items-center">
 							<h3 className="text-sm font-medium">
-								Uploaded Files ({selectedFiles.length}/{maxFiles})
+								File đã chọn ({selectedFiles.length}/{maxFiles})
 							</h3>
 							<Button size="sm" onClick={clearUploadedFiles}>
-								Clear All
+								Xóa tất cả
 							</Button>
 						</div>
 						<ScrollArea className="max-h-[280px]">
@@ -205,7 +212,13 @@ const FileSelectorDialog = ({
 								{selectedFiles.map((file, index) => (
 									<div
 										key={index}
-										className="flex hover:bg-gray-100 items-center justify-between p-2 border rounded-md"
+										onClick={() => setViewingFile(file)}
+										className={cn(
+											"flex cursor-pointer hover:bg-gray-100 items-center justify-between p-2 border rounded-md",
+											viewingFile?.file.name === file.file.name
+												? "bg-sky-50 border-sky-200"
+												: "",
+										)}
 									>
 										<div className="flex items-center">
 											{getFileIcon("pdf")}
@@ -220,13 +233,15 @@ const FileSelectorDialog = ({
 										</div>
 										<div className="flex items-center gap-2">
 											<Button
-												size="sm"
+												size="icon"
+												variant="outline"
 												onClick={() => openMetadataDialog(file)}
 											>
 												<ListIcon size={16} />
 											</Button>
 											<Button
-												size="sm"
+												size="icon"
+												variant="outline"
 												onClick={() => removeUploadedFile(index)}
 											>
 												<X size={16} />
@@ -241,50 +256,55 @@ const FileSelectorDialog = ({
 			</div>
 
 			{/* File details section */}
-			{(getSelectedFileForDetails() || selectedFiles.length > 0) && (
+			{(viewingFile || selectedFiles.length > 0) && (
 				<div className="mt-6 border rounded-md">
-					<div className="p-3 border-b bg-gray-50">
-						<h3 className="text-sm font-semibold">File Details</h3>
+					<div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+						<h3 className="text-sm font-semibold">Thông tin chi tiết</h3>
+						{viewingFile && (
+							<Button
+								size="icon"
+								variant="outline"
+								onClick={() => setViewingFile(null)}
+							>
+								<X size={16} />
+							</Button>
+						)}
 					</div>
 					<div className="p-4">
-						{getSelectedFileForDetails() ? (
+						{viewingFile ? (
 							<div className="space-y-2">
 								<div className="grid grid-cols-2 gap-2">
-									<p className="text-sm font-medium">Name:</p>
+									<p className="text-sm font-medium">Tên tài liệu:</p>
+									<p className="text-sm">{viewingFile.file.name}</p>
+
+									<p className="text-sm font-medium">Loại:</p>
+									<p className="text-sm">{viewingFile?.file.type}</p>
+
+									<p className="text-sm font-medium">Dung lượng:</p>
 									<p className="text-sm">
-										{getSelectedFileForDetails()?.file.name}
+										{formatBytes(viewingFile?.file.size || 0)}
 									</p>
 
-									<p className="text-sm font-medium">Type:</p>
-									<p className="text-sm">
-										{getSelectedFileForDetails()?.file.type}
-									</p>
-
-									<p className="text-sm font-medium">Size:</p>
-									<p className="text-sm">
-										{formatBytes(getSelectedFileForDetails()?.file.size || 0)}
-									</p>
-
-									{getSelectedFileForDetails()?.metadata &&
-										Object.entries(
-											getSelectedFileForDetails()?.metadata || {},
-										).map(([key, value]) => (
-											<React.Fragment key={key}>
-												<p className="text-sm font-medium">
-													{key.charAt(0).toUpperCase() + key.slice(1)}:
-												</p>
-												<p className="text-sm">{value}</p>
-											</React.Fragment>
-										))}
+									{viewingFile?.metadata &&
+										Object.entries(viewingFile?.metadata || {}).map(
+											([key, value]) => (
+												<React.Fragment key={key}>
+													<p className="text-sm font-medium">
+														{key.charAt(0).toUpperCase() + key.slice(1)}:
+													</p>
+													<p className="text-sm">{value}</p>
+												</React.Fragment>
+											),
+										)}
 								</div>
 							</div>
 						) : selectedFiles.length > 0 ? (
 							<div className="space-y-2">
 								<div className="grid grid-cols-2 gap-2">
-									<p className="text-sm font-medium">Total Files:</p>
+									<p className="text-sm font-medium">Số lượng:</p>
 									<p className="text-sm">{selectedFiles.length}</p>
 
-									<p className="text-sm font-medium">Total Size:</p>
+									<p className="text-sm font-medium">Tổng dung lượng:</p>
 									<p className="text-sm">
 										{formatBytes(
 											selectedFiles.reduce(
@@ -294,7 +314,7 @@ const FileSelectorDialog = ({
 										)}
 									</p>
 
-									<p className="text-sm font-medium">Types:</p>
+									<p className="text-sm font-medium">Loại:</p>
 									<p className="text-sm">
 										{Array.from(
 											new Set(
@@ -305,7 +325,7 @@ const FileSelectorDialog = ({
 										).join(", ")}
 									</p>
 
-									<p className="text-sm font-medium">Files with Metadata:</p>
+									<p className="text-sm font-medium">Tệp có Metadata:</p>
 									<p className="text-sm">
 										{
 											selectedFiles.filter(
@@ -321,41 +341,29 @@ const FileSelectorDialog = ({
 				</div>
 			)}
 			<div className="flex justify-between">
-				<div>
-					{selectedFiles.length > 0 && (
-						<span className="text-sm text-gray-600">
-							{selectedFiles.length} file{selectedFiles.length > 1 ? "s" : ""}{" "}
-							selected
-						</span>
-					)}
-					{selectedFiles.length > 0 && (
-						<span className="text-sm text-gray-600">
-							{selectedFiles.length} file{selectedFiles.length > 1 ? "s" : ""}{" "}
-							to upload
-						</span>
-					)}
-				</div>
-				<div className="flex mt-4 space-x-2">
+				<div className="flex ml-auto mt-4 space-x-2">
 					<Button
 						onClick={() => {
 							setSelectedFiles([]);
+							setViewingFile(null);
 							onOpenChange(false);
 						}}
+						variant="outline"
 					>
-						Cancel
+						Hủy
 					</Button>
 					<Button
 						disabled={selectedFiles.length === 0}
 						onClick={handleConfirmSelection}
 					>
-						Upload
+						Xác nhận
 					</Button>
 				</div>
 			</div>
 			<Dialog
 				showFooter
-				title="Edit Metadata"
-				primaryActionText="Save Metadata"
+				title="Sửa Metadata"
+				primaryActionText="Lưu"
 				onPrimaryAction={saveMetadata}
 				open={metadataDialogOpen}
 				onOpenChange={setMetadataDialogOpen}
@@ -370,9 +378,9 @@ const FileSelectorDialog = ({
 
 					{/* Current metadata fields */}
 					<div className="space-y-2">
-						<div className="text-sm font-medium">Current Metadata:</div>
+						<div className="text-sm font-medium">Metadata hiện tại:</div>
 						{Object.keys(currentMetadata).length === 0 && (
-							<p className="text-sm text-gray-500">No metadata added yet.</p>
+							<p className="text-sm text-gray-500">Chưa có Metadata.</p>
 						)}
 						{Object.entries(currentMetadata).map(([key, value]) => (
 							<div key={key} className="flex items-center space-x-2">
@@ -382,7 +390,8 @@ const FileSelectorDialog = ({
 									className="flex-1 h-8"
 								/>
 								<Button
-									size="sm"
+									size="icon"
+									variant="outline"
 									onClick={() => removeMetadataField(key)}
 									className="h-8 w-8 p-0"
 								>
@@ -394,12 +403,12 @@ const FileSelectorDialog = ({
 
 					{/* Add new metadata field */}
 					<div className="space-y-2 pt-2 border-t">
-						<div className="text-sm font-medium">Add Field:</div>
+						<div className="text-sm font-medium">Thêm trường:</div>
 						<div className="flex space-x-2">
 							<div className="flex-1">
 								<Input
 									list="metadata-suggestions"
-									placeholder="Field name"
+									placeholder="Tên trường"
 									value={newMetadataKey}
 									onChange={(e) => setNewMetadataKey(e.target.value)}
 									className="h-8"
@@ -415,14 +424,14 @@ const FileSelectorDialog = ({
 								</datalist>
 							</div>
 							<Input
-								placeholder="Value"
+								placeholder="Giá trị"
 								value={newMetadataValue}
 								onChange={(e) => setNewMetadataValue(e.target.value)}
 								className="flex-1 h-8"
 							/>
 							<Button
-								type="button"
-								size="sm"
+								size="icon"
+								variant="outline"
 								onClick={addMetadataField}
 								className="h-8 px-2"
 								disabled={!newMetadataKey.trim()}
@@ -442,6 +451,7 @@ const FileSelectorDialog = ({
 									<Button
 										key={field}
 										type="button"
+										variant="outline"
 										size="sm"
 										className="h-6 text-xs"
 										onClick={() => setNewMetadataKey(field)}

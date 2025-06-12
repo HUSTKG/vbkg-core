@@ -5,17 +5,19 @@ from websockets.http11 import d
 
 from app.api.deps import PermissionChecker, get_current_user
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.fibo import (EntityMapping, EntityMappingCreate,
-                              EntityMappingUpdate, EntityTypeSuggestion,
-                              FIBOClass, FIBOClassCreate, FIBOClassSuggestion,
-                              FIBOClassUpdate, FIBOProperty,
-                              FIBOPropertyCreate, FIBOPropertySuggestion,
-                              FIBOPropertyUpdate, OntologyImportRequest,
-                              OntologyImportResponse, RelationshipMapping,
-                              RelationshipMappingCreate,
-                              RelationshipMappingUpdate,
-                              RelationshipTypeSuggestion)
-from app.services.fibo import FIBOService
+from app.schemas.ontology import (EntityMapping, EntityMappingCreate,
+                                  EntityMappingUpdate, EntityTypeSuggestion,
+                                  OntologyClass, OntologyClassCreate,
+                                  OntologyClassSuggestion, OntologyClassUpdate,
+                                  OntologyImportRequest,
+                                  OntologyImportResponse, OntologyProperty,
+                                  OntologyPropertyCreate,
+                                  OntologyPropertySuggestion,
+                                  OntologyPropertyUpdate, RelationshipMapping,
+                                  RelationshipMappingCreate,
+                                  RelationshipMappingUpdate,
+                                  RelationshipTypeSuggestion)
+from app.services.ontology import OntologyService
 
 router = APIRouter()
 
@@ -23,110 +25,110 @@ check_read_permission = PermissionChecker("kg:read")
 check_write_permission = PermissionChecker("kg:edit")
 
 
-@router.get("/classes", response_model=PaginatedResponse[FIBOClass])
-async def read_fibo_classes(
+@router.get("/classes", response_model=PaginatedResponse[OntologyClass])
+async def read_ontology_classes(
     domain: Optional[str] = None,
     search: Optional[str] = None,
     is_custom: Optional[bool] = None,
     limit: int = Query(100, ge=1, le=1000),
     skip: int = Query(0, ge=0),
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> PaginatedResponse[FIBOClass]:
-    """Retrieve FIBO classes with filtering options."""
-    fibo_service = FIBOService()
-    response = await fibo_service.get_fibo_classes(
+) -> PaginatedResponse[OntologyClass]:
+    """Retrieve Ontology classes with filtering options."""
+    ontology_service = OntologyService()
+    response = await ontology_service.get_ontology_classes(
         domain=domain, search=search, is_custom=is_custom, limit=limit, skip=skip
     )
     return PaginatedResponse(
-        data=[FIBOClass(**item) for item in response.data],
+        data=[OntologyClass(**item) for item in response.data],
         meta=PaginatedMeta(
             total=response.count if response.count is not None else 0,
             limit=limit,
             skip=skip,
         ),
-        message="FIBO classes retrieved successfully",
+        message="Ontology classes retrieved successfully",
         status=status.HTTP_200_OK,
     )
 
 
-@router.get("/classes/{class_id}", response_model=ApiResponse[FIBOClass])
-async def read_fibo_class(
+@router.get("/classes/{class_id}", response_model=ApiResponse[OntologyClass])
+async def read_ontology_class(
     class_id: int = Path(...),
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> ApiResponse[FIBOClass]:
+) -> ApiResponse[OntologyClass]:
     """
-    Get a specific FIBO class by ID.
+    Get a specific Ontology class by ID.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.get_fibo_class(class_id=class_id)
+    ontology_service = OntologyService()
+    response = await ontology_service.get_ontology_class(class_id=class_id)
 
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
-        message="FIBO class retrieved successfully",
+        message="Ontology class retrieved successfully",
     )
 
 
 @router.post(
     "/classes",
-    response_model=ApiResponse[FIBOClass],
+    response_model=ApiResponse[OntologyClass],
     status_code=status.HTTP_201_CREATED,
 )
-async def create_fibo_class(
-    fibo_class_in: FIBOClassCreate,
+async def create_ontology_class(
+    ontology_class_in: OntologyClassCreate,
     current_user: Dict[str, Any] = Depends(check_write_permission),
-) -> ApiResponse[FIBOClass]:
+) -> ApiResponse[OntologyClass]:
     """
-    Create a new FIBO class.
+    Create a new Ontology class.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.create_fibo_class(fibo_class_in=fibo_class_in)
+    ontology_service = OntologyService()
+    response = await ontology_service.create_ontology_class(ontology_class_in=ontology_class_in)
     return ApiResponse(
         data=response,
         status=status.HTTP_201_CREATED,
-        message="FIBO class created successfully",
+        message="Ontology class created successfully",
     )
 
 
-@router.put("/classes/{class_id}", response_model=ApiResponse[FIBOClass])
-async def update_fibo_class(
-    fibo_class_in: FIBOClassUpdate,
+@router.put("/classes/{class_id}", response_model=ApiResponse[OntologyClass])
+async def update_ontology_class(
+    ontology_class_in: OntologyClassUpdate,
     class_id: int = Path(...),
     current_user: Dict[str, Any] = Depends(check_write_permission),
-) -> ApiResponse[FIBOClass]:
+) -> ApiResponse[OntologyClass]:
     """
-    Update a FIBO class.
+    Update a Ontology class.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.update_fibo_class(
-        class_id=class_id, fibo_class_in=fibo_class_in
+    ontology_service = OntologyService()
+    response = await ontology_service.update_ontology_class(
+        class_id=class_id, ontology_class_in=ontology_class_in
     )
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
-        message="FIBO class updated successfully",
+        message="Ontology class updated successfully",
     )
 
 
 @router.delete("/classes/{class_id}", response_model=ApiResponse[Dict[str, Any]])
-async def delete_fibo_class(
+async def delete_ontology_class(
     class_id: int = Path(...),
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """
-    Delete a FIBO class.
+    Delete a Ontology class.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.delete_fibo_class(class_id=class_id)
+    ontology_service = OntologyService()
+    response = await ontology_service.delete_ontology_class(class_id=class_id)
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
-        message="FIBO class deleted successfully",
+        message="Ontology class deleted successfully",
     )
 
 
-@router.get("/properties", response_model=PaginatedResponse[FIBOProperty])
-async def read_fibo_properties(
+@router.get("/properties", response_model=PaginatedResponse[OntologyProperty])
+async def read_ontology_properties(
     domain_class_id: Optional[int] = None,
     property_type: Optional[str] = Query(None, enum=["object", "datatype"]),
     search: Optional[str] = None,
@@ -134,12 +136,12 @@ async def read_fibo_properties(
     limit: int = Query(100, ge=1, le=1000),
     skip: int = Query(0, ge=0),
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> PaginatedResponse[FIBOProperty]:
+) -> PaginatedResponse[OntologyProperty]:
     """
-    Retrieve FIBO properties with filtering options.
+    Retrieve Ontology properties with filtering options.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.get_fibo_properties(
+    ontology_service = OntologyService()
+    response = await ontology_service.get_ontology_properties(
         domain_class_id=domain_class_id,
         property_type=property_type,
         search=search,
@@ -148,82 +150,82 @@ async def read_fibo_properties(
         skip=skip,
     )
     return PaginatedResponse(
-        data=[FIBOProperty(**item) for item in response.data],
+        data=[OntologyProperty(**item) for item in response.data],
         meta=PaginatedMeta(
             total=response.count if response.count is not None else 0,
             limit=limit,
             skip=skip,
         ),
         status=status.HTTP_200_OK,
-        message="FIBO properties retrieved successfully",
+        message="Ontology properties retrieved successfully",
     )
 
 
-@router.get("/properties/{property_id}", response_model=ApiResponse[FIBOProperty])
-async def read_fibo_property(
+@router.get("/properties/{property_id}", response_model=ApiResponse[OntologyProperty])
+async def read_ontology_property(
     property_id: int = Path(...),
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> ApiResponse[FIBOProperty]:
+) -> ApiResponse[OntologyProperty]:
     """
-    Get a specific FIBO property by ID.
+    Get a specific Ontology property by ID.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.get_fibo_property(property_id=property_id)
+    ontology_service = OntologyService()
+    response = await ontology_service.get_ontology_property(property_id=property_id)
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
-        message="FIBO property retrieved successfully",
+        message="Ontology property retrieved successfully",
     )
 
 
 @router.post(
     "/properties",
-    response_model=ApiResponse[FIBOProperty],
+    response_model=ApiResponse[OntologyProperty],
     status_code=status.HTTP_201_CREATED,
 )
-async def create_fibo_property(
-    fibo_property_in: FIBOPropertyCreate,
+async def create_ontology_property(
+    ontology_property_in: OntologyPropertyCreate,
     current_user: Dict[str, Any] = Depends(check_write_permission),
-) -> ApiResponse[FIBOProperty]:
+) -> ApiResponse[OntologyProperty]:
     """
-    Create a new FIBO property.
+    Create a new Ontology property.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.create_fibo_property(
-        fibo_property_in=fibo_property_in
+    ontology_service = OntologyService()
+    response = await ontology_service.create_ontology_property(
+        ontology_property_in=ontology_property_in
     )
     return ApiResponse(
         data=response,
         status=status.HTTP_201_CREATED,
-        message="FIBO property created successfully",
+        message="Ontology property created successfully",
     )
 
 
-@router.patch("/properties/{property_id}", response_model=FIBOProperty)
-async def update_fibo_property(
-    fibo_property_in: FIBOPropertyUpdate,
+@router.patch("/properties/{property_id}", response_model=OntologyProperty)
+async def update_ontology_property(
+    ontology_property_in: OntologyPropertyUpdate,
     property_id: int = Path(...),
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> Any:
     """
-    Update a FIBO property.
+    Update a Ontology property.
     """
-    fibo_service = FIBOService()
-    return await fibo_service.update_fibo_property(
-        property_id=property_id, fibo_property_in=fibo_property_in
+    ontology_service = OntologyService()
+    return await ontology_service.update_ontology_property(
+        property_id=property_id, ontology_property_in=ontology_property_in
     )
 
 
 @router.delete("/properties/{property_id}", response_model=Dict[str, Any])
-async def delete_fibo_property(
+async def delete_ontology_property(
     property_id: int = Path(...),
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> Any:
     """
-    Delete a FIBO property.
+    Delete a Ontology property.
     """
-    fibo_service = FIBOService()
-    return await fibo_service.delete_fibo_property(property_id=property_id)
+    ontology_service = OntologyService()
+    return await ontology_service.delete_ontology_property(property_id=property_id)
 
 
 @router.post("/import", response_model=ApiResponse[OntologyImportResponse])
@@ -232,28 +234,28 @@ async def import_ontology(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[OntologyImportResponse]:
     """
-    Import FIBO ontology from a file or URL.
+    Import Ontology ontology from a file or URL.
     """
-    fibo_service = FIBOService()
+    ontology_service = OntologyService()
 
     if import_request.file_id:
-        response = await fibo_service.import_ontology_from_file(
+        response = await ontology_service.import_ontology_from_file(
             file_id=import_request.file_id
         )
         return ApiResponse(
             data=response,
             status=status.HTTP_200_OK,
-            message="FIBO ontology imported successfully",
+            message="Ontology ontology imported successfully",
         )
 
     elif import_request.url:
-        response = await fibo_service.import_ontology_from_url(
+        response = await ontology_service.import_ontology_from_url(
             url=import_request.url, format=import_request.format
         )
         return ApiResponse(
             data=response,
             status=status.HTTP_200_OK,
-            message="FIBO ontology imported successfully",
+            message="Ontology ontology imported successfully",
         )
     else:
         raise HTTPException(
@@ -276,8 +278,8 @@ async def read_entity_mappings(
     current_user: Dict[str, Any] = Depends(check_read_permission),
 ) -> PaginatedResponse[EntityMapping]:
     """Retrieve entity mappings with filtering options."""
-    fibo_service = FIBOService()
-    response = await fibo_service.get_entity_mappings(
+    ontology_service = OntologyService()
+    response = await ontology_service.get_entity_mappings(
         entity_type_id=entity_type_id,
         mapping_status=mapping_status,
         is_verified=is_verified,
@@ -304,8 +306,8 @@ async def create_entity_mapping(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[EntityMapping]:
     """Create or update an entity mapping."""
-    fibo_service = FIBOService()
-    response = await fibo_service.create_entity_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.create_entity_mapping(
         mapping=mapping, user_id=current_user["id"]
     )
     return ApiResponse(
@@ -324,8 +326,8 @@ async def update_entity_mapping(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[EntityMapping]:
     """Update an entity mapping."""
-    fibo_service = FIBOService()
-    response = await fibo_service.update_entity_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.update_entity_mapping(
         mapping_id=mapping_id, mapping=mapping
     )
     return ApiResponse(
@@ -343,8 +345,8 @@ async def delete_entity_mapping(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """Delete an entity mapping."""
-    fibo_service = FIBOService()
-    response = await fibo_service.delete_entity_mapping(mapping_id=mapping_id)
+    ontology_service = OntologyService()
+    response = await ontology_service.delete_entity_mapping(mapping_id=mapping_id)
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
@@ -362,8 +364,8 @@ async def verify_entity_mapping(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[EntityMapping]:
     """Verify an entity mapping."""
-    fibo_service = FIBOService()
-    response = await fibo_service.verify_entity_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.verify_entity_mapping(
         mapping_id=mapping_id,
         verified=verified,
         user_id=current_user["id"],
@@ -392,8 +394,8 @@ async def read_relationship_mappings(
     current_user: Dict[str, Any] = Depends(check_read_permission),
 ) -> PaginatedResponse[RelationshipMapping]:
     """Retrieve relationship mappings with filtering options."""
-    fibo_service = FIBOService()
-    response = await fibo_service.get_relationship_mappings(
+    ontology_service = OntologyService()
+    response = await ontology_service.get_relationship_mappings(
         relationship_type_id=relationship_type_id,
         mapping_status=mapping_status,
         is_verified=is_verified,
@@ -422,8 +424,8 @@ async def create_relationship_mapping(
     """
     Create or update a relationship mapping.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.create_relationship_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.create_relationship_mapping(
         mapping=mapping, user_id=current_user["id"]
     )
     return ApiResponse(
@@ -445,8 +447,8 @@ async def update_relationship_mapping(
     """
     Update a relationship mapping.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.update_relationship_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.update_relationship_mapping(
         relationship_type=relationship_type, mapping=mapping
     )
     return ApiResponse(
@@ -467,8 +469,8 @@ async def delete_relationship_mapping(
     """
     Delete a relationship mapping.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.delete_relationship_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.delete_relationship_mapping(
         relationship_type=relationship_type
     )
     return ApiResponse(
@@ -490,8 +492,8 @@ async def verify_relationship_mapping(
     """
     Verify a relationship mapping.
     """
-    fibo_service = FIBOService()
-    response = await fibo_service.verify_relationship_mapping(
+    ontology_service = OntologyService()
+    response = await ontology_service.verify_relationship_mapping(
         relationship_type=relationship_type,
         verified=verified,
         user_id=current_user["id"],
@@ -512,8 +514,8 @@ async def suggest_entity_types(
     current_user: Dict[str, Any] = Depends(check_read_permission),
 ) -> ApiResponse[List[EntityTypeSuggestion]]:
     """Suggest entity types for text."""
-    fibo_service = FIBOService()
-    response = await fibo_service.suggest_entity_types(
+    ontology_service = OntologyService()
+    response = await ontology_service.suggest_entity_types(
         text=text,
         context=context,
         domain_id=domain_id,
@@ -537,8 +539,8 @@ async def suggest_relationship_types(
     current_user: Dict[str, Any] = Depends(check_read_permission),
 ) -> ApiResponse[List[RelationshipTypeSuggestion]]:
     """Suggest relationship types for text."""
-    fibo_service = FIBOService()
-    response = await fibo_service.suggest_relationship_types(
+    ontology_service = OntologyService()
+    response = await ontology_service.suggest_relationship_types(
         text=text,
         source_entity_type_id=source_entity_type_id,
         target_entity_type_id=target_entity_type_id,
@@ -553,18 +555,18 @@ async def suggest_relationship_types(
     )
 
 
-@router.get("/suggest/classes", response_model=ApiResponse[List[FIBOClassSuggestion]])
-async def suggest_fibo_classes(
+@router.get("/suggest/classes", response_model=ApiResponse[List[OntologyClassSuggestion]])
+async def suggest_ontology_classes(
     entity_text: Optional[str] = None,
     entity_type: Optional[str] = None,
     entity_type_id: Optional[int] = None,
     context: Optional[str] = None,
     max_suggestions: int = Query(5, ge=1, le=20),
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> ApiResponse[List[FIBOClassSuggestion]]:
-    """Suggest FIBO classes for an entity."""
-    fibo_service = FIBOService()
-    response = await fibo_service.suggest_fibo_class_for_entity(
+) -> ApiResponse[List[OntologyClassSuggestion]]:
+    """Suggest Ontology classes for an entity."""
+    ontology_service = OntologyService()
+    response = await ontology_service.suggest_ontology_class_for_entity(
         entity_text=entity_text or "",
         entity_type=entity_type or "",
         max_suggestions=max_suggestions,
@@ -574,20 +576,20 @@ async def suggest_fibo_classes(
     suggestions = []
     for item in response:
         suggestions.append({
-            "fibo_class": item,
+            "ontology_class": item,
             "confidence": 0.8,  # Default confidence
-            "reason": f"Matched FIBO class: {item.get('label', item['uri'])}"
+            "reason": f"Matched Ontology class: {item.get('label', item['uri'])}"
         })
     
     return ApiResponse(
-        data=[FIBOClassSuggestion(**item) for item in suggestions],
+        data=[OntologyClassSuggestion(**item) for item in suggestions],
         status=status.HTTP_200_OK,
-        message="FIBO classes suggested successfully",
+        message="Ontology classes suggested successfully",
     )
 
 
-@router.get("/suggest/properties", response_model=ApiResponse[List[FIBOPropertySuggestion]])
-async def suggest_fibo_properties(
+@router.get("/suggest/properties", response_model=ApiResponse[List[OntologyPropertySuggestion]])
+async def suggest_ontology_properties(
     relationship_type: Optional[str] = None,
     relationship_type_id: Optional[int] = None,
     source_entity_type: Optional[str] = None,
@@ -597,10 +599,10 @@ async def suggest_fibo_properties(
     context: Optional[str] = None,
     max_suggestions: int = Query(5, ge=1, le=20),
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> ApiResponse[List[FIBOPropertySuggestion]]:
-    """Suggest FIBO properties for a relationship."""
-    fibo_service = FIBOService()
-    response = await fibo_service.suggest_fibo_property_for_relationship(
+) -> ApiResponse[List[OntologyPropertySuggestion]]:
+    """Suggest Ontology properties for a relationship."""
+    ontology_service = OntologyService()
+    response = await ontology_service.suggest_ontology_property_for_relationship(
         relationship_type=relationship_type or "",
         source_entity_type=source_entity_type or "",
         target_entity_type=target_entity_type or "",
@@ -611,15 +613,15 @@ async def suggest_fibo_properties(
     suggestions = []
     for item in response:
         suggestions.append({
-            "fibo_property": item,
+            "ontology_property": item,
             "confidence": 0.8,  # Default confidence
-            "reason": f"Matched FIBO property: {item.get('label', item['uri'])}"
+            "reason": f"Matched Ontology property: {item.get('label', item['uri'])}"
         })
     
     return ApiResponse(
-        data=[FIBOPropertySuggestion(**item) for item in suggestions],
+        data=[OntologyPropertySuggestion(**item) for item in suggestions],
         status=status.HTTP_200_OK,
-        message="FIBO properties suggested successfully",
+        message="Ontology properties suggested successfully",
     )
 
 # ==============================================
@@ -632,8 +634,8 @@ async def bulk_create_entity_mappings(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """Bulk create entity mappings."""
-    fibo_service = FIBOService()
-    response = await fibo_service.bulk_create_entity_mappings(
+    ontology_service = OntologyService()
+    response = await ontology_service.bulk_create_entity_mappings(
         mappings=mappings, user_id=current_user["id"]
     )
     return ApiResponse(
@@ -649,8 +651,8 @@ async def bulk_create_relationship_mappings(
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """Bulk create relationship mappings."""
-    fibo_service = FIBOService()
-    response = await fibo_service.bulk_create_relationship_mappings(
+    ontology_service = OntologyService()
+    response = await ontology_service.bulk_create_relationship_mappings(
         mappings=mappings, user_id=current_user["id"]
     )
     return ApiResponse(
@@ -669,8 +671,8 @@ async def get_mapping_stats(
     current_user: Dict[str, Any] = Depends(check_read_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """Get mapping statistics."""
-    fibo_service = FIBOService()
-    response = await fibo_service.get_mapping_stats(domain_id=domain_id)
+    ontology_service = OntologyService()
+    response = await ontology_service.get_mapping_stats(domain_id=domain_id)
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
@@ -686,26 +688,26 @@ async def import_ontology(
     import_request: OntologyImportRequest,
     current_user: Dict[str, Any] = Depends(check_write_permission),
 ) -> ApiResponse[OntologyImportResponse]:
-    """Import FIBO ontology from a file or URL."""
-    fibo_service = FIBOService()
+    """Import Ontology ontology from a file or URL."""
+    ontology_service = OntologyService()
 
     if import_request.file_id:
-        response = await fibo_service.import_ontology_from_file(
+        response = await ontology_service.import_ontology_from_file(
             file_id=import_request.file_id
         )
         return ApiResponse(
             data=response,
             status=status.HTTP_200_OK,
-            message="FIBO ontology imported successfully",
+            message="Ontology ontology imported successfully",
         )
     elif import_request.url:
-        response = await fibo_service.import_ontology_from_url(
+        response = await ontology_service.import_ontology_from_url(
             url=import_request.url, format=import_request.format
         )
         return ApiResponse(
             data=response,
             status=status.HTTP_200_OK,
-            message="FIBO ontology imported successfully",
+            message="Ontology ontology imported successfully",
         )
     else:
         raise HTTPException(

@@ -4,11 +4,14 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.schemas.pipeline_step import (PipelineStep, PipelineStepBase,
-                                       PipelineStepCreate, PipelineStepRun)
+from app.schemas.pipeline_step import (
+    PipelineStep,
+    PipelineStepBase,
+    PipelineStepCreate,
+    PipelineStepRun,
+)
 
 
-# Enums
 class PipelineType(str, Enum):
     EXTRACTION = "extraction"
     TRANSFORMATION = "transformation"

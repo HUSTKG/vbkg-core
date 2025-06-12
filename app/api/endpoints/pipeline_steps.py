@@ -5,13 +5,9 @@ from fastapi import status as httpStatus
 
 from app.api.deps import PermissionChecker
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.pipeline_step import (
-    PipelineStep,
-    PipelineStepCreate,
-    PipelineStepRun,
-    PipelineStepRunUpdate,
-    PipelineStepUpdate,
-)
+from app.schemas.pipeline_step import (PipelineStep, PipelineStepCreate,
+                                       PipelineStepRun, PipelineStepRunUpdate,
+                                       PipelineStepUpdate)
 from app.schemas.user import User
 
 router = APIRouter()
@@ -375,3 +371,21 @@ async def get_pipeline_run_status(
         status=httpStatus.HTTP_200_OK,
         message="Pipeline run status retrieved successfully",
     )
+    
+@router.get("/{pipeline_id}/steps/execution-order", response_model=Dict[str, Any])
+async def get_step_execution_order(
+    pipeline_id: str,
+    current_user: Dict = Depends(check_read_permission)
+):
+    """Get step execution order considering dependencies"""
+    from app.services.pipeline_step import PipelineStepService
+    try:
+        pipeline_step_service = PipelineStepService()
+        execution_order = await pipeline_step_service.get_step_execution_order(pipeline_id)
+        return {"success": True, "data": {"execution_levels": execution_order}}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+

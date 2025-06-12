@@ -18,6 +18,7 @@ import {
   IReadPipelineStepRunsResponse,
   IReadPipelineStepRunRequest,
   IReadPipelineStepRunResponse,
+  PipelineRunStatus,
 } from "@vbkg/types";
 import { PipelineService } from "../../services/pipeline";
 
@@ -54,6 +55,7 @@ export const usePipelineRuns = (
     queryKey: ["pipelineRuns", input],
     queryFn: () => PipelineService.readPipelineRuns(input),
     ...options,
+	refetchInterval: input.status === PipelineRunStatus.RUNNING ? 2000 : false,
   });
 };
 
@@ -107,12 +109,13 @@ export const usePipelineStep = (
 // Fetch all pipeline runs
 export const usePipelineStepRuns = (
   input: IReadPipelineStepRunsRequest,
-  options?: UseQueryOptions<IReadPipelineStepRunsResponse, Error>,
+  options?: Partial<UseQueryOptions<IReadPipelineStepRunsResponse, Error>>,
 ) => {
   return useQuery<IReadPipelineStepRunsResponse, Error>({
-    queryKey: ["pipelineRuns", input],
+    queryKey: ["pipelineStepRuns", input],
     queryFn: () => PipelineService.readPipelineStepRuns(input),
     ...options,
+	refetchInterval: input.status === PipelineRunStatus.RUNNING ? 2000 : false,
   });
 };
 

@@ -3,44 +3,37 @@ from typing import Annotated, Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi import status as HttpStatus
 
-from app.api.deps import (
-    RequireDataSourceDelete,
-    RequireDataSourceRead,
-    RequireDataSourceWrite,
-    validate_rate_limits,
-)
+from app.api.deps import (RequireDataSourceDelete, RequireDataSourceRead,
+                          RequireDataSourceWrite, validate_rate_limits)
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.datasource import (
-    CreatePipelineFromTemplate,
-    DataSource,
-    DataSourceCreate,
-    DataSourceUpdate,
-    SourceType,
-)
+from app.schemas.datasource import (CreatePipelineFromTemplate, DataSource,
+                                    DataSourceCreate, DataSourceUpdate,
+                                    SourceType)
 from app.services.datasource import DataSourceService
+from app.services.pipeline import PipelineService
 
 router = APIRouter()
 
 
 @router.post(
     "",
-    response_model=ApiResponse[DataSource],
+    response_model=ApiResponse[None],
     status_code=HttpStatus.HTTP_201_CREATED,
     dependencies=[Depends(validate_rate_limits)],  # Add rate limiting
 )
 async def create_datasource(
     datasource_in: DataSourceCreate,
     current_user: Annotated[Dict[str, Any], Depends(RequireDataSourceWrite)],
-) -> ApiResponse[DataSource]:
+) -> ApiResponse[None]:
     """
     Create new data source. Requires datasource:write permission.
     """
     datasource_service = DataSourceService()
-    response = await datasource_service.create_datasource(
+    await datasource_service.create_datasource(
         datasource_in=datasource_in, user_id=current_user["id"]
     )
     return ApiResponse(
-        data=DataSource(**response),
+        data=None,
         status=HttpStatus.HTTP_201_CREATED,
         message="Data source created successfully",
     )
@@ -100,12 +93,12 @@ async def read_datasource(
     )
 
 
-@router.patch("/{datasource_id}", response_model=ApiResponse[DataSource])
+@router.patch("/{datasource_id}", response_model=ApiResponse[None])
 async def update_datasource(
     datasource_in: DataSourceUpdate,
     datasource_id: str = Path(...),
     current_user: Dict[str, Any] = Depends(RequireDataSourceWrite),
-) -> ApiResponse[DataSource]:
+) -> ApiResponse[None]:
     """
     Update a data source. Requires datasource:write permission.
     """
@@ -114,7 +107,7 @@ async def update_datasource(
         datasource_id=datasource_id, datasource_in=datasource_in
     )
     return ApiResponse(
-        data=DataSource(**response),
+        data=None,
         status=HttpStatus.HTTP_200_OK,
         message="Data source updated successfully",
     )
@@ -145,10 +138,10 @@ async def get_pipeline_templates(
 ) -> ApiResponse[List[Dict[str, Any]]]:
     """Get available pipeline templates for this data source"""
 
-    datasource_service = DataSourceService()
+    pipeline_service = PipelineService()
 
     try:
-        templates = await datasource_service.get_pipeline_templates(datasource_id)
+        templates = await pipeline_service.get_pipeline_templates(datasource_id)
 
         return ApiResponse(
             data=templates,
@@ -170,16 +163,13 @@ async def create_pipeline_from_template(
 ) -> ApiResponse[Dict[str, Any]]:
     """Create a pipeline from template for this data source"""
 
-    # This would integrate with the pipeline factory service we discussed earlier
-    from app.services.datasource import DataSourceService
-
-    factory_service = DataSourceService()
+    pipeline_service = PipelineService()
 
     template_name = create_pipeline_request.template_name
     custom_options = create_pipeline_request.custom_options
 
     try:
-        pipeline = await factory_service.create_pipeline_from_template(
+        pipeline = await pipeline_service.create_pipeline_from_template(
             datasource_id=datasource_id,
             template_name=template_name,
             user_id=current_user["id"],

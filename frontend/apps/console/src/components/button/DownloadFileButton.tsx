@@ -28,5 +28,5 @@ export default function DownloadFileButton({
     document.body.removeChild(link);
   };
 
-  return <Button onClick={() => handleDownload()}>Tải xuống</Button>;
+  return <Button variant="outline" onClick={() => handleDownload()}>Tải xuống</Button>;
 }
