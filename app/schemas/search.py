@@ -1,3 +1,5 @@
+# app/schemas/search.py (Enhanced version)
+
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +11,7 @@ class SearchType(str, Enum):
     FUZZY = "fuzzy"
     SEMANTIC = "semantic"
     HYBRID = "hybrid"
+    AI_POWERED = "ai_powered"  # New AI search type
 
 
 class SearchFilter(BaseModel):
@@ -54,9 +57,9 @@ class SearchRequest(BaseModel):
 class EntitySearchResult(BaseModel):
     id: str
     text: str
-    type: str
+    type: Optional[str]
     properties: Dict[str, Any]
-    fibo_class: Optional[str] = None
+    ontology_class: Optional[str] = None
     score: float
     relationships: Optional[List[Dict[str, Any]]] = None
     similar_entities: Optional[List[Dict[str, Any]]] = None
@@ -93,32 +96,98 @@ class GraphSearchQuery(BaseModel):
     start_entity_id: Optional[str] = None
     start_entity_type: Optional[str] = None
     start_entity_text: Optional[str] = None
-    relationship_path: List[str]  # e.g. ["HAS_ACCOUNT", "BELONGS_TO"]
     end_entity_type: Optional[str] = None
     max_depth: int = Field(3, ge=1, le=5)
     limit: int = Field(20, ge=1, le=100)
-
-    @field_validator("relationship_path")
-    def validate_relationship_path(cls, v):
-        if not v:
-            raise ValueError("Relationship path must not be empty")
-        return v
-
-    # @field_validator("start_entity_id", "start_entity_type", "start_entity_text")
-    # def validate_start_entity(cls, v, values):
-    #     # Ensure at least one of start_entity_id, start_entity_type+start_entity_text is provided
-    #     if (
-    #         "start_entity_id" not in values
-    #         and "start_entity_type" not in values
-    #         and "start_entity_text" not in values
-    #     ):
-    #         raise ValueError(
-    #             "Either start_entity_id or both start_entity_type and start_entity_text must be provided"
-    #         )
-    #     return v
+    relationship_path: Optional[List[str]] = None  # e.g. ["HAS_ACCOUNT", "BELONGS_TO"]
 
 
 class GraphSearchResult(BaseModel):
     paths: List[Dict[str, Any]]
     total: int
     execution_time_ms: int
+
+
+# ===== NEW AI SEARCH SCHEMAS =====
+
+class AISearchRequest(BaseModel):
+    """Request model for AI-powered search"""
+    
+    query: str = Field(..., description="Natural language query")
+    entity_types: Optional[List[str]] = Field(
+        None, description="Filter by specific entity types"
+    )
+    max_candidates: int = Field(
+        50, ge=1, le=200, description="Maximum entities to consider for ranking"
+    )
+    similarity_threshold: float = Field(
+        0.3, ge=0.0, le=1.0, description="Minimum similarity threshold for semantic search"
+    )
+    top_k_entities: int = Field(
+        10, ge=1, le=50, description="Number of top entities to include in response"
+    )
+    subgraph_radius: int = Field(
+        2, ge=1, le=4, description="Radius for subgraph extraction around top entities"
+    )
+    max_subgraph_nodes: int = Field(
+        100, ge=10, le=500, description="Maximum nodes in subgraph context"
+    )
+    damping_factor: float = Field(
+        0.85, ge=0.1, le=0.99, description="PersonRank damping factor"
+    )
+    max_iterations: int = Field(
+        20, ge=5, le=100, description="Maximum iterations for PersonRank algorithm"
+    )
+    generate_answer: bool = Field(
+        True, description="Whether to generate LLM answer"
+    )
+    llm_model: str = Field(
+        "gpt-4o-mini", description="LLM model to use for answer generation"
+    )
+
+
+class EntityRankResult(BaseModel):
+    """Entity with ranking scores"""
+    
+    entity_id: str
+    entity_text: str
+    entity_type: str
+    similarity_score: float = Field(description="Semantic similarity to query")
+    personrank_score: float = Field(description="PersonRank score in graph")
+    final_score: float = Field(description="Combined ranking score")
+    properties: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SubgraphContext(BaseModel):
+    """Subgraph context around top entities"""
+    
+    nodes: List[Dict[str, Any]] = Field(description="Nodes in subgraph")
+    edges: List[Dict[str, Any]] = Field(description="Edges in subgraph")
+    node_count: int
+    edge_count: int
+
+
+class AISearchResponse(BaseModel):
+    """Response from AI search"""
+    
+    query: str
+    answer: str = Field(description="Generated answer from LLM")
+    entities: List[EntityRankResult] = Field(description="Top ranked entities")
+    subgraph_context: Optional[SubgraphContext] = Field(description="Graph context")
+    execution_time_ms: int
+    confidence_score: float = Field(ge=0.0, le=1.0, description="Confidence in answer")
+    total_candidates: int = Field(description="Total entities considered")
+
+
+class SearchSuggestionRequest(BaseModel):
+    """Request for search suggestions"""
+    
+    partial_query: str = Field(..., min_length=1, max_length=100)
+    limit: int = Field(5, ge=1, le=20)
+
+
+class SearchSuggestionResponse(BaseModel):
+    """Response with search suggestions"""
+    
+    suggestions: List[str]
+    query: str

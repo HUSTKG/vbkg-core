@@ -1,0 +1,106 @@
+TIÊU ĐỀ: NAPAS triển khai Apple Pay cho khách hàng tại Việt Nam
+
+URL: https://sbv.gov.vn/vi/w/sbv625419
+
+------------------ NỘI DUNG ------------------
+
+Ngày 15/4/2025, Công ty Cổ phần Thanh toán Quốc gia Việt Nam (NAPAS) giới thiệu Apple Pay đến với chủ thẻ nội địa NAPAS tại Việt Nam. Apple Pay là phương thức dễ dàng, bảo mật và riêng tư để thanh toán trực tiếp tại cửa hàng, trên các ứng dụng (app) và thanh toán trực tuyến.
+Để thanh toán tại cửa hàng, khách hàng đơn giản chỉ cần nhấn đúp nút sườn, xác thực và đặt iPhone hoặc Apple Watch gần thiết bị thanh toán để thực hiện thanh toán không tiếp xúc. Khách hàng không cần nhập mã PIN khi mua hàng tại cửa hàng với Apple Pay. Mỗi giao dịch bằng Apple Pay đều bảo mật vì được xác thực bằng Face ID, Touch ID hoặc mật khẩu của thiết bị, cùng với mã bảo mật động dùng một lần. Hiện nay, Apple Pay mang đến phương thức thanh toán nhanh chóng, an toàn và tiện lợi hơn cho các khách hàng, bất kể họ đang mua cà phê tại cửa hàng Highlands Coffee, mua hàng tạp hóa tại Annam Gourmet hay đặt xe công nghệ của BE — Apple Pay được chấp nhận ở bất kỳ nơi nào chấp nhận thanh toán không tiếp xúc.
+Chia sẻ về việc triển khai
+th
+ẻ nội địa trê
+n Apple Pay,
+ông Nguyễn Quang Minh – Tổng Giám đốc của NAPAS cho biế
+t:
+Bằng việc giới thiệ
+u Apple Pay
+đến vớ
+i ch
+ủ
+th
+ẻ nội địa NAPAS, chúng tôi sẽ tạo nên bước đột phá
+th
+úc đẩy giao dị
+ch s
+ố,
+mang lại sự tiện lợi, và gia tăng trải nghiệm thanh toá
+n ri
+êng tư và bảo mật cho ngườ
+i dù
+ng. Nhìn lại tiến trình thanh toá
+n th
+ẻ tại Việt Nam trong những năm gần đây, chúng ta có
+th
+ể
+thấy s
+ự phát triển mạnh mẽ và nhanh ch
+ó
+ng củ
+a c
+ác phương thức thanh toá
+n th
+ẻ được số h
+ó
+a trê
+n thi
+ết bị
+di
+động. Đặc biệt, vớ
+i c
+ác tính năng thanh toá
+n ti
+ện lợi, an toàn và dễ sử dụng, thẻ thanh toán đã được ứng dụng trong các giải pháp thanh toán cho nhiều lĩnh vực của xã hội hiện đại như giao thông, bán lẻ, ăn uống. Việc triển khai
+Apple Pay
+trên
+th
+ẻ NAPAS g
+ó
+p phần phát triển hệ sinh thái thanh toá
+n th
+ẻ hiện đạ
+i c
+ũng như hội nhập quốc tế, đá
+p
+ứng nhu cầu thanh toán của người tiêu d
+ù
+ng tại Việt Nam.”
+Khá
+ch h
+àng có
+th
+ể sử dụ
+ng Apple Pay trên iP
+hone,
+iPad, Mac để mua hàng nhanh ch
+ó
+ng, tiện lợi trên các ứng dụng, trê
+n website, m
+à không cần phải tạo tài khoản hoặc nhập lại thông tin liên hệ
+, th
+ông tin thẻ
+, th
+ông tin về vận chuyển hay h
+ó
+a đơn. Khá
+ch h
+àng không cần phải đợi mật khẩu d
+ù
+ng mộ
+t l
+ần –
+OTP (one time password), m
+à vẫn trải nghiệm thanh toán an toàn.
+NAPAS đã hợp tác vớ
+i c
+ác ngân hàng để triển khai dị
+ch v
+ụ Apple Pay cho thẻ nội địa NAPAS bao gồm Vietcombank, OCB. C
+ù
+ng với sự hợp tác vớ
+i c
+ác ngân hàng, NAPAS đã hợp tác vớ
+i c
+ác đơn vị cung cấ
+p dịch v
+ụ thanh toán gồm OnePay, VNPay, Zalo Pay và Ngân Lượng để mở rộng chấp nhận thanh toán Apple Pay cho thẻ nội địa NAPAS.
+ĐN

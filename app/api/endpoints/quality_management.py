@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi import status as HttpStatus
 
-from app.api.deps import PermissionChecker
+from app.api.deps import PermissionChecker, validate_rate_limits
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.conflict_resolution import (Conflict, ConflictResolution,
                                              ConflictResolutionRequest,
@@ -16,7 +16,9 @@ from app.services.conflict_resolution import ConflictResolutionService
 from app.services.knowledge_graph import KnowledgeGraphService
 from app.services.quality_management import QualityManagementService
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(validate_rate_limits)],  # Add rate limiting
+        )
 
 # Permission checkers
 check_read_permission = PermissionChecker("quality:read")
@@ -48,11 +50,11 @@ async def get_quality_dashboard(
         )
 
 
-@router.get("/report", response_model=ApiResponse[QualityReport])
+@router.get("/report", response_model=ApiResponse[Dict[str, Any]])
 async def generate_quality_report(
     days_back: int = 30,
     current_user: Dict[str, Any] = Depends(check_read_permission),
-) -> ApiResponse[QualityReport]:
+) -> ApiResponse[Dict[str, Any]]:
     """Generate comprehensive quality report"""
 
     quality_service = QualityManagementService()
@@ -78,7 +80,7 @@ async def generate_quality_report(
 
 
 @router.post("/monitoring/run")
-async def run_quality_monitoring(
+def run_quality_monitoring(
     background_tasks: BackgroundTasks,
     current_user: Dict[str, Any] = Depends(check_admin_permission),
 ) -> ApiResponse[Dict[str, Any]]:
@@ -139,7 +141,7 @@ async def get_conflicts(
 
 
 @router.post("/conflicts/detect")
-async def detect_conflicts(
+def detect_conflicts(
     background_tasks: BackgroundTasks,
     entity_ids: Optional[List[str]] = None,
     current_user: Dict[str, Any] = Depends(check_expert_permission),
@@ -168,7 +170,7 @@ async def detect_conflicts(
             print(f"Detected and saved {len(conflicts)} conflicts")
 
         except Exception as e:
-            print(f"Conflict detection failed: {e}")
+            print(f"Conflict detection failedz: {e}")
 
     # Run detection and saving in background
     background_tasks.add_task(detect_and_save_conflicts)
@@ -198,7 +200,7 @@ async def resolve_conflict_manually(
                 resolution_data=resolution.resolution_data,
                 reasoning=resolution.reasoning,
                 resolved_by=current_user["id"],
-                resolution_timestamp=datetime.now(timezone.utc),
+                resolution_timestamp=datetime.now(timezone.utc).isoformat(),
             ),
             expert_id=current_user["id"],
         )

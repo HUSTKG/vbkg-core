@@ -77,11 +77,11 @@ const detectConflicts = async (
 const resolveConflict = async (
   input: IResolveConflictRequest,
 ): Promise<IResolveConflictResponse> => {
-  const { conflict_id, resolution } = input;
+  const { conflict_id, ...resolution } = input;
   return await api()
     .post<IResolveConflictResponse>(
       API_ENDPOINTS.RESOLVE_CONFLICT(conflict_id),
-      { resolution },
+      { ...resolution },
     )
     .then((res) => res.data);
 };

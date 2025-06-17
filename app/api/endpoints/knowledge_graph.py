@@ -10,8 +10,13 @@ from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.entity import (Entity, EntityCreate, EntityResponse,
                                 EntityUpdate)
 from app.schemas.knowledge_graph import (CypherQuery, GraphQueryRequest,
-                                         PathResponse, PathSearchRequest,
-                                         StatsResponse, SubgraphResponse)
+                                         KGCompletionRequest,
+                                         KGCompletionResponse,
+                                         KGCompletionStats,
+                                         KGCompletionSuggestion, PathResponse,
+                                         PathSearchRequest, SubgraphResponse,
+                                         SuggestionActionRequest,
+                                         SuggestionActionResponse)
 from app.schemas.relationship import (Relationship, RelationshipCreate,
                                       RelationshipResponse)
 from app.services.knowledge_graph import KnowledgeGraphService
@@ -166,7 +171,7 @@ async def get_entity_neighbors(
 
 @router.get(
     "/relationships",
-    response_model=PaginatedResponse[RelationshipResponse],
+    response_model=PaginatedResponse[Dict[str, Any]],
     tags=["Relationships"],
 )
 async def search_relationships(
@@ -184,7 +189,7 @@ async def search_relationships(
     ),
     current_user: dict = Depends(RequireKGRead),
     kg_service: KnowledgeGraphService = Depends(),
-) -> PaginatedResponse[RelationshipResponse]:
+) -> PaginatedResponse[Dict[str, Any]]:
     """Search relationships with various filters"""
     # Rate limiting
     rate_limiter = get_rate_limiter()
@@ -426,22 +431,6 @@ async def execute_graph_query(
         raise HTTPException(status_code=400, detail=f"Query execution failed: {str(e)}")
 
 
-# =============================================
-# ANALYTICS & STATISTICS
-# =============================================
-
-
-@router.get("/stats", response_model=StatsResponse, tags=["Analytics"])
-async def get_knowledge_graph_stats(
-    current_user: dict = Depends(RequireKGRead),
-    kg_service: KnowledgeGraphService = Depends(),
-):
-    """Get comprehensive KG statistics"""
-
-    # Check permissions
-    return await kg_service.get_knowledge_graph_stats()
-
-
 @router.get("/insights/investment", tags=["Analytics"])
 async def get_investment_insights(
     entity_type: str = Query(
@@ -658,20 +647,6 @@ async def create_relationship(
     )
 
 
-@router.post("/query", response_model=ApiResponse[List[Dict[str, Any]]])
-async def execute_query(
-    query_in: CypherQuery, current_user: Dict[str, Any] = Depends(check_read_permission)
-) -> ApiResponse[List[Dict[str, Any]]]:
-    """
-    Execute a Cypher query against the knowledge graph.
-    """
-    kg_service = KnowledgeGraphService()
-    response = await kg_service.execute_query(
-        query=query_in.query, parameters=query_in.parameters
-    )
-    return ApiResponse(
-        data=response, status=status.HTTP_200_OK, message="Query executed successfully"
-    )
 
 
 @router.get("/stats", response_model=ApiResponse[Dict[str, Any]])
@@ -679,35 +654,309 @@ async def get_knowledge_graph_stats(
     current_user: Dict[str, Any] = Depends(check_read_permission),
 ) -> ApiResponse[Dict[str, Any]]:
     """
-    Get statistics about the knowledge graph entities.
+    get statistics about the knowledge graph entities.
     """
     kg_service = KnowledgeGraphService()
-    response = await kg_service.get_entity_stats()
+    response = await kg_service.get_knowledge_graph_stats()
     return ApiResponse(
         data=response,
         status=status.HTTP_200_OK,
-        message="Knowledge graph statistics retrieved successfully",
+        message="knowledge graph statistics retrieved successfully",
     )
 
 
-@router.post("/entities/merge", response_model=ApiResponse[Entity])
-async def create_or_merge_entity(
-    entity_in: EntityCreate,
-    current_user: Dict[str, Any] = Depends(check_edit_permission),
-) -> ApiResponse[Entity]:
-    """
-    Create a new entity or merge with existing one if found.
-    """
-    kg_service = KnowledgeGraphService()
-    response = await kg_service.create_or_merge_entity(
-        entity_text=entity_in.text,
-        entity_type=entity_in.type,
-        properties=entity_in.properties,
-        fibo_class=entity_in.fibo_class,
-        source_document_id=entity_in.source_document_id,
+@router.post("/completion", response_model=ApiResponse[KGCompletionResponse], tags=["KG Completion"])
+async def generate_kg_completion(
+    completion_request: KGCompletionRequest,
+    current_user: dict = Depends(check_edit_permission),
+    kg_service: KnowledgeGraphService = Depends(),
+):
+    """Generate knowledge graph completion suggestions"""
+    
+    # Rate limiting for expensive operations
+    rate_limiter = get_rate_limiter()
+    rate_check = await rate_limiter.check_limit(
+        identifier=current_user["id"],
+        scope=RateLimitScope.USER,
+        config_name="search_heavy",
     )
-    return ApiResponse(
-        data=response,
-        status=status.HTTP_201_CREATED,
-        message="Entity created or merged successfully",
-    )
+
+    if not rate_check.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded",
+            headers=rate_check.to_headers(),
+        )
+
+    try:
+        # Get entities and relationships for completion
+        if completion_request.entity_ids:
+            # Get specific entities and their related data
+            entities = []
+            relationships = []
+            
+            for entity_id in completion_request.entity_ids:
+                entity = await kg_service.get_entity(str(entity_id))
+                if entity:
+                    entities.append(entity)
+                    
+                    # Get entity's relationships
+                    entity_rels = await kg_service.get_entity_relationships(
+                        str(entity_id), limit=1000
+                    )
+                    relationships.extend(entity_rels.get("relationships", []))
+        else:
+            # Get all entities and relationships (with limits)
+            entity_limit = completion_request.limit_entities or 1000
+            rel_limit = completion_request.limit_relationships or 1000
+            
+            entity_result = await kg_service.search_entities(limit=entity_limit)
+            rel_result = await kg_service.search_relationships(limit=rel_limit)
+            
+            entities = entity_result.get("entities", [])
+            relationships = rel_result.get("relationships", [])
+
+        # Initialize completion task
+        completion_task = KnowledgeGraphCompletionTask()
+        
+        # Generate completion suggestions
+        result = await completion_task.complete_knowledge_graph(
+            entities=entities,
+            relationships=relationships,
+            completion_types=completion_request.completion_types,
+            auto_apply_suggestions=completion_request.auto_apply_suggestions,
+            confidence_threshold=completion_request.confidence_threshold,
+            user_id=current_user["id"],
+            entity_ids=completion_request.entity_ids,
+            limit_entities=completion_request.limit_entities,
+            limit_relationships=completion_request.limit_relationships,
+        )
+
+        if result["success"]:
+            response = KGCompletionResponse(
+                suggestions=[KGCompletionSuggestion(**suggestion) for suggestion in result["suggestions"]],
+                stats=result["completion_stats"],
+                success=True,
+                message="Knowledge graph completion generated successfully"
+            )
+        else:
+            response = KGCompletionResponse(
+                suggestions=[],
+                stats={},
+                success=False,
+                error=result.get("error", "Unknown error occurred")
+            )
+
+        return ApiResponse(
+            data=response,
+            status=status.HTTP_200_OK,
+            message="Knowledge graph completion completed"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating knowledge graph completion: {str(e)}"
+        )
+
+
+@router.get("/completion/suggestions", response_model=PaginatedResponse[KGCompletionSuggestion], tags=["KG Completion"])
+async def get_completion_suggestions(
+    suggestion_type: Optional[str] = Query(None, regex="^(entity|relationship)$"),
+    status_filter: Optional[str] = Query(None, alias="status", regex="^(pending|accepted|rejected|applied)$"),
+    priority: Optional[str] = Query(None, regex="^(low|medium|high|critical)$"),
+    min_confidence: Optional[float] = Query(None, ge=0.0, le=1.0),
+    max_confidence: Optional[float] = Query(None, ge=0.0, le=1.0),
+    source: Optional[str] = Query(None),
+    limit: int = Query(default=50, le=200),
+    skip: int = Query(default=0, ge=0),
+    current_user: dict = Depends(check_read_permission),
+    kg_service: KnowledgeGraphService = Depends(),
+):
+    """Get knowledge graph completion suggestions with filters"""
+    
+    try:
+        result = await kg_service.get_completion_suggestions(
+            suggestion_type=suggestion_type,
+            status_filter=status_filter,
+            priority=priority,
+            min_confidence=min_confidence,
+            max_confidence=max_confidence,
+            source=source,
+            limit=limit,
+            skip=skip
+        )
+        
+        suggestions = [KGCompletionSuggestion(**suggestion) for suggestion in result["suggestions"]]
+
+        return PaginatedResponse(
+            data=suggestions,
+            meta=PaginatedMeta(
+                total=result["total"],
+                limit=limit,
+                skip=skip,
+            ),
+            status=status.HTTP_200_OK,
+            message="Completion suggestions retrieved successfully",
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving completion suggestions: {str(e)}"
+        )
+
+
+@router.post("/completion/suggestions/actions", response_model=ApiResponse[SuggestionActionResponse], tags=["KG Completion"])
+async def handle_suggestion_actions(
+    action_request: SuggestionActionRequest, 
+    current_user: dict = Depends(check_edit_permission),
+    kg_service: KnowledgeGraphService = Depends(),
+):
+    """Handle actions on completion suggestions (accept, reject, apply)"""
+    
+    try:
+        if action_request.action == "apply":
+            # Apply suggestions - create actual entities/relationships
+            result = await kg_service.apply_completion_suggestions(
+                suggestion_ids=[str(sid) for sid in action_request.suggestion_ids],
+                user_id=current_user["id"]
+            )
+            
+            response = SuggestionActionResponse(
+                processed_suggestions=action_request.suggestion_ids,
+                applied_entities=[str(eid) for eid in result["applied_entities"]],
+                applied_relationships=[str(rid) for rid in result["applied_relationships"]],
+                errors=result["errors"],
+                success=result["success"],
+                message=result["message"]
+            )
+            
+        else:
+            # Accept or reject suggestions
+            result = await kg_service.update_suggestion_status(
+                suggestion_ids=[str(sid) for sid in action_request.suggestion_ids],
+                action="accepted" if action_request.action == "accept" else "rejected",
+                user_id=current_user["id"],
+                review_notes=action_request.review_notes,
+                rejection_reason=action_request.rejection_reason
+            )
+            
+            response = SuggestionActionResponse(
+                processed_suggestions=action_request.suggestion_ids,
+                success=result["success"],
+                message=result["message"]
+            )
+
+        return ApiResponse(
+            data=response,
+            status=status.HTTP_200_OK,
+            message=f"Suggestion action '{action_request.action}' completed"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error handling suggestion action: {str(e)}"
+        )
+
+
+@router.get("/completion/suggestions/{suggestion_id}", response_model=ApiResponse[KGCompletionSuggestion], tags=["KG Completion"])
+async def get_completion_suggestion(
+    suggestion_id: str,
+    current_user: dict = Depends(check_read_permission),
+    kg_service: KnowledgeGraphService = Depends(),
+):
+    """Get a specific completion suggestion by ID"""
+    
+    try:
+        suggestion_data = await kg_service.get_completion_suggestion(str(suggestion_id))
+        
+        if not suggestion_data:
+            raise HTTPException(
+                status_code=404,
+                detail="Completion suggestion not found"
+            )
+        
+        suggestion = KGCompletionSuggestion(**suggestion_data)
+        
+        return ApiResponse(
+            data=suggestion,
+            status=status.HTTP_200_OK,
+            message="Completion suggestion retrieved successfully"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving completion suggestion: {str(e)}"
+        )
+
+
+@router.delete("/completion/suggestions/{suggestion_id}", response_model=ApiResponse[dict], tags=["KG Completion"])
+async def delete_completion_suggestion(
+    suggestion_id: str,
+    current_user: dict = Depends(check_edit_permission),
+    kg_service: KnowledgeGraphService = Depends(),
+):
+    """Delete a completion suggestion"""
+    
+    try:
+        success = await kg_service.delete_completion_suggestion(str(suggestion_id))
+        
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail="Completion suggestion not found"
+            )
+        
+        return ApiResponse(
+            data={"deleted_id": suggestion_id},
+            status=status.HTTP_200_OK,
+            message="Completion suggestion deleted successfully"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting completion suggestion: {str(e)}"
+        )
+
+
+@router.get("/completion/stats", response_model=ApiResponse[KGCompletionStats], tags=["KG Completion"])
+async def get_completion_stats(
+    current_user: dict = Depends(check_read_permission),
+    kg_service: KnowledgeGraphService = Depends(),
+):
+    """Get knowledge graph completion statistics"""
+    
+    try:
+        stats_data = await kg_service.get_completion_stats()
+        
+        stats = KGCompletionStats(
+            total_suggestions=stats_data["total_suggestions"],
+            pending_suggestions=stats_data["pending_suggestions"],
+            accepted_suggestions=stats_data["accepted_suggestions"],
+            rejected_suggestions=stats_data["rejected_suggestions"],
+            applied_suggestions=stats_data["applied_suggestions"],
+            entity_suggestions=stats_data["entity_suggestions"],
+            relationship_suggestions=stats_data["relationship_suggestions"],
+            avg_confidence=stats_data["avg_confidence"] or 0.0,
+            high_priority_pending=stats_data["high_priority_pending"]
+        )
+
+        return ApiResponse(
+            data=stats,
+            status=status.HTTP_200_OK,
+            message="Completion statistics retrieved successfully"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving completion statistics: {str(e)}"
+        )

@@ -1,35 +1,35 @@
-import { FIBOClass, FIBOProperty } from "@vbkg/types";
+import { OntologyClass, OntologyProperty } from "@vbkg/types";
 import { Dialog } from "@/components";
-import FormEditFiboProperty from "../form/edit-property";
+import FormEditOntologyProperty from "../form/edit-property";
 
-interface EditFiboPropertyDialogProps {
+interface EditOntologyPropertyDialogProps {
   isEditPropertyModalOpen: boolean;
   setIsEditPropertyModalOpen: (open: boolean) => void;
-  selectedProperty: FIBOProperty | null;
-  getClassById: (id: number) => FIBOClass | undefined;
-  fiboClasses: FIBOClass[];
+  selectedProperty: OntologyProperty | null;
+  getClassById: (id: number) => OntologyClass | undefined;
+  ontologyClasses: OntologyClass[];
 }
 
-export default function EditFiboPropertyDialog({
+export default function EditOntologyPropertyDialog({
   isEditPropertyModalOpen,
   setIsEditPropertyModalOpen,
   selectedProperty,
   getClassById,
-  fiboClasses,
-}: EditFiboPropertyDialogProps) {
+  ontologyClasses,
+}: EditOntologyPropertyDialogProps) {
   return (
     <Dialog
-      title="Edit FIBO Property"
-      description="Chỉnh sửa FIBO property"
+      title="Edit Ontology Property"
+      description="Chỉnh sửa Ontology property"
       open={isEditPropertyModalOpen}
       size="2xl"
       showFooter={false}
       onOpenChange={setIsEditPropertyModalOpen}
     >
       {selectedProperty && (
-        <FormEditFiboProperty
+        <FormEditOntologyProperty
           selectedProperty={selectedProperty}
-          fiboClasses={fiboClasses}
+          ontologyClasses={ontologyClasses}
           getClassById={getClassById} // Replace with actual class retrieval logic
         />
       )}

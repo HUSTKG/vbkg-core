@@ -1,0 +1,120 @@
+TIÊU ĐỀ: Chuyển dịch xanh và vai trò của ngân hàng trung ương: Từ ổn định vĩ mô đến quản trị rủi ro khí hậu
+
+URL: https://sbv.gov.vn/vi/w/sbv637282
+
+------------------ NỘI DUNG ------------------
+
+Biến đổi khí hậu tạo áp lực lớn lên kinh tế toàn cầu và đòi hỏi chuyển dịch sang nền kinh tế xanh, phát thải thấp. Bài viết dựa trên nghiên cứu của Ngân hàng Thanh toán Quốc tế (BIS) phân tích vai trò của ngân hàng trung ương (NHTW) trong ổn định kinh tế vĩ mô và hỗ trợ chính sách ứng phó với rủi ro khí hậu.
+Ảnh minh họa: Nguồn Internet
+1. Mở đầu
+Trong những năm gần đây, biến đổi khí hậu đã trở thành một trong những rủi ro hệ thống lớn nhất đối với kinh tế toàn cầu. Sự gia tăng về tần suất và cường độ của các hiện tượng thời tiết cực đoan - như nắng nóng bất thường,
+lũ
+lụt và hạn hán kéo dài - đang tác động rõ rệt đến hoạt động sản xuất, đầu tư, tiêu dùng và giá cả. Đồng thời, các nỗ lực nhằm giảm phát thải khí nhà kính và thúc đẩy sử dụng năng lượng tái tạo đang đặt ra yêu cầu điều chỉnh sâu rộng trong cấu trúc kinh tế, định hướng tín dụng và hành
+vi
+thị trường.
+Chuyển dịch xanh - tức là quá trình chuyển đổi từ nền kinh tế sử dụng năng lượng hóa thạch sang mô hình phát triển dựa trên năng lượng sạch và phát thải thấp - không chỉ là mục tiêu dài hạn về môi trường, mà còn là thách thức
+vĩ
+mô hiện hữu đối với hầu hết các quốc gia. Việc áp dụng các công cụ như thuế carbon, quy định khí thải, hoặc đầu tư công vào hạ tầng xanh, đều có thể gây ra những tác động đáng kể đến lạm phát, tăng trưởng, thất nghiệp và phân phối thu nhập. Những tác động này đặt ra yêu cầu điều chỉnh chính sách một cách kịp thời, có phối hợp và có cơ sở lý luận rõ ràng.
+Trong bối cảnh đó, vai trò của NHTW ngày càng trở nên quan trọng, không chỉ với tư cách là cơ quan điều hành chính sách tiền tệ, mà còn là trụ cột trong việc bảo đảm ổn định tài chính, hỗ trợ định hướng dòng tín dụng và cung cấp khung phân tích kỹ thuật cho quá trình hoạch định chính sách khí hậu. Các nghiên cứu mới đây của BIS, đặc biệt là loạt tài liệu chuyên sâu như The macroeconomics of green transitions (BIS Working Paper No. 1237) và Macroeconomic impact of extreme weather events (BIS Bulletin No. 98), đã cung cấp những gợi ý có giá trị về cách thức đánh giá, phản ứng và điều phối chính sách trong bối cảnh chuyển dịch xanh ngày càng phức tạp.
+Bài viết này tổng hợp và phân tích các kết quả nghiên cứu mới nhất của BIS, qua đó làm rõ các kịch bản kinh tế của quá trình chuyển dịch xanh, vai trò của NHTW trong ổn định vĩ mô và kiểm soát rủi ro khí hậu, đồng thời đề xuất một số định hướng chính sách phù hợp với bối cảnh Việt Nam.
+2. Tác động
+vĩ
+mô của chuyển dịch xanh
+Chuyển dịch xanh, về bản chất, là một cú sốc cung mang tính cấu trúc đối với nền kinh tế. Việc thiết lập thuế carbon, cắt giảm sản lượng năng lượng hóa thạch và thúc đẩy đầu tư xanh sẽ tác động trực tiếp đến chi phí sản xuất, giá cả hàng hóa, hoạt động đầu tư - tiêu dùng và cấu trúc thị trường
+lao
+động. Để đánh giá chính xác những tác động này, BIS đã phát triển một mô hình DSGE mở rộng (Dynamic Stochastic General Equilibrium - mô hình kinh tế động có tính toán biến đổi khí hậu và chuyển dịch xanh), tích hợp cả yếu tố đổi mới công nghệ xanh và phản ứng của chính sách tiền tệ. Mô hình cho phép lượng hóa các kết quả kinh tế dưới những kịch bản hành động chính sách khác nhau, từ đó cung cấp bằng chứng khoa học cho việc lựa chọn lộ trình chuyển dịch.
+Kịch bản trễ nải (Delayed policy)
+Trong kịch bản này, chính sách khí hậu được nới lỏng hoặc chậm triển khai trong giai đoạn đầu, song bị siết chặt đột ngột sau năm 2030 - chẳng hạn như tăng thuế carbon với cường độ lớn hoặc áp đặt hạn mức phát thải tức thì. Kết quả là nền kinh tế phải đối mặt với một cú sốc lớn về chi phí sản xuất và giá năng lượng, làm tăng CPI, kéo giảm đầu tư và tiêu dùng, đồng thời gia tăng tỷ lệ thất nghiệp. Tăng trưởng GDP giảm mạnh sau năm 2030 và nền kinh tế phải trả giá đắt vì sự chậm trễ trong điều chỉnh.
+Kịch bản phối hợp (Coordinated policy)
+Trong kịch bản phối hợp, chính sách chuyển dịch được triển khai một cách dần dần ngay từ đầu, có sự phối hợp hiệu quả giữa các chính sách tài khóa (hỗ trợ hộ gia đình, đầu tư công xanh), chính sách tiền tệ (duy trì ổn định giá cả) và chính sách tín dụng (định hướng dòng vốn xanh). Kết quả là nền kinh tế có thời gian thích ứng, lạm phát tăng trong ngưỡng kiểm soát, đầu tư xanh tăng đều, kỳ vọng thị trường ổn định và rủi ro xã hội được giảm thiểu. Đây là kịch bản tối ưu với chi phí kinh tế - xã hội thấp nhất, xét trên cả ngắn hạn và trung hạn.
+Kịch bản phi điều phối (Uncoordinated policy)
+Trong kịch bản này, các trụ cột chính sách hành động một cách riêng rẽ, thiếu sự điều phối giữa cơ quan tiền tệ, tài khóa và giám sát tài chính. Chính sách có thể mang tính mâu thuẫn, ví dụ như thuế carbon được ban hành mà không có hỗ trợ giá năng lượng sạch, hoặc chính sách tiền tệ thắt chặt quá mức trong lúc
+đầu tư xanh cần thúc đẩy. Kết quả là chi phí kinh tế cao, đầu tư thiếu hiệu quả, kỳ vọng thị trường bất định, niềm tin doanh nghiệp suy giảm và rủi ro tài chính gia tăng đáng kể.
+Nhìn chung, các kết quả mô phỏng từ mô hình cho thấy quá trình chuyển dịch xanh sẽ dẫn tới tăng chi phí sản xuất và giá năng lượng trong ngắn hạn, nhưng nếu được điều phối hợp lý và kèm theo hỗ trợ đổi mới công nghệ, tác động tiêu cực này có thể được bù đắp trong trung hạn. Quan trọng hơn, tốc độ và độ sâu của quá trình chuyển dịch phụ thuộc mạnh mẽ vào cách thiết kế chính sách - đặc biệt là mức độ sẵn sàng “chấp nhận” một mức lạm phát cao hơn tạm thời để đổi lấy tiến bộ nhanh hơn trong đổi mới và tăng trưởng xanh.
+3. Vai trò của NHTW trong quá trình chuyển dịch xanh
+Thứ nhất,
+NHTW giữ vai trò trung tâm trong việc ổn định kỳ vọng lạm phát trong quá trình chuyển dịch. Việc áp dụng thuế carbon, đầu tư hạ tầng xanh, hay thay đổi cấu trúc sản xuất năng lượng có thể làm gia tăng lạm phát trong ngắn hạn, đặc biệt trong bối cảnh thị trường năng lượng toàn cầu còn nhiều biến động. Để đối phó với rủi ro này, NHTW cần tăng cường minh bạch hóa cơ sở dự báo, cải thiện công cụ truyền thông chính sách và điều chỉnh lộ trình điều hành chính sách tiền tệ một cách linh hoạt. Việc xác lập thông điệp rõ ràng về “lạm phát chuyển dịch” - tức là mức lạm phát cao hơn tạm thời do tác động của chính sách khí hậu - sẽ giúp duy trì niềm tin thị trường và tránh hiệu ứng
+lan
+tỏa bất lợi đến kỳ vọng giá cả dài hạn.
+Thứ hai,
+NHTW đóng vai trò quan trọng trong việc bảo đảm ổn định tài chính, đặc biệt trong bối cảnh một số ngành sử dụng nhiều carbon có thể đối mặt với rủi ro tài chính lớn do sụt giảm giá trị tài sản hoặc bị loại khỏi chuỗi cung ứng tín dụng. Việc chủ động giám sát các “tài sản dễ tổn thương khí hậu” (climate-vulnerable assets), đánh giá độ nhạy bảng cân đối của các tổ chức tài chính đối với chính sách khí hậu và điều chỉnh các yêu cầu về vốn hoặc công bố thông tin có thể giúp hạn chế tác động lan truyền rủi ro trong hệ thống tài chính quốc gia.
+Thứ ba
+, thông qua việc triển khai các công cụ chính sách như tái cấp vốn ưu đãi cho các lĩnh vực xanh, cơ chế hỗ trợ thanh khoản có chọn lọc và hệ thống phân loại tài sản xanh (green taxonomy), NHTW có thể tạo ra những tín hiệu định hướng quan trọng cho thị trường tài chính. Những biện pháp này giúp thúc đẩy hệ thống tài chính lồng ghép các tiêu chí môi trường, xã hội và quản trị (ESG) vào quá trình đánh giá rủi ro và phân bổ vốn. Không chỉ góp phần hiện thực hóa các cam kết về khí hậu, cách tiếp cận này còn củng cố nền tảng bền vững cho hoạt động ngân hàng trong dài hạn.
+Thứ tư,
+với năng lực kỹ thuật và mô hình hóa vĩ mô sâu rộng, NHTW có thể trở thành đối tác tư vấn quan trọng cho Chính phủ trong việc xây dựng các chính sách tài khóa xanh, thiết kế các công cụ thị trường carbon và đánh giá chi phí - lợi ích của chuyển dịch. Vai trò này đặc biệt quan trọng tại các quốc gia đang phát triển, nơi các quyết định chính sách khí hậu thường thiếu cơ sở định lượng mạnh mẽ hoặc bị giới hạn bởi năng lực phân tích.
+Tổng thể, các phân tích của BIS cho thấy: Nếu NHTW chủ động, có năng lực phân tích tốt và phối hợp hiệu quả với các cơ quan tài chính - môi trường, quá trình chuyển dịch xanh sẽ ít gây rủi ro vĩ mô hơn, đồng thời đạt được mục tiêu khí hậu với chi phí xã hội thấp hơn đáng kể so với kịch bản bị động hoặc đơn ngành.
+4. Rủi ro từ khí hậu cực đoan và phản ứng chính sách
+Bên cạnh chuyển dịch xanh mang tính chủ động về chính sách, các nền kinh tế ngày nay phải đối mặt ngày càng rõ nét với rủi ro khí hậu mang tính bị động - đặc biệt là những thiệt hại do các hiện tượng thời tiết cực đoan gây ra. Các sự kiện như sóng nhiệt, hạn hán, lũ lụt và cháy rừng không còn là vấn đề của tương lai, mà đang trực tiếp ảnh hưởng đến tăng trưởng, giá cả và ổn định tài chính ở nhiều quốc gia, nhất là các nền kinh tế mới nổi.
+Nghiên cứu của BIS chỉ ra rằng các hiện tượng khí hậu cực đoan có thể tác động đến GDP thông qua nhiều kênh truyền dẫn, bao gồm giảm năng suất
+lao
+động, gián đoạn chuỗi cung ứng, thiệt hại cơ sở hạ tầng và mất cân đối khu vực địa lý. Đặc biệt, các quốc gia có độ bao phủ rừng thấp, cơ cấu nông nghiệp chiếm tỷ trọng lớn trong GDP và hệ thống hạ tầng yếu kém thường dễ bị tổn thương hơn, với thiệt hại tiềm tàng lên đến 0
+,6
+- 0,8 điểm phần trăm GDP mỗi năm nếu tần suất các sự kiện khí hậu cực đoan tăng gấp đôi trong thập kỷ tới.
+Không giống như cú sốc tài chính hay biến động giá năng lượng, rủi ro khí hậu mang tính tích lũy và có độ trễ, tức là ảnh hưởng thường không hiện rõ ngay trong các chỉ báo kinh tế ngắn hạn, mà tác động qua trung hạn với tính lan tỏa cao. Điều này đặt ra thách thức đặc biệt cho các cơ quan điều hành chính sách, vốn thường dựa vào các chỉ báo mang tính
+chu
+kỳ và phản ứng ngắn hạn. Do đó, BIS khuyến nghị rằng các NHTW cần chủ động tích hợp rủi ro khí hậu vào các mô hình phân tích
+vĩ
+mô, đặc biệt là trong dự báo tăng trưởng - lạm phát và đánh giá độ nhạy của hệ thống tài chính.
+Ngoài ra, BIS cũng nhấn mạnh vai trò của dữ liệu và công nghệ trong
+theo
+dõi rủi ro khí hậu cực đoan. Cụ thể, việc phát triển các chỉ số giám sát thời tiết
+theo
+thời gian thực - kết hợp dữ liệu vệ tinh, cảm biến mặt đất và dữ liệu lớn (big data) - có thể giúp phát hiện sớm nguy cơ mất ổn định khu vực hoặc theo ngành. Việc này đặc biệt hữu ích trong thiết kế các mô hình cảnh báo sớm, từ đó hỗ trợ tốt hơn cho công tác điều hành chính sách tiền tệ và kiểm soát rủi ro tài chính.
+Quan trọng hơn, bài học kinh nghiệm cho thấy các sự kiện khí hậu cực đoan thường gây thiệt hại nghiêm trọng nhất khi xảy ra tại những thời điểm mà chính sách tài khóa hoặc chính sách tiền tệ đã bị “neo cứng” - chẳng hạn như khi lãi suất chạm đáy hoặc thâm hụt ngân sách cao. Do đó, NHTW cần duy trì dư địa chính sách hợp lý để sẵn sàng phản ứng nhanh trong trường hợp nền kinh tế chịu cú sốc khí hậu bất ngờ.
+Từ góc nhìn ổn định vĩ mô, rủi ro khí hậu cực đoan không còn là vấn đề môi trường hay bảo hiểm thiên tai, mà đã trở thành một biến số kinh tế có tính hệ thống, đòi hỏi NHTW phải đổi mới cả về công cụ phân tích, mô hình giám sát và thiết kế chính sách dự phòng.
+5. Khuyến nghị chính sách đối với các NHTW và cơ quan điều hành
+Dựa trên các phân tích mô hình và bằng chứng định lượng được BIS trình bày trong các nghiên cứu gần đây, đặc biệt là Working Paper No. 1237 và Bulletin No. 98, có thể rút ra một số định hướng chính sách chủ chốt mà các NHTW và cơ quan điều hành kinh tế - tài chính cần xem xét nhằm đảm bảo quá trình chuyển dịch xanh được triển khai hiệu quả, đồng thời kiểm soát tốt các rủi ro khí hậu ngày càng gia tăng.
+Thứ nhất,
+cần chủ động lồng ghép rủi ro khí hậu vào khung chính sách tiền tệ và ổn định tài chính. Điều này bao gồm việc cập nhật các mô hình dự báo
+vĩ
+mô để phản ánh tác động của thuế carbon, đầu tư xanh, cũng như các yếu tố rủi ro khí hậu vật lý (physical risks) và rủi ro chuyển dịch (transition risks). Việc triển khai các bài kiểm tra sức chịu đựng khí hậu (climate stress test) không chỉ ở cấp tổ chức tín dụng riêng lẻ mà còn ở cấp hệ thống sẽ giúp đánh giá được khả năng hấp thụ cú sốc của hệ thống tài chính trong các kịch bản khí hậu bất lợi.
+Thứ hai,
+các NHTW cần tích cực định hướng và hỗ trợ thị trường tín dụng xanh thông qua việc xây dựng và vận hành khung phân loại tài sản xanh, ưu đãi tái cấp vốn cho các khoản vay xanh, phát triển thị trường tài chính xanh - đặc biệt là trái phiếu xanh và công cụ chuyển đổi khí hậu (climate-linked instruments). Điều này không chỉ giúp phân bổ vốn hiệu quả hơn mà còn thúc đẩy sự phát triển của hệ sinh thái tài chính bền vững.
+Thứ ba,
+việc thiết lập cơ chế phối hợp chính sách liên ngành là yêu cầu cấp thiết. Các nỗ lực giảm phát thải, đầu tư năng lượng sạch và kiểm soát rủi ro khí hậu cần có sự đồng bộ giữa các bộ, ngành chức năng - đặc biệt là giữa NHTW, Bộ Tài chính và Bộ Nông nghiệp và Môi trường. Một cơ chế phối hợp ba bên với vai trò điều phối chính sách chuyển dịch xanh rõ ràng sẽ hạn chế được các mâu thuẫn mục tiêu giữa chính sách tiền tệ, tài khóa và môi trường, đồng thời nâng cao hiệu quả thực thi.
+Thứ tư,
+NHTW cần có chiến lược truyền thông chủ động và minh bạch về “lạm phát xanh” - tức là mức lạm phát tạm thời phát sinh do tác động từ chính sách khí hậu hoặc biến động giá năng lượng tái tạo. Truyền thông rõ ràng về tính chất tạm thời và cần thiết của lạm phát này sẽ giúp duy trì kỳ vọng ổn định từ phía doanh nghiệp và người tiêu dùng, giảm thiểu khả năng
+lan
+truyền của tâm lý giá cả và tăng độ tin cậy của chính sách tiền tệ.
+Thứ năm,
+đầu tư cho năng lực nội tại là yếu tố mang tính nền tảng. Các NHTW cần xây dựng đội ngũ chuyên gia về kinh tế khí hậu, phát triển mô hình DSGE tích hợp yếu tố môi trường, đồng thời thiết lập cơ sở dữ liệu xanh có khả năng phân tích theo vùng, ngành và rủi ro khí hậu cụ thể. Việc xây dựng một hệ thống dữ liệu thời tiết và khí hậu có tính chất kinh tế, kết nối với cảm biến vệ tinh và dữ liệu lớn, là bước đi quan trọng để nâng cao năng lực phản ứng chính sách
+theo
+thời gian thực.
+Cuối cùng,
+các NHTW cần mở rộng khung giám sát vĩ mô truyền thống để tích hợp tác động của thời tiết cực đoan và biến đổi khí hậu vào đánh giá chu kỳ kinh tế, phân tích rủi ro tài chính và thiết kế các kịch bản điều hành chính sách. Điều này sẽ giúp nâng cao tính bao quát và chủ động trong quản lý rủi ro hệ thống - một trong những sứ mệnh trung tâm của NHTW trong thế kỷ 21.
+6. Kết luận
+Chuyển dịch xanh là xu thế tất yếu trong bối cảnh biến đổi khí hậu ngày càng gia tăng. Tuy nhiên, quá trình này không thể được triển khai theo cách tuyến tính hay đơn ngành, mà đòi hỏi sự phối hợp chặt chẽ giữa các chính sách kinh tế vĩ mô, đồng thời lồng ghép có hệ thống các yếu tố rủi ro khí hậu vào khuôn khổ điều hành hiện hành. Trong đó, NHTW giữ vai trò đặc biệt quan trọng không chỉ với tư cách là người điều tiết giá cả và ổn định tài chính, mà còn là một tác nhân kỹ thuật chủ lực trong thiết kế, kiểm định và giám sát các chính sách kinh tế - tài chính liên quan đến khí hậu.
+Các nghiên cứu gần đây của BIS cho thấy: Nếu chính sách khí hậu được triển khai quá trễ hoặc thiếu điều phối, nền kinh tế có thể phải chịu chi phí
+vĩ
+mô cao hơn gấp đôi so với các kịch bản chủ động. Ngược lại, với hành động phối hợp giữa chính sách tài khóa, tiền tệ và tín dụng, quá trình chuyển dịch xanh có thể đạt được mục tiêu khí hậu mà vẫn duy trì tăng trưởng, kiểm soát lạm phát và hạn chế phân hóa thu nhập. Điều này càng củng cố vai trò trung tâm của NHTW trong việc duy trì kỳ vọng
+vĩ
+mô ổn định giữa bối cảnh chuyển dịch phức tạp và rủi ro khí hậu gia tăng.
+Về phía các NHTW, việc tích hợp yếu tố khí hậu vào mô hình dự báo, khung giám sát tài chính, định hướng dòng tín dụng và truyền thông chính sách cần trở thành một cấu phần chính thức trong chiến lược điều hành trung hạn. Bên cạnh đó, đầu tư cho dữ liệu xanh, năng lực nội tại và cơ chế phối hợp chính sách liên ngành sẽ là những trụ cột mang tính nền tảng để chuyển dịch từ “NHTW truyền thống” sang “NHTW trong kỷ nguyên khí hậu”.
+Đối với Việt Nam - một nền kinh tế có độ mở lớn, phụ thuộc nhiều vào năng lượng hóa thạch và chịu rủi ro khí hậu cao - việc đón đầu xu thế xanh hóa hệ thống tài chính không chỉ là yêu cầu của hợp tác quốc tế, mà còn là điều kiện tiên quyết để bảo vệ ổn định kinh tế vĩ mô trong trung và dài hạn. Ngân hàng Nhà nước Việt Nam, với vai trò điều phối chính sách tiền tệ và giám sát hệ thống tài chính, cần chủ động xác lập tầm nhìn chiến lược và lộ trình hành động cụ thể nhằm đóng góp tích cực vào tiến trình phát triển bền vững của đất nước.
+Tài liệu tham khảo:
+1.Bank
+for International Settlements (BIS). (2024). Regulating AI in the financial sector: recent developments and main challenges. FSI Insights No. 63.
+https://www.bis.org/fsi/fsipapers63.pdf
+2.Bank
+for International Settlements (BIS). (2025a). Macroeconomic impact of extreme weather events. BIS Bulletin No. 98.
+https://www.bis.org/publ/bisbull98.htm
+3.Bank
+for International Settlements (BIS). (2025b). Artificial intelligence and human capital: challenges for central banks. BIS Bulletin No. 100.
+https://www.bis.org/publ/bisbull100.htm
+4.Bank
+for International Settlements (BIS). (2024).
+The
+macroeconomics of green transitions. BIS Working Paper No. 1237.
+https://www.bis.org/publ/work1237.htm
+5.European
+Central Bank (ECB). (2021). Climate change and monetary policy in the euro area. ECB Occasional Paper Series No. 271. https://www.ecb.europa.eu/pub/pdf/scpops/ecb.op271~65a54f8b3d.en.pdf
+6.Network
+for Greening the Financial System (NGFS). (2022). Guide to climate scenario analysis for central banks and supervisors.
+https://www.ngfs.net/en/guide-climate-scenario-analysis-central-banks-and-supervisors
+7.Organisation
+for Economic Co-operation and Development (OECD). (2021). Climate action in financial institutions: A stocktake.
+https://www.oecd.org/environment/climate-action-in-financial-institutions.pdf
+8.Task
+Force on Climate-related Financial Disclosures (TCFD). (2017). Final Report: Recommendations of the Task Force on Climate-related Financial Disclosures. https://www.fsb-tcfd.org/publications/final-recommendations-report/
+Thùy Linh
+(Vụ HTQT)

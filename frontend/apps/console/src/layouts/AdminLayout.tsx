@@ -2,6 +2,7 @@ import { useLogout } from "@vbkg/api-client";
 import { getSession, setSession } from "@vbkg/utils";
 import {
 	DatabaseIcon,
+	Edit3,
 	HomeIcon,
 	NetworkIcon,
 	Settings,
@@ -70,16 +71,30 @@ const AdminLayout = () => {
 							path: "/admin/quality/dashboard",
 						},
 						{
-							title: "⚠️ Phát hiện xung đột",
-							path: "/admin/quality/conflicts",
-						},
-						{
-							title: " 🔧 Xử lý xung đột",
+							title: "⚠️ Xung đột",
 							path: "/admin/quality/conflicts",
 						},
 						{
 							title: "💯 Hoàn thiện đồ thị",
-							path: "/admin/quality/conflicts",
+							path: "/admin/quality/completion",
+						},
+					],
+				},
+				{
+					title: "Quản lý miền",
+					icon: <Edit3 />,
+					submenu: [
+						{
+							title: "🌐 Domain",
+							path: "/admin/domain",
+						},
+						{
+							title: "🏛️ Ontology",
+							path: "/admin/domain/fibo",
+						},
+						{
+							title: "🗺️ Khớp Ontology",
+							path: "/admin/domain/fibo-mapping",
 						},
 					],
 				},

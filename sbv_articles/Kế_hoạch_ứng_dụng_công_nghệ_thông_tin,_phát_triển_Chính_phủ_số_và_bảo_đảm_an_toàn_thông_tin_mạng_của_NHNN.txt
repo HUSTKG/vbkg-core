@@ -1,0 +1,15 @@
+TIÊU ĐỀ: Kế hoạch ứng dụng công nghệ thông tin, phát triển Chính phủ số và bảo đảm an toàn thông tin mạng của NHNN
+
+URL: https://sbv.gov.vn/vi/w/sbv436809
+
+------------------ NỘI DUNG ------------------
+
+Ngày 04/3/2021, Ngân hàng Nhà nước Việt Nam (NHNN) có Quyết định số 260/QĐ-NHNN ban hành Kế hoạch ứng dụng công nghệ thông tin, phát triển Chính phủ số và bảo đảm an toàn thông tin mạng trong hoạt động của NHNN giai đoạn 2021-2025.
+Ảnh minh họa (nguồn internet)
+Theo Quyết định, mục tiêu tổng quát của Kế hoạch này là nhằm xây dựng cơ sở pháp lý tạo môi trường thuận lợi cho việc ứng dụng toàn diện công nghệ thông tin, các công nghệ mới của cách mạng công nghiệp 4.0 vào các hoạt động nghiệp vụ ngân hàng và từng bước chuẩn hóa hạ tầng công nghệ thông tin của ngành Ngân hàng.
+Xây dựng Chính phủ số tại NHNN nhằm đáp ứng yêu cầu xử lý thủ tục hành chính, dịch vụ công và kết nối chia sẻ dữ liệu của NHNN phù hợp với lộ trình của Chính phủ.
+Đồng thời, ứng dụng hiệu quả công nghệ thông tin theo chiều sâu cho toàn bộ các hoạt động nghiệp vụ của NHNN, trước mắt ưu tiên cho công tác thanh tra, giám sát và thanh toán.
+Tự động hóa, giám sát liên tục hạ tầng và các hệ thống thông tin đảm bảo hoạt động ổn định, liên tục, an toàn trên cơ sở ứng dụng các thành tựu công nghệ của cách mạng công nghiệp 4.0.
+Cùng với đó, xây dựng nền tảng an ninh mạng chuyên nghiệp, hiện đại, chủ động phát hiện và xử lý kịp thời các sự cố an ninh mạng, đảm bảo an toàn, an ninh thông tin phục vụ tốt cho các hoạt động nghiệp vụ của NHNN và hỗ trợ công tác giám sát, ứng cứu sự cố an toàn thông tin ngành Ngân hàng.
+Kế hoạch này đã đề ra các nhiệm vụ, giải pháp và phân công các đơn vị triển khai thực hiện các mục tiêu cụ thể về: Hoàn thiện môi trường pháp lý Phát triển Chính phủ điện tử tại NHNN; Ứng dụng công nghệ thông tin cho các hoạt động nghiệp vụ; Phát triển hạ tầng công nghệ thông tin; Công tác an ninh bảo mật nhằm bảo đảm an toàn thông tin mạng trong hoạt động của NHNN…
+CKH

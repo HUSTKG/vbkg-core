@@ -32,6 +32,7 @@ export default function KnowledgeGraphRelationships() {
 		useKGRelationshipsSearch({
 			query,
 			relationship_types: selectedType !== "all" ? [selectedType] : undefined,
+			limit: 10000,
 			min_confidence: Number(confidenceThreshold) || 0.5,
 			verified_only: onlyVerified,
 		}).data || {};

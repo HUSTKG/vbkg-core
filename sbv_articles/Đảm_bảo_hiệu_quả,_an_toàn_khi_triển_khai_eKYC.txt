@@ -1,0 +1,143 @@
+TIÊU ĐỀ: Đảm bảo hiệu quả, an toàn khi triển khai eKYC
+
+URL: https://sbv.gov.vn/vi/w/sbv429608
+
+------------------ NỘI DUNG ------------------
+
+“Việc thực hiện nhận biết khách hàng bằng phương thức điện tử (eKYC) trong thiết lập mối quan hệ lần đầu với khách hàng được coi “cửa ngõ” để phát triển các mô hình ngân hàng số”, Phó Thống đốc Ngân hàng Nhà nước Việt Nam (NHNN) Nguyễn Kim Anh chia sẻ tại Hội thảo “Nhận biết khách hàng bằng phương thức điện tử (eKYC) trong mở tài khoản thanh toán – Quy định pháp luật và cách thức triển khai” ngày 29/1/2021 tại Hà Nội.
+Phó Thống đốc Nguyễn Kim Anh phát biểu tại Hội thảo
+Hội thảo do
+NHNN
+phối hợp với Ngân hàng Phát triển Châu Á (ADB)
+và và Cơ quan Phát triển quốc tế Úc (Australia Aid)
+tổ chức
+nhằm hỗ trợ
+triển khai
+hiệu quả
+Thông tư
+số
+16/2020/TT-NHNN
+(Thông tư 16)
+sửa
+đổi, bổ sung một số điều của
+Thông tư
+số
+23/2014/TT-NHNN
+(Thông tư 23)
+hướng dẫn mở tài khoản thanh toán tại tổ chức cung ứng dịch vụ thanh toán
+, trong đó bổ sung quy định, hướng dẫn về mở tài khoản thanh toán bằng phương thức điện tử
+đạt hiệu quả cao, đảm bảo sự thống nhất trong quá trình thực hiện
+.
+Phát biểu khai mạ
+c
+, Phó Thống đốc Nguyễn Kim Anh nhấn mạnh,
+với
+bối cảnh
+Cách mạng Công nghiệp lần thứ tư (CMCN 4.0)
+, ngành ngân hàng đứng trước những cơ hội và thách thức lớn, đòi hỏi sự chuyển đổi theo hướng số hóa tự động, cung ứng sản phẩm, dịch vụ sáng tạo, lấy khách hàng làm trọng tâm, giúp các ngân hàng phát triển bền vững, tạo lợi thế cạnh tranh.
+Trong quá trình chuyển đổi số ngân hàng, việc thực hiện eKYC trong thiết lập mối quan hệ lần đầu với khách hàng được coi “cửa ngõ” để phát triển các mô hình ngân hàng số.
+Đặc biệt,
+việc
+nhận biết và xác minh thông tin khách hàng trong mở tài khoản thanh toán đ
+óng vai trò quan trọng,
+giúp
+khách hàng tiếp cận và sử dụng các dịch vụ ngân hàng, cho phép các ngân hàng có thể mở rộng khách hàng và
+cung ứng dịch vụ ngân hàng an toàn, thuận tiện, hiệu quả.
+Ông Phạm Tiến Dũng – Vụ trưởng Vụ Thanh toán
+(NHNN)
+phát biểu tại Hội thảo
+Trong thời gian qua,
+Đảng và Chính phủ đã
+ban hành
+nhiều chính sách, chủ trương nhằm tạo điều kiện thuận lợi cho các tổ chức, doanh nghiệp đẩy mạnh ứng dụng công nghệ số, thúc đẩy đổi mới sáng tạo. Triển khai chủ trương, định hướng
+trên
+,
+NHNN
+đang đẩy mạnh xây dựng, hoàn thiện
+cơ chế, chính sách và khuôn khổ pháp lý
+nhằm hỗ trợ, tạo thuận lợi cho các ngân hàng trong quá trình chuyển đổi số, phát triển hoạt động ngân hàng số. Trong đó, để tạo điều kiện cho các ngân hàng triển khai eKYC, NHNN đã tham mưu, trình Chính phủ ban hành
+Nghị định số 87/2019/NĐ-CP sửa đổi quy định về tại Nghị định 116/2013/NĐ-CP, theo đó cho phép ngân hàng được quyết định gặp mặt trực tiếp hoặc không gặp mặt trực tiếp khách hàng khi lần đầu thiết lập mối quan hệ
+.
+Căn cứ nguyên tắc, định hướng trên, NHNN đã nghiên cứu, xây dựng, tham vấn các tổ chức tín dụng và đã ban hành
+Thông tư số 16 sửa đổi, bổ sung một số điều của Thông tư số 23 về mở và sử dụng tài khoản thanh toán tại tổ chức cung ứng dịch vụ thanh toán, trong đó bổ sung quy định, hướng dẫn về mở tài khoản thanh toán bằng phương thức điện tử.
+“
+Quy định về mở tài khoản thanh toán bằng phương thức điện tử tại
+Thông tư 16
+được xây dựng trên cơ sở phù hợp với quy định pháp luật hiện hành về phòng, chống rửa tiền, phù hợp với xu thế ứng dụng công nghệ trong hoạt động nghiệp vụ ngân hàng trên thế giới và ở Việt Nam,
+đáp ứng
+yêu cầu cấp thiết của các
+tổ chức tín dụng
+trong quá trình chuyển đổi số,
+tăng khả năng tiếp cận khách hàng mới thuận tiện hơn với chi phí thấp hơn, góp phần thực hiện mục tiêu tài chính toàn diện quốc gia
+”,
+Phó Thống đốc cho biết thêm mục tiêu, ý nghĩa của
+Thông tư 16
+.
+Là
+đơn vị đầu mối soạn thảo
+Thông tư 16
+, ông
+Lê Anh Dũng
+-
+Phó Vụ trưởng Vụ Thanh
+t
+oán
+(NHNN)
+đã thông tin cụ thể một số
+quy định mới về
+Thông tư
+và
+cách thức triển khai quy định về mở tài khoản thanh toán bằng phương thức điện tử
+đ
+ể
+các ngân hàng thực hiện
+đạt hiệu quả cao, đảm bảo an ninh, an toàn, bảo mật.
+Cụ th
+ể
+, Thông tư 16 sửa đổi điều 12 về hồ sơ mở tài khoản quy định trường hợp hồ sơ mở tài khoản thanh toán là bản sao điện tử; cho phép ngân hàng được thỏa thuận với khách hàng về việc dịch hay không dịch hồ sơ bằng tiếng Anh.
+..
+Quy định mới quan trọng nữa tại Điều 13 về Giấy đề nghị mở tài khoản không yêu cầu đăng ký mẫu chữ ký của khách hàng trong Giấy đề nghị mở tài khoản thanh toán mà yêu cầu trong quá trình khách hàng sử dụng... Việc chỉnh sửa bổ sung trên để tương thích quy định mở tài khoản thanh toán cá nhân bằng phương thức điện tử. Ngoài các quy định trên, NHNN đưa ra một số yêu cầu quan trọng để đảm bảo việc mở và sử dụng tài khoản thanh toán bằng phương thức điện tử được an toàn, hiệu quả.
+Các đại biểu thảo luận tại Hội thảo
+Các ngân hàng vẫn phải đáp ứng một số yêu cầu tối thiểu phải có giải pháp công nghệ kiểm tra đối chiếu về thông tin nhận biết khách hàng, dữ liệu sinh trắc học với thông tin; có quy trình quản lý kiểm soát, đánh giá rủ
+i ro... Trong quá trình triển khai các ngân hàng phải tăng cường nhân sự và các biện pháp rà soát, kiểm tra, đối chiếu, đánh giá giải pháp công nghệ eKYC, đảm bảo chất lượng đường truyền...
+Tại
+Hội thảo,
+các đại diện đến từ các
+ngân hàng thương mại
+, chi nhánh ngân hàng nước ngoài trình bày các vấn đề
+về
+v
+iệc ứng dụng các giải pháp công nghệ trong định danh khách hàng điện tử
+;
+c
+ác biện pháp, giải pháp công nghệ để kiểm soát rủi ro trong mở tài khoản thanh toán bằng phương thức điện tử
+;
+thực tiễn triển khai thí điểm tạ
+i
+ngân hàng thương mại
+.
+Sau phần chia sẻ, đ
+ại diện của NHNN và
+ngân hàng thương mại
+đã
+thảo luận, trao đổi,
+chia sẻ
+, làm rõ thêm
+về cách thức triển khai quy định eKYC trong mở tài khoản thanh toán để đảm bảo an ninh, an toàn, hiệu quả
+cũng như
+đưa ra
+những vướng mắc, thách thức có thể gặp phải
+,...
+t
+ừ đó,
+đưa ra các khuyến nghị chính sách phù hợp.
+V
+ới sự nỗ lực, quyết tâm và đồng lòng giữa các cơ quan quản lý,
+ngân hàng và các đơn vị liên quan, các diễn giả tham gia
+Hội thảo
+hy vọng
+việc triển khai thực hiện Thông tư 16 sẽ thành công, tạo bước tiến ấn tượng, tiếp nối cho việc thể hiện những
+chính sách
+thúc đẩy thanh toán chuyển đổi số ngành Ngân hàng tại Việt Nam đã thực sự đi vào cuộc sống
+.
+VA

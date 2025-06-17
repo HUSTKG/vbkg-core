@@ -4,6 +4,14 @@ import {
 	ISearchKGEntitiesRequest,
 	IReadEntityRequest,
 	IReadEntityResponse,
+	IKGCompletionRequest,
+	IKGCompletionRequestResponse,
+	IKGCompletionSuggestionsResponse,
+	IKGCompletionStatsResponse,
+	IKGCompletionActionResponse,
+	IKGCompletionSuggestionResponse,
+	ISuggestionActionRequest,
+	ISuggestionFilterRequest,
 	IUpdateEntityRequest,
 	IUpdateEntityResponse,
 	IDeleteEntityRequest,
@@ -331,6 +339,73 @@ const globalSearch = async (
 		.then((res) => res.data);
 };
 
+// Generate KG Completion
+const generateKGCompletion = async (
+	input: IKGCompletionRequest,
+): Promise<IKGCompletionRequestResponse> => {
+	return await api()
+		.post<IKGCompletionRequestResponse>(API_ENDPOINTS.KG_COMPLETION_GENERATE, input)
+		.then((res) => res.data);
+};
+
+// Get completion suggestions with filters
+const getCompletionSuggestions = async (
+	input: ISuggestionFilterRequest,
+): Promise<IKGCompletionSuggestionsResponse> => {
+	return await api()
+		.get<IKGCompletionSuggestionsResponse>(API_ENDPOINTS.KG_COMPLETION_SUGGESTIONS, {
+			params: {
+				suggestion_type: input.suggestion_type,
+				status: input.status,
+				priority: input.priority,
+				min_confidence: input.min_confidence,
+				max_confidence: input.max_confidence,
+				source: input.source,
+				limit: input.limit || 50,
+				skip: input.skip || 0,
+			},
+		})
+		.then((res) => res.data);
+};
+
+// Get single completion suggestion
+const getCompletionSuggestion = async (
+	suggestionId: string,
+): Promise<IKGCompletionSuggestionResponse> => {
+	return await api()
+		.get<IKGCompletionSuggestionResponse>(
+			API_ENDPOINTS.KG_COMPLETION_SUGGESTION(suggestionId)
+		)
+		.then((res) => res.data);
+};
+
+// Handle suggestion actions (accept, reject, apply)
+const handleSuggestionAction = async (
+	input: ISuggestionActionRequest,
+): Promise<IKGCompletionActionResponse> => {
+	return await api()
+		.post<IKGCompletionActionResponse>(API_ENDPOINTS.KG_COMPLETION_ACTIONS, input)
+		.then((res) => res.data);
+};
+
+// Delete suggestion
+const deleteSuggestion = async (
+	suggestionId: string,
+): Promise<IKGCompletionActionResponse> => {
+	return await api()
+		.delete<IKGCompletionActionResponse>(
+			API_ENDPOINTS.KG_COMPLETION_SUGGESTION(suggestionId)
+		)
+		.then((res) => res.data);
+};
+
+// Get completion statistics
+const getCompletionStats = async (): Promise<IKGCompletionStatsResponse> => {
+	return await api()
+		.get<IKGCompletionStatsResponse>(API_ENDPOINTS.KG_COMPLETION_STATS)
+		.then((res) => res.data);
+};
+
 export const KnowledgeGraphService = {
 	// Entities
 	getEntity,
@@ -363,4 +438,11 @@ export const KnowledgeGraphService = {
 	createRelationship,
 	getKnowledgeGraphStats,
 	createOrMergeEntity,
+
+	generateKGCompletion,
+	getCompletionSuggestions,
+	getCompletionSuggestion,
+	handleSuggestionAction,
+	deleteSuggestion,
+	getCompletionStats,
 };

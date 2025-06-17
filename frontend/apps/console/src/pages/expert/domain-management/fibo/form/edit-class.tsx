@@ -1,25 +1,25 @@
-import { useUpdateFiboClass } from "@vbkg/api-client";
-import { UpdateFiboClassSchema } from "@vbkg/schemas";
-import { FIBOClass } from "@vbkg/types";
+import { useUpdateOntologyClass } from "@vbkg/api-client";
+import { UpdateOntologyClassSchema } from "@vbkg/schemas";
+import { OntologyClass } from "@vbkg/types";
 import { AppForm, FieldConfig, toast } from "@/components";
 
-interface FormEditFiboClassProps {
-	selectedClass: FIBOClass;
-	fiboClasses: FIBOClass[];
-	getClassById: (id: number) => FIBOClass | undefined;
+interface FormEditOntologyClassProps {
+	selectedClass: OntologyClass;
+	ontologyClasses: OntologyClass[];
+	getClassById: (id: number) => OntologyClass | undefined;
 }
 
-export default function FormEditFiboClass({
+export default function FormEditOntologyClass({
 	selectedClass,
-	fiboClasses,
+	ontologyClasses,
 	getClassById,
-}: FormEditFiboClassProps) {
-	const { mutate: updateFiboClass, isPending: loading } = useUpdateFiboClass({
+}: FormEditOntologyClassProps) {
+	const { mutate: updateOntologyClass, isPending: loading } = useUpdateOntologyClass({
 		onSuccess: () => {
-			toast.success("Cập nhật FIBO class thành công");
+			toast.success("Cập nhật Ontology class thành công");
 		},
 		onError: (error) => {
-			toast.error("Cập nhật FIBO class thất bại: " + error.message);
+			toast.error("Cập nhật Ontology class thất bại: " + error.message);
 		},
 	});
 	const handleUpdateClass = (data: any) => {
@@ -30,7 +30,7 @@ export default function FormEditFiboClass({
 				? getClassById(data.parent_class_uri)?.id || null
 				: null,
 		};
-		updateFiboClass(updatedClass);
+		updateOntologyClass(updatedClass);
 	};
 
 	const getClassFormFields = (): FieldConfig[] => [
@@ -38,9 +38,9 @@ export default function FormEditFiboClass({
 			name: "uri",
 			label: "URI",
 			type: "text",
-			placeholder: "https://spec.edmcouncil.org/fibo/ontology/...",
+			placeholder: "https://spec.edmcouncil.org/ontology/ontology/...",
 			required: true,
-			description: "URI duy nhất của FIBO class",
+			description: "URI duy nhất của Ontology class",
 		},
 		{
 			name: "label",
@@ -61,13 +61,13 @@ export default function FormEditFiboClass({
 			label: "Domain",
 			type: "text",
 			placeholder: "VD: FBC, SEC, FND",
-			description: "Domain trong FIBO taxonomy",
+			description: "Domain trong Ontology taxonomy",
 		},
 		{
 			name: "parent_class_uri",
 			label: "Parent Class",
 			type: "select",
-			options: fiboClasses.map((c) => ({
+			options: ontologyClasses.map((c) => ({
 				label: `${c.label || c.uri} (${c.domain || "No domain"})`,
 				value: c.uri,
 			})),
@@ -78,13 +78,13 @@ export default function FormEditFiboClass({
 			label: "Custom Class",
 			type: "switch",
 			defaultValue: false,
-			description: "Đây có phải là custom class không thuộc FIBO chuẩn",
+			description: "Đây có phải là custom class không thuộc Ontology chuẩn",
 		},
 	];
 	return (
 		<AppForm
 			fields={getClassFormFields()}
-			schema={UpdateFiboClassSchema}
+			schema={UpdateOntologyClassSchema}
 			defaultValues={{
 				...selectedClass,
 				parent_class_uri: selectedClass.parent_class_id

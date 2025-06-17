@@ -1,0 +1,22 @@
+TIÊU ĐỀ: Ban hành cơ chế thử nghiệm có kiểm soát cho Fintech trong lĩnh vực ngân hàng
+
+URL: https://sbv.gov.vn/vi/w/sbv626058
+
+------------------ NỘI DUNG ------------------
+
+Chính phủ đã ban hành Nghị định số 94/2025/NĐ-CP ngày 29/4/2025 quy định về Cơ chế thử nghiệm có kiểm soát trong lĩnh vực ngân hàng, có hiệu lực thi hành từ ngày 01/7/2025, tạo điều kiện cho việc thử nghiệm các sản phẩm, dịch vụ, mô hình kinh doanh mới ứng dụng công nghệ tài chính (Fintech).
+Ảnh minh họa: Nguồn: Internet
+Cơ chế thử nghiệm được áp dụng đối với các giải pháp Fintech như: chấm điểm tín dụng, chia sẻ dữ liệu qua Open API và cho vay ngang hàng. Đối tượng tham gia gồm:
+Tổ chức tín dụng, chi nhánh ngân hàng nước ngoài (trừ lĩnh vực cho vay ngang hàng), công ty công nghệ tài chính, các cơ quan quản lý nhà nước và các tổ chức, cá nhân có liên quan.
+Nghị định đặt mục tiêu thúc đẩy đổi mới sáng tạo, hiện đại hóa hệ thống ngân hàng, đồng thời hỗ trợ xây dựng khung pháp lý phù hợp và giảm thiểu rủi ro cho người dùng. Kết quả thử nghiệm sẽ là cơ sở thực tiễn để hoàn thiện quy định pháp luật trong lĩnh vực Fintech nếu cần thiết.
+Việc xét duyệt các tổ chức tham gia cơ chế thử nghiệm sẽ được thực hiện công khai, minh bạch với các tiêu chí rõ ràng. Tuy nhiên, việc được tham gia thử nghiệm không đồng nghĩa với việc đựơc công nhận là dủ điều kiện được kinh doanh chính thức
+theo
+quy định hiện hành.
+Thời gian thử nghiệm một giải pháp Fintech tối đa là 2 năm, tính từ thời điểm tổ chức được Ngân hàng Nhà nước cấp Giấy chứng nhận tham gia thử nghiệm, và có thể được gia hạn. Việc thử nghiệm chỉ được thực hiện trong phạm
+vi
+lãnh thổ Việt Nam, không được phép triển khai xuyên biên giới.
+Các tổ chức chỉ được cung cấp giải pháp Fintech trong pham
+vi
+đã được phê duyệt tại Giấy chứng nhận. Riêng các công ty cho vay ngang hàng, khi tham gia thử nghiệm, chỉ được hoạt động trong phạm vi được cấp phép và không được tự cung cấp biện pháp đảm bảo, không đươc hoạt
+động như khách hàng hay cung cấp dich vụ cho công ty cầm đồ.
+Hà Anh

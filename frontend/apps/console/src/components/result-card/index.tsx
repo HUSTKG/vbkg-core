@@ -70,7 +70,7 @@ const ResultCard: React.FC<ResultCardProps> = ({
     if (highlightTerms.length === 0) return text;
     
     const regex = new RegExp(`(${highlightTerms.join('|')})`, 'gi');
-    const parts = text.toString().split(regex);
+    const parts = text?.toString()?.split(regex);
     
     return (
       <>

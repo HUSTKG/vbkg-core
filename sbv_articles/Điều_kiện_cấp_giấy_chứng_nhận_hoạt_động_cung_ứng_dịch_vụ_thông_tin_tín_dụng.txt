@@ -1,0 +1,12 @@
+TIÊU ĐỀ: Điều kiện cấp giấy chứng nhận hoạt động cung ứng dịch vụ thông tin tín dụng
+
+URL: https://sbv.gov.vn/vi/w/sbv457413
+
+------------------ NỘI DUNG ------------------
+
+Theo Nghị định số 58/2021/NĐ-CP ngày 10/6/2021 của Chính phủ, các công ty thông tin tín dụng (TTTD) cần đáp ứng các yêu cầu cụ thể như cơ sở hạ tầng, vốn, nhân sự, phương án kinh doanh,... để được cấp Giấy chứng nhận thực hiện hoạt động cung ứng dịch vụ TTTD.
+Cụ thể, công ty TTTD cần có hệ thống cơ sở hạ tầng thông tin đáp ứng yêu cầu tối thiểu: có ít nhất 2 đường truyền số liệu, mỗi đường truyền của 1 nhà cung cấp dịch vụ; có cơ sở hạ tầng thông tin có khả năng tích hợp, kết nối được với hệ thống thông tin của tổ chức tham gia; có hệ thống máy chủ đặt tại Việt Nam, hệ thống phần mềm tin học và các giải pháp kỹ thuật có khả năng thực hiện hoạt động cung ứng dịch vụ TTTD đối với tối thiểu 5 triệu khách hàng vay; có phương án bảo mật, bảo đảm an toàn thông tin; phương án dự phòng thảm họa, đảm bảo không bị gián đoạn các hoạt động cung ứng dịch vụ TTTD quá 4 giờ làm việc.
+Doanh nghiệp có vốn điều lệ tối thiểu 30 tỷ đồng; người quản lý doanh nghiệp, thành viên ban kiểm soát phải đáp ứng các yêu cầu về năng lực, trình độ chuyên môn theo quy định, có kinh nghiệm công tác trong các lĩnh vực tài chính, ngân hàng, kế toán, kiểm toán, công nghệ thông tin.
+Bên cạnh đó, doanh nghiệp cần có phương án kinh doanh đảm bảo không kinh doanh ngành nghề khác ngoài hoạt động cung ứng dịch vụ TTTD. Các tổ chức tham gia không có cam kết cung cấp TTTD với công ty TTTD khác, trong đó tối thiểu 15 tổ chức tham gia là tổ chức tín dụng, chi nhánh ngân hàng nước ngoài (trừ ngân hàng chính sách, ngân hàng hợp tác xã, quỹ tín dụng nhân dân và tổ chức tài chính vi mô).
+Công ty TTTD có văn bản thỏa thuận về cung cấp thông tin, sản phẩm TTTD với tổ chức tham gia, trong đó có các nội dung như: nội dung, phạm vi TTTD được cung cấp; nguyên tắc, phạm vi, mục đích sử dụng sản phẩm TTTD; nghĩa vụ thông báo, thỏa thuận với khách hàng vay về việc sử dụng TTTD của khách hàng vay; trách nhiệm của các bên trong việc điều chỉnh, sửa chữa sai sót trong quá trình cập nhật, truyền đưa, xử lý, lưu giữ, khai thác và sử dụng TTTD; trách nhiệm của các bên trong việc rà soát, đối chiếu, kiểm tra chất lượng và lưu giữ TTTD; trách nhiệm và sự phối hợp của các bên khi giải quyết điều chỉnh sai sót về TTTD của khách hàng vay; xử lý vi phạm, giải quyết tranh chấp…
+CKH

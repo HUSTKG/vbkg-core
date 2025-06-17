@@ -1,6 +1,6 @@
 export * from "./auth";
 export * from "./datasources";
-export * from "./fibo";
+export * from "./ontology";
 export * from "./celery";
 export * from "./knowledge-graph";
 export * from "./validation-rules";

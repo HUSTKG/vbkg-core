@@ -1,5 +1,5 @@
 export * from "./datasource";
-export * from "./fibo";
+export * from "./ontology";
 export * from "./celery";
 export * from "./validation-rules";
 export * from "./knowledge-graph";

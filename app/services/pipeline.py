@@ -617,7 +617,7 @@ class PipelineService:
                 )
 
             # Cancel via Celery task
-            cancel_pipeline_run_task.delay(run_id)
+            cancel_pipeline_run_task.delay(run_id=run_id, pipeline_id=pipeline_id)
 
             return True
 
@@ -759,9 +759,9 @@ class PipelineService:
                         "ontology_enrichment",
                         "entity_resolution",
                         "entity_fusion",
+                        "kg_writer",
                         "entity_enrichment",
                         "quality_monitoring",
-                        "kg_writer",
                         "kg_completion",
                     ],
                     "estimated_duration": "45-60 minutes",

@@ -40,7 +40,7 @@ class VisualizationService:
                 )
 
             # Prepare data
-            data = visualization_in.dict()
+            data = visualization_in.model_dump()
             data["created_by"] = user_id
 
             # Insert into database
@@ -243,7 +243,7 @@ class VisualizationService:
         try:
             # Get visualization configuration
             visualization = await self.get_visualization(visualization_id)
-            visualization_type = visualization["config"]["type"]
+            visualization_type = visualization["visualization_type"]
 
             # Collect data based on the source
             data = None
@@ -334,7 +334,7 @@ class VisualizationService:
         try:
             # Build Cypher query to get entity and its relationships
             cypher_query = f"""
-            MATCH (n {{id: '{entity_id}'}})
+            MATCH (n {{entity_id: '{entity_id}'}})
             OPTIONAL MATCH (n)-[r]->(m)
             RETURN n as source, r, m as target
             UNION
@@ -362,8 +362,8 @@ class VisualizationService:
             edges = []
 
             # Get configuration
-            node_config = config.get("config", {}).get("node_config", {})
-            edge_config = config.get("config", {}).get("edge_config", {})
+            node_config = config.get("node_config", {})
+            edge_config = config.get("edge_config", {})
 
             # Process each record
             for record in data:
@@ -397,6 +397,7 @@ class VisualizationService:
         self, node: Dict[str, Any], config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Create a node object for visualization"""
+
         # Get node properties
         node_props = dict(node)
         node_id = node.get(
@@ -409,15 +410,15 @@ class VisualizationService:
         label = node_props.get(label_field, node_id)
 
         # Get node type/label
-        if hasattr(node, "labels"):
-            node_type = next(iter(node["labels"]), "Unknown")
+        if hasattr(node_props, "labels"):
+            node_type = next(iter(node_props["labels"]), "Unknown")
         else:
-            node_type = node_props.get("type", "Unknown")
+            node_type = node_props.get("entity_type", "Unknown")
 
         # Determine color
         color = config.get("default_color", "#1f77b4")
         color_field = config.get("color_field")
-        color_mapping = config.get("color_mapping", {})
+        color_mapping = config.get("color_mapping", {}) or {}
 
         if color_field and color_field in node_props:
             field_value = str(node_props[color_field])
@@ -453,7 +454,7 @@ class VisualizationService:
 
         # Add icon if configured
         icon_field = config.get("icon_field")
-        icon_mapping = config.get("icon_mapping", {})
+        icon_mapping = config.get("icon_mapping", {}) or {}
 
         if icon_field and icon_field in node_props:
             field_value = str(node_props[icon_field])

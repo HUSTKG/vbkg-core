@@ -1,23 +1,23 @@
-import { FIBOClass, FIBOProperty } from "@vbkg/types";
+import { OntologyClass, OntologyProperty } from "@vbkg/types";
 import { Badge, Dialog } from "@/components";
 
-interface ViewFiboPropertyDialogProps {
+interface ViewOntologyPropertyDialogProps {
   isViewPropertyModalOpen: boolean;
   setIsViewPropertyModalOpen: (open: boolean) => void;
-  selectedProperty: FIBOProperty | null;
-  getClassById: (id: number) => FIBOClass | undefined;
+  selectedProperty: OntologyProperty | null;
+  getClassById: (id: number) => OntologyClass | undefined;
 }
 
-export default function ViewFiboPropertyDialog({
+export default function ViewOntologyPropertyDialog({
   isViewPropertyModalOpen,
   setIsViewPropertyModalOpen,
   selectedProperty,
   getClassById,
-}: ViewFiboPropertyDialogProps) {
+}: ViewOntologyPropertyDialogProps) {
   return (
     <Dialog
-      title="View FIBO Property"
-      description="Xem chi tiết FIBO property"
+      title="View Ontology Property"
+      description="Xem chi tiết Ontology property"
       open={isViewPropertyModalOpen}
       onOpenChange={setIsViewPropertyModalOpen}
     >

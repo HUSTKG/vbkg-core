@@ -14,7 +14,7 @@ from app.schemas.pipeline import PipelineRunStatus, PipelineRunUpdate
 from app.schemas.pipeline_step import PipelineRunStatus as StepStatus
 from app.schemas.pipeline_step import (PipelineStepRunCreate,
                                        PipelineStepRunUpdate, PipelineStepType)
-from app.tasks.executors import STEP_EXECUTORS
+from app.tasks.executors import GraphState, get_step_executor
 
 # Create Celery app
 celery_app = Celery(
@@ -133,7 +133,7 @@ async def run_pipeline_task(
 
         logger.info(f"Pipeline will execute in {len(dependency_levels)} levels")
         for i, level in enumerate(dependency_levels):
-            level_names = [step['name'] for step in level]
+            level_names = [step["name"] for step in level]
             logger.info(f"  Level {i+1}: {level_names}")
 
         # Create task chains for each dependency level
@@ -211,20 +211,32 @@ def organize_steps_by_dependency_levels(
 
             # Get dependencies - handle both "depends_on" and "inputs" fields
             dependencies = set()
-            
+
             # Check "depends_on" field
             if step.get("depends_on"):
                 if isinstance(step["depends_on"], list):
                     dependencies.update(step["depends_on"])
                 elif isinstance(step["depends_on"], str):
-                    dependencies.update([dep.strip() for dep in step["depends_on"].split(",") if dep.strip()])
-            
+                    dependencies.update(
+                        [
+                            dep.strip()
+                            for dep in step["depends_on"].split(",")
+                            if dep.strip()
+                        ]
+                    )
+
             # Check "inputs" field for backwards compatibility
             if step.get("inputs"):
                 if isinstance(step["inputs"], list):
                     dependencies.update(step["inputs"])
                 elif isinstance(step["inputs"], str):
-                    dependencies.update([dep.strip() for dep in step["inputs"].split(",") if dep.strip()])
+                    dependencies.update(
+                        [
+                            dep.strip()
+                            for dep in step["inputs"].split(",")
+                            if dep.strip()
+                        ]
+                    )
 
             # Check if all dependencies are satisfied
             if dependencies.issubset(processed):
@@ -380,7 +392,14 @@ async def run_pipeline_step_task(
         logger.info(f"Step run created with ID {step_run_id}")
 
         # Execute step based on type
-        output_data = await execute_step_by_type(step_type, config, resolved_input_data)
+        step_metadata = {
+            "step_id": step_id,
+            "step_name": step["name"],
+            "step_type": step_type,
+        }
+        output_data = await execute_step_by_type(
+            step_type, config, resolved_input_data, step_metadata
+        )
 
         logger.info(
             f"Step {step_id} executed successfully, output size: {len(str(output_data))} characters"
@@ -464,20 +483,24 @@ async def wait_for_dependencies(
     """
     # Get dependencies from both "depends_on" and "inputs" fields
     step_inputs = set()
-    
+
     # Check "depends_on" field
     if step.get("depends_on"):
         if isinstance(step["depends_on"], list):
             step_inputs.update(step["depends_on"])
         elif isinstance(step["depends_on"], str) and step["depends_on"]:
-            step_inputs.update([s.strip() for s in step["depends_on"].split(",") if s.strip()])
-    
+            step_inputs.update(
+                [s.strip() for s in step["depends_on"].split(",") if s.strip()]
+            )
+
     # Check "inputs" field for backwards compatibility
     if step.get("inputs"):
         if isinstance(step["inputs"], list):
             step_inputs.update(step["inputs"])
         elif isinstance(step["inputs"], str) and step["inputs"]:
-            step_inputs.update([s.strip() for s in step["inputs"].split(",") if s.strip()])
+            step_inputs.update(
+                [s.strip() for s in step["inputs"].split(",") if s.strip()]
+            )
 
     step_inputs = list(step_inputs)  # Convert to list
 
@@ -555,52 +578,44 @@ async def wait_for_dependencies(
             await asyncio.sleep(check_interval)
 
 
-async def resolve_step_input_data_from_db(
+async def build_graph_state_from_dependencies(
     step: Dict[str, Any], pipeline_run_id: str
-) -> Dict[str, Any]:
+) -> GraphState:
     """
-    Resolve input data for a step by fetching from database.
-
-    Args:
-        step: Step configuration
-        pipeline_run_id: Pipeline run ID
-
-    Returns:
-        Resolved input data with dependency outputs
+    Build GraphState từ dependency step outputs stored trong database
     """
-    input_data = {}
-    
-    # Get dependencies from both "depends_on" and "inputs" fields
-    step_inputs = set()
-    
-    # Check "depends_on" field
-    if step.get("depends_on"):
-        if isinstance(step["depends_on"], list):
-            step_inputs.update(step["depends_on"])
-        elif isinstance(step["depends_on"], str) and step["depends_on"]:
-            step_inputs.update([s.strip() for s in step["depends_on"].split(",") if s.strip()])
-    
-    # Check "inputs" field for backwards compatibility
-    if step.get("depends_on"):
-        if isinstance(step["depends_on"], list):
-            step_inputs.update(step["depends_on"])
-        elif isinstance(step["depends_on"], str) and step["depends_on"]:
-            step_inputs.update([s.strip() for s in step["depends_on"].split(",") if s.strip()])
-
-    step_inputs = list(step_inputs)  # Convert to list
-
-    logger.info(
-            f"Resolving input data for step {step['id']} - inputs: {step_inputs}"
-            )
-
-    if not step_inputs:
-        return input_data
-
-    from app.services.pipeline_step import PipelineStepService
-
-    step_service = PipelineStepService()
+    graph_state = GraphState()
 
     try:
+        from app.services.pipeline_step import PipelineStepService
+
+        step_service = PipelineStepService()
+
+        # Get step dependencies
+        step_inputs = set()
+
+        if step.get("depends_on"):
+            if isinstance(step["depends_on"], list):
+                step_inputs.update(step["depends_on"])
+            elif isinstance(step["depends_on"], str) and step["depends_on"]:
+                step_inputs.update(
+                    [s.strip() for s in step["depends_on"].split(",") if s.strip()]
+                )
+
+        if step.get("inputs"):
+            if isinstance(step["inputs"], list):
+                step_inputs.update(step["inputs"])
+            elif isinstance(step["inputs"], str) and step["inputs"]:
+                step_inputs.update(
+                    [s.strip() for s in step["inputs"].split(",") if s.strip()]
+                )
+
+        step_inputs = list(step_inputs)
+
+        if not step_inputs:
+            logger.info("No dependencies found, returning empty GraphState")
+            return graph_state
+
         # Get all completed step runs for this pipeline run
         step_runs_response = await step_service.get_pipeline_step_runs(pipeline_run_id)
         step_runs = step_runs_response.data if step_runs_response else []
@@ -608,31 +623,231 @@ async def resolve_step_input_data_from_db(
         # Create lookup map: step_id -> step_run for completed steps only
         step_run_map = {}
         for run in step_runs:
-            if run["status"] == StepStatus.COMPLETED:
+            if run["status"] == StepStatus.COMPLETED and run.get("output_data"):
                 step_run_map[run["step_id"]] = run
 
-        # Gather input data from dependencies
+        # Build GraphState từ dependency outputs in order
+        dependency_outputs = []
         for dep_step_id in step_inputs:
             if dep_step_id in step_run_map:
-                dep_output = step_run_map[dep_step_id].get("output_data", {})
-                if dep_output:
-                    # Add with step prefix for clear identification
-                    for key in dep_output:
-                        input_data[key] = dep_output[key]
+                step_run = step_run_map[dep_step_id]
+                output_data = step_run.get("output_data", {})
 
-                    logger.info(
-                        f"Added dependency data from step {dep_step_id} (size: {len(str(dep_output))} chars)"
-                    )
-            else:
-                logger.warning(
-                    f"Dependency step {dep_step_id} not found or not completed"
+                # Add step info for ordering
+                dependency_outputs.append(
+                    {
+                        "step_id": dep_step_id,
+                        "step_name": step_run.get("step_name", dep_step_id),
+                        "end_time": step_run.get("end_time"),
+                        "output_data": output_data,
+                    }
                 )
 
-        return input_data
+        # Sort by end_time để maintain execution order
+        dependency_outputs.sort(key=lambda x: x.get("end_time", ""))
+
+        # Build GraphState từ each dependency output
+        for dep_output in dependency_outputs:
+            step_name = dep_output["step_name"]
+            output_data = dep_output["output_data"]
+
+            # Extract graph_state if available
+            if "graph_state" in output_data:
+                dep_graph_state = GraphState.from_dict(output_data["graph_state"])
+
+                # Merge into our graph state
+                if dep_graph_state.entities:
+                    graph_state.add_entities(dep_graph_state.entities, step_name)
+                if dep_graph_state.relationships:
+                    graph_state.add_relationships(
+                        dep_graph_state.relationships, step_name
+                    )
+                if dep_graph_state.raw_text_data:
+                    graph_state.raw_text_data = dep_graph_state.raw_text_data
+                if dep_graph_state.processed_chunks:
+                    graph_state.processed_chunks = dep_graph_state.processed_chunks
+                if dep_graph_state.cleaned_data:
+                    graph_state.cleaned_data = dep_graph_state.cleaned_data
+                if dep_graph_state.validation_results:
+                    graph_state.validation_results = dep_graph_state.validation_results
+
+                # Merge metadata và step history
+                graph_state.metadata.update(dep_graph_state.metadata)
+                for completed_step in dep_graph_state.step_history:
+                    if completed_step not in graph_state.step_history:
+                        graph_state.step_history.append(completed_step)
+
+            # Extract data directly from step output nếu không có graph_state
+            else:
+                _extract_data_from_step_output(graph_state, step_name, output_data)
+
+        logger.info(
+            f"Built GraphState cho step {step['id']} - "
+            f"Entities: {len(graph_state.entities)}, "
+            f"Relationships: {len(graph_state.relationships)}, "
+            f"Text items: {len(graph_state.get_best_text_data())}, "
+            f"Completed steps: {graph_state.step_history}"
+        )
+
+        return graph_state
 
     except Exception as e:
-        logger.error(f"Failed to resolve input data for step {step['id']}: {str(e)}")
-        return input_data
+        logger.error(f"Failed to build GraphState từ dependencies: {e}")
+        return graph_state
+
+
+def _extract_data_from_step_output(
+    graph_state: GraphState, step_name: str, output_data: Dict[str, Any]
+):
+    """Extract data từ step output để build GraphState"""
+
+    # Extract entities
+    entities = _extract_entities_from_output(output_data)
+    if entities:
+        graph_state.add_entities(entities, step_name)
+
+    # Extract relationships
+    relationships = _extract_relationships_from_output(output_data)
+    if relationships:
+        graph_state.add_relationships(relationships, step_name)
+
+    # Extract text data
+    text_data = _extract_text_data_from_output(output_data)
+    if text_data:
+        if "chunks" in output_data:
+            graph_state.processed_chunks = text_data
+        elif "cleaned_data" in output_data:
+            graph_state.cleaned_data = text_data
+        elif "files" in output_data:
+            graph_state.raw_text_data = text_data
+
+
+def _extract_entities_from_output(output: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract entities từ step output với multiple paths"""
+    entities = []
+
+    # Common paths cho entities
+    paths = [
+        ["extraction_result", "data", "entities"],
+        ["ontology_result", "data", "enriched_entities"],
+        ["resolution_result", "data", "resolved_entities"],
+        ["fusion_result", "data", "fused_entities"],
+        ["enrichment_result", "data", "enriched_entities"],
+    ]
+
+    for path in paths:
+        value = output
+        for key in path:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                value = None
+                break
+
+        if value and isinstance(value, list):
+            entities.extend(value)
+            break  # Take first found path
+
+    return entities
+
+
+def _extract_relationships_from_output(output: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract relationships từ step output"""
+    relationships = []
+
+    paths = [
+        ["extraction_result", "data", "relationships"],
+        ["ontology_result", "data", "enriched_relationships"],
+        ["completion_result", "data", "suggested_relationships"],
+    ]
+
+    for path in paths:
+        value = output
+        for key in path:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                value = None
+                break
+
+        if value and isinstance(value, list):
+            relationships.extend(value)
+            break
+
+    return relationships
+
+
+def _extract_text_data_from_output(output: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract text data từ step output"""
+    text_data = []
+
+    # Check for chunks
+    if "chunks" in output and isinstance(output["chunks"], list):
+        for chunk in output["chunks"]:
+            if isinstance(chunk, dict) and "data" in chunk:
+                text_data.append(chunk["data"])
+
+    # Check for cleaned data
+    elif "cleaned_data" in output:
+        cleaned = output["cleaned_data"]
+        if isinstance(cleaned, dict) and "data" in cleaned:
+            text_data = (
+                cleaned["data"]
+                if isinstance(cleaned["data"], list)
+                else [cleaned["data"]]
+            )
+
+    # Check for files
+    elif "files" in output and isinstance(output["files"], list):
+        for file_item in output["files"]:
+            if isinstance(file_item, dict) and "data" in file_item:
+                file_info = file_item["data"]
+                text_data.append(
+                    {
+                        "text": str(file_info.get("text_content", "")),
+                        "source": file_info.get("file_name", "unknown"),
+                        "metadata": file_info,
+                    }
+                )
+
+    return text_data
+
+
+async def resolve_step_input_data_from_db(
+    step: Dict[str, Any], pipeline_run_id: str
+) -> Dict[str, Any]:
+    """
+    Enhanced version với GraphState support sử dụng step output_data
+    """
+
+    # 2. Build GraphState từ dependency step outputs
+    try:
+        graph_state = await build_graph_state_from_dependencies(step, pipeline_run_id)
+
+        logger.info(
+            f"Enhanced input cho step {step['id']} - "
+            f"GraphState entities: {len(graph_state.entities)}, "
+            f"relationships: {len(graph_state.relationships)}"
+        )
+
+        # 3. Return enhanced input với both formats
+        enhanced_input = {
+            "graph_state": graph_state.to_dict(),
+            "step_metadata": {
+                "step_id": step.get("id"),
+                "step_name": step.get("name"),
+                "step_type": step.get("step_type"),
+                "pipeline_run_id": pipeline_run_id,
+            },
+        }
+
+        return enhanced_input
+
+    except Exception as e:
+        logger.error(f"Failed to build enhanced input, falling back to legacy: {e}")
+        raise Exception(
+            f"Failed to resolve step input data for step {step['id']}: {str(e)}"
+        )
 
 
 @celery_app.task(name="level_completion_callback")
@@ -764,41 +979,41 @@ async def complete_pipeline(
 
 
 async def execute_step_by_type(
-    step_type: str, config: Dict[str, Any], input_data: Optional[Dict[str, Any]] = None
+    step_type: str,
+    config: Dict[str, Any],
+    input_data: Optional[Dict[str, Any]] = None,
+    step_metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    Execute a step based on its type using the executor classes.
-
-    Args:
-        step_type: Type of the step
-        config: Step configuration
-        input_data: Input data from previous steps
-
-    Returns:
-        Output data from step execution
+    Enhanced step execution với GraphState support
     """
     try:
-        # Get step executor from the STEP_EXECUTORS mapping
-        step_type_enum = PipelineStepType(step_type)
-        executor_class = STEP_EXECUTORS.get(step_type_enum)
+        # Check if enhanced execution is supported
+        logger.info(f"Using enhanced execution cho step type {step_type}")
 
-        if not executor_class:
-            raise ValueError(f"No executor found for step type: {step_type}")
+        # Extract GraphState
+        graph_state_dict = input_data.get("graph_state", {})
+        graph_state = GraphState.from_dict(graph_state_dict)
 
-        # Create executor instance
-        step_metadata = {
-            "step_type": step_type,
-        }
-        executor = executor_class(config, step_metadata)
+        # Get enhanced executor
+        executor = get_step_executor(
+            step_type=PipelineStepType(step_type),
+            step_config=config,
+            step_metadata=step_metadata or {},
+            graph_state=graph_state,
+        )
 
-        # Execute step
-        output_data = await executor.execute(input_data or {})
+        # Execute với GraphState context
+        output_data = await executor.execute(input_data)
 
+        logger.info(f"Enhanced execution completed cho step {step_type}")
         return output_data
 
     except Exception as e:
-        logger.error(f"Error executing step type {step_type}: {str(e)}")
-        raise
+        logger.error(f"Enhanced step execution failed, falling back to legacy: {e}")
+        raise Exception(
+            f"Failed to execute step {step_type} with enhanced execution: {str(e)}"
+        )
 
 
 @celery_app.task(name="cancel_pipeline_run")
@@ -812,20 +1027,25 @@ async def cancel_pipeline_run_task(run_id: str, pipeline_id: str = None):
         # Get pipeline run details
         from app.services.pipeline import PipelineService
         from app.services.pipeline_step import PipelineStepService
-        
+
         pipeline_service = PipelineService()
         step_service = PipelineStepService()
-        
+
         # Get all step runs for this pipeline run
         step_runs_response = await step_service.get_pipeline_step_runs(run_id)
         step_runs = step_runs_response.data if step_runs_response else []
-        
+
         # Cancel running step tasks
         for step_run in step_runs:
-            if step_run.get("celery_task_id") and step_run["status"] == StepStatus.RUNNING:
+            if (
+                step_run.get("celery_task_id")
+                and step_run["status"] == StepStatus.RUNNING
+            ):
                 try:
-                    celery_app.control.revoke(step_run["celery_task_id"], terminate=True)
-                    
+                    celery_app.control.revoke(
+                        step_run["celery_task_id"], terminate=True
+                    )
+
                     # Update step run status
                     await step_service.update_pipeline_step_run(
                         step_run["id"],
@@ -837,7 +1057,9 @@ async def cancel_pipeline_run_task(run_id: str, pipeline_id: str = None):
                         ),
                     )
                 except Exception as e:
-                    logger.error(f"Failed to cancel step task {step_run['celery_task_id']}: {e}")
+                    logger.error(
+                        f"Failed to cancel step task {step_run['celery_task_id']}: {e}"
+                    )
 
         # Update pipeline run status to cancelled
         await pipeline_service.update_pipeline_run(

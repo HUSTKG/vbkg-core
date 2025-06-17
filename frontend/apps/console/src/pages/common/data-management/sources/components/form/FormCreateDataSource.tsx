@@ -3,38 +3,44 @@ import { SourceType } from "@vbkg/types";
 import { AppForm, FieldConfig, toast } from "@/components";
 import { z } from "zod";
 import { useCreateDatasource } from "@vbkg/api-client";
+import { tr } from "date-fns/locale";
 
 const formFields = (formData: z.infer<typeof CreateDataSourceSchema>) =>
 	[
 		{
-			label: "Name",
+			label: "Tên",
 			name: "name",
 			type: "text",
 			placeholder: "Enter data source name",
 			required: true,
 		},
 		{
-			label: "Type",
+			label: "Loại",
 			name: "source_type",
 			type: "select",
 			placeholder: "Select data source type",
 			options: [
 				{ value: SourceType.API, label: "REST API" },
-				{ value: SourceType.DATABASE, label: "Database" },
+				{ value: SourceType.DATABASE, label: "CSDL" },
 				{ value: SourceType.FILE, label: "File" },
-				{ value: SourceType.URL, label: "URL" },
 			],
 			required: true,
 		},
 		{
-			label: "Description",
+			label: "Độ tin cậy",
+			name: "trust_score",
+			type: "number",
+			placeholder: "Enter trust score (0-100)",
+		},
+		{
+			label: "Mô tả",
 			name: "description",
 			type: "textarea",
 			placeholder: "Enter description",
 			required: false,
 		},
 		{
-			label: "Connection Details",
+			label: "Thông tin kết nối",
 			name: "connection_details",
 			type: "object",
 			placeholder: "Enter connection details",
@@ -44,10 +50,11 @@ const formFields = (formData: z.infer<typeof CreateDataSourceSchema>) =>
 				: [],
 		},
 		{
-			label: "Credentials",
+			label: "Thông tin xác thực",
 			name: "credentials",
 			type: "array",
 			placeholder: "Enter credentials",
+			arrayItemLabel: "Khóa",
 			collapsible: true,
 			required: false,
 			fields: [
@@ -384,7 +391,9 @@ export const FormCreateDataSource = ({
 					name: values.name,
 					description: values.description,
 					source_type: values.source_type,
+					trust_score: values.trust_score,
 					credentials: values.credentials
+
 						? Object.fromEntries(
 								values.credentials.map((credential) => [
 									credential.key,

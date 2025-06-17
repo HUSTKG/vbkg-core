@@ -20,65 +20,66 @@ const ExpertLayout = () => {
 		<AppLayout
 			menuItems={[
 				{
-					title: "Conflicts",
-					icon: <Construction />,
-					path: "/expert/conflicts",
-				},
-				{
-					title: "Knowledge Graph",
-					icon: <GitGraphIcon />,
+					title: "Quản lý miền",
+					icon: <Edit3 />,
 					submenu: [
 						{
-							title: "🔍 Graph Explorer",
-							path: "/expert/kg/explorer",
+							title: "🌐 Domain",
+							path: "/expert/domain",
 						},
 						{
-							title: "🏢 Entity Management",
-							path: "/expert/kg/entities",
+							title: "🏛️ Ontology",
+							path: "/expert/domain/ontology",
 						},
 						{
-							title: "🔗 Relationship Management",
-							path: "/expert/kg/relationships",
+							title: "🗺️ Khớp Ontology",
+							path: "/expert/domain/fibo-mapping",
 						},
 					],
 				},
 				{
-					title: "Data Management",
+					title: "Xử lý dữ liệu",
 					icon: <DatabaseIcon />,
 					submenu: [
 						{
-							title: "🔌 Data Sources",
+							title: "🔌 Nguồn Dữ Liệu",
 							path: "/expert/data/sources",
 						},
 						{
-							title: "⚙️ Pipeline Management",
+							title: "⚙️ Pipeline",
 							path: "/expert/data/pipelines",
 						},
 					],
 				},
 				{
-					title: "Domain Customization",
-					icon: <Edit3 />,
+					title: "Quản lý chất lượng",
+					icon: <Construction />,
 					submenu: [
 						{
-							title: "🌐 Domain Management",
-							path: "/expert/domain",
+							title: "🛠️ Xử lý xung đột",
+							path: "/expert/quality/conflicts",
 						},
 						{
-							title: "🏷️ Entity Types",
-							path: "/expert/domain/entity-types",
+							title: "✅ Hoàn thiện đồ thị",
+							path: "/expert/quality/completion",
+						},
+					],
+				},
+				{
+					title: "Đồ thị tri thức",
+					icon: <GitGraphIcon />,
+					submenu: [
+						{
+							title: "🔍 Tra cứu",
+							path: "/expert/kg/explorer",
 						},
 						{
-							title: "🔗 Relationship Types",
-							path: "/expert/domain/relationship-types",
+							title: "🏢 Quản lý thực thể",
+							path: "/expert/kg/entities",
 						},
 						{
-							title: "🏛️ FIBO",
-							path: "/expert/domain/fibo",
-						},
-						{
-							title: "🗺️ FIBO Mapping",
-							path: "/expert/domain/fibo-mapping",
+							title: "🔗 Quản lý mối quan hệ",
+							path: "/expert/kg/relationships",
 						},
 					],
 				},

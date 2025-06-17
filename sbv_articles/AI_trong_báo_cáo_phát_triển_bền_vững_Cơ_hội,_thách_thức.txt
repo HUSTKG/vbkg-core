@@ -1,0 +1,101 @@
+TIÊU ĐỀ: AI trong báo cáo phát triển bền vững: Cơ hội, thách thức
+
+URL: https://sbv.gov.vn/vi/w/sbv637230
+
+------------------ NỘI DUNG ------------------
+
+Tại Tọa đàm “Thực hành báo cáo phát triển bền vững trong lĩnh vực ngân hàng với giải pháp AI” do Thời báo Ngân hàng tổ chức ngày 21/5/2025 tại Hà Nội, ông Mike Suffield - Giám đốc Chính sách và Nghiên cứu chuyên sâu ACCA toàn cầu cho rằng, trí tuệ nhân tạo (AI) chỉ là công cụ hỗ trợ, không thể thay thế tư duy và đánh giá của con người. Chính sự kết hợp giữa công nghệ hiện đại và tư duy phản biện sắc sảo mới tạo nên những thông tin ESG thực sự hữu ích và đáng tin cậy.
+Ảnh minh họa. (Nguồn: Internet)
+Trong bối cảnh toàn cầu hóa và biến đổi khí hậu ngày càng gia tăng, yêu cầu về minh bạch, trách nhiệm và phát triển bền vững đang trở thành một phần cốt lõi trong chiến lược của các doanh nghiệp, đặc biệt là các tổ chức tài chính và kế toán. Báo cáo phát triển bền vững không còn là một hành động tự nguyện mà đang tiến gần tới chuẩn mực bắt buộc, được thúc đẩy bởi các quy định quốc tế như GRI, SASB hay TCFD.
+Đồng thời,
+AI
+- với khả năng xử lý dữ li
+ệu lớn, học máy và tự động hóa -
+đang trở thành động lực thúc đẩy sự chuyển đổi trong cách thức các tổ chức sản xuất và sử dụng thông tin phát triển bền vững. Tuy nhiên, đi kèm với những cơ hội tiềm năng, AI cũng mang theo
+những
+thách thức về đạo đức, minh bạch và tác động môi trường.
+Chu trình sản xuất thông tin bền vững
+Theo
+ông Mike Suffield -
+Giám đốc Chính sách và Nghiên cứu chuyên sâu ACCA toàn cầu
+,
+8
+giai đoạn chính trong chu trình sản xuất thông tin phát triển bền vững,
+cụ thể:
+(i) Hiểu mục tiêu báo cáo; (ii) Thiết lập bối cảnh báo cáo; (iii) Xác định thông tin trọng yếu cần báo cáo; (iv) Xác định nhu cầu dữ liệu; (v) Thu thập dữ liệu; (vi) Báo cáo dữ liệu đã thu thập; (vii) Sử dụng thông tin để ra quyết định; (viii) Xác minh và cải tiến liên tục
+Quy trình 8 bước này
+giúp định hướng một quy trình chuẩn hóa, có thể lặp lại và nâng cấp cho báo cáo phát triển bền vững. AI đóng vai trò hỗ trợ mạnh mẽ xuyên suốt chu trình, từ thu thập đến phân tích, trình bày và tối ưu hóa báo cáo.
+Rào cản hiện hữu: Khi dữ liệu và ra quyết định trở thành điểm nghẽn
+Tuy AI có nhiều tiềm năng, nhưng việc ứng dụng AI trong báo cáo phát triển b
+ền vững không hề đơn giản. Theo
+ông Mike Suffield
+, có 2
+rào cản chính đang làm chậ
+m quá trình chuyển đổi số ESG:
+Một là
+, thiếu dữ liệu chất lượng và hệ thống liên thông:
+AI cần dữ liệu lớn và chất lượng cao để hoạt động chính xác. Tuy nhiên, hiện nay nhiều tổ chức vẫn lưu trữ dữ liệu phân tán, thiếu chuẩn hóa, và ít có khả năng kết nối giữa các hệ thống tài chính và phi tài chính. Đặc biệt, các chỉ số ESG đòi hỏi phải có dữ liệu định
+lượng khách quan và minh bạch - điều mà nhiều doanh nghiệp chưa đáp ứng được.
+Hai là
+, quyết định sai lầm do hiểu sai AI hoặc phụ thuộc thái quá:
+Một rủi ro đáng lo ngại là việc sử dụng AI mà không hiểu rõ giới hạn và logic vận hành của nó. Nếu nguồn dữ liệu đầu vào không phù hợp, thuật toán chưa được kiểm định, hoặc tổ chức không đặt đúng câu hỏi, AI có thể đưa ra các khuyến nghị sai lệch.
+Việc dựa hoàn toàn
+vào kết quả AI mà không có kiểm chứng con người sẽ làm mất đi giá trị cốt lõi của thông tin hữu ích.
+Rủi ro đạo đức và nguyên tắc nghề nghiệp kế toán
+Ông Mike Suffield -
+Giám đốc Chính sách và Nghiên cứu chuyên sâu ACCA toàn cầu
+nhấn mạnh rằng các chuyên gia tài chính và kế toán, khi ứng dụng AI vào báo cáo phát triển bền vững, cần tuân thủ nghiêm ngặt các nguyên tắc đạo đức nghề nghiệp. Cụ thể: (i)
+Chính trực
+: Luôn trung thực, không làm sai lệch kết quả vì mục đích thươn
+g mại hay để cải thiện hình ảnh; (ii)
+Khách quan
+: Đánh giá kết quả do AI đưa ra một cách độc lập, không để c
+ảm tính hay thiên kiến chi phối; (iii)
+Năng lực và sự cẩn trọng
+: Phải hiểu rõ cách thức AI hoạt động, không ỷ lại hay giao phó hoàn toàn cho hệ thống; (iv)
+Hành xử chuyên nghiệp
+: Tuân thủ đầy đủ các quy định ph
+áp luật và chuẩn mực ngành nghề; (v)
+Bảo mật
+: Bảo vệ thông tin nhạy cảm, đặc biệt là dữ liệu cá nhân và dữ liệu ESG.
+Cần khẳng định rằng
+AI chỉ là công cụ hỗ trợ, không thể thay thế tư duy và đánh giá của con người. Chính sự kết hợp giữa công nghệ hiện đại và tư duy phản biện sắc sảo mới tạo nên những thông tin ESG thực sự hữu ích và đáng tin cậy.
+Hệ lụy môi trường của AI: Khi công nghệ không hẳn là “xanh”
+AI đang được ca ngợi như một công cụ hỗ trợ đắc lực cho chiến lược phát triển bền vững của các tổ chức và doanh nghiệp. AI giúp thu thập, phân tích và trình bày dữ liệu ESG một cách nhanh chóng, chính xác và hiệu quả hơn bao giờ hết. Tuy nhiên, đằng sau bức tranh đầy tiềm năng đó là một nghịch lý đang ngày càng trở nên rõ nét: Công nghệ được kỳ vọng thúc đẩy tính bền vững lại đang đặt ra những thách thức nghiêm trọng cho chính mục tiêu này -
+đặc biệt là từ góc độ môi trường.
+Dữ liệu thực tế cho thấy tác động môi trường của AI là không nhỏ. Đơn cử như trong năm 2022, 2
+công ty
+lớn công nghệ toàn cầu là Google và Microsoft đã sử dụng lượng nước làm mát cho các trung tâm dữ liệu của họ tương đương với mức tiêu thụ nước của khoảng 700.000 hộ gia đình Mỹ. Đây là một con số đáng báo động, nhất là trong bối cảnh nhiều quốc gia đang đối mặt với tình trạng thiếu nước sạch và áp lực từ biến đổi khí hậu ngày càng gia tăng.
+Không dừng lại ở đó, các mô hình AI tạo sinh (Gen
+AI), vốn được sử dụng phổ biến để tạo ra văn bản, hình ảnh hoặc âm thanh, cũng tiêu tốn năng lượng ở mức rất cao. Chỉ một lần tạo hình ảnh bằng AI có thể đốt cháy lượng điện tương đương từ 1 đến
+900 lần sạc điện thoại di động -
+tùy thuộc vào độ phức tạp của mô hình và hạ tầng xử lý. Khi việc tạo hình ảnh, sinh nội dung và mô phỏng bằng AI được thực hiện hàng triệu lần mỗi ngày trên toàn cầu, tác động tích lũy của nó đến lượng khí thải carbon và tiêu thụ tài nguyên trở nên vô cùng lớn.
+Điều này đặt ra một câu hỏi nghiêm túc cho cộng đồng doanh nghiệp và các nhà hoạch định chính sách: Liệu việc ứng dụng AI quy mô lớn trong các hệ thống quản trị ESG có thực sự góp phần hiện thực hóa các mục tiêu phát triển bền vững một cách toàn diện? Hay chúng ta đang vô tình “xanh hóa”
+công nghệ bằng một lớp vỏ bề ngoài, trong khi bản chất vẫn tiếp tục gia tăng dấu chân sinh thái và áp lực lên tài nguyên môi trường?
+Việc tích hợp AI vào báo cáo bền vững rõ ràng mang lại những lợi ích không thể phủ nhận. Nhưng để công nghệ này thực sự phục vụ cho mục tiêu “xanh”
+mà nó được kỳ vọng, cần phải có cái nhìn toàn diện hơn, không chỉ dừng lại ở hiệu quả đầu ra mà còn xét đến chi phí môi trường của quá trình đầu vào. Chỉ khi nào AI được triển khai dựa trên nền tảng công nghệ hiệu quả năng lượng, dữ liệu sạch, và chiến lược sử dụng tài nguyên thông minh, chúng ta mới có thể nói đến một sự chuyển đổi bền vững thực sự, thay vì chỉ là hình thức cải tiến bề ngoài.
+Vai trò của giáo dục và thay đổi văn hóa doanh nghiệp trong ứng dụng AI bền vững
+Để bảo đảm việc ứng dụng
+AI
+vào báo cáo phát triển bền vững diễn ra một cách hiệu quả và có trách nhiệm, yếu tố then chốt không nằm ở công nghệ, mà ở con người. Đào tạo liên tục và sự chuyển biến trong văn hóa tổ chức chính là nền tảng giúp doanh nghiệp thích nghi và phát triển bền vững trong kỷ nguyên số. AI chỉ thực sự phát huy hiệu quả khi được sử dụng bởi đội ngũ nhân sự có kiến thức sâu về công nghệ, hiểu rõ đạo đức nghề nghiệp và có khả năng tư duy phản biện.
+Các chuyên gia trong lĩnh vực kế toán -
+tài chính cần được trang bị những kiến thức cập nhật về AI, dữ liệu lớn và học máy - những công cụ ngày càng đóng vai trò quan trọng trong quá trình thu thập, phân tích và báo cáo dữ liệu ESG. Bên cạnh đó, họ cũng cần phát triển k
+ỹ năng đánh giá rủi ro đạo đức -
+yếu tố không thể thiếu khi ra quyết định dựa trên thuật toán. Việc làm quen và khai thác hiệu quả các nền tảng công nghệ hỗ trợ như AI Monitor
+(
+Công cụ AI giám sát và phân tích dữ liệu ESG tự động)
+hay Sustainability Reporting Hub
+(
+Nền tảng tập hợp và công bố báo cáo bền vững)
+sẽ giúp các tổ chức nâng cao chất lượng báo cáo và năng lực quản trị thông tin bền vững.
+Chỉ khi doanh nghiệp sở hữu đội ngũ nhân sự có đủ hiểu biết và năng lực công nghệ, họ mới có thể tích hợp AI vào chuỗi hoạt động ESG một cách tự tin, mà không phải đánh đổi các giá trị cốt lõi như minh bạch, liêm chính và đạo đức nghề nghiệp.
+Kết luận
+AI
+đang mở ra những cơ hội to lớn trong việc thúc đẩy quá trình chuyển đổi bền vững của các doanh nghiệp và tổ chức tài chính. Với khả năng xử lý dữ liệu nhanh chóng, phân tích sâu sắc và hỗ trợ ra quyết định hiệu quả, AI có thể trở thành đòn bẩy quan trọng giúp hiện thực hóa các mục
+tiêu ESG. Tuy nhiên, công nghệ - dù tiên tiến đến đâu -
+cũng không thể thay thế hoàn toàn vai trò của con người, đặc biệt trong những quyết định mang tính đạo đức, chiến lược dài hạn và liên quan đến nhiều bên.
+Chính vì vậy, việc ứng dụng AI trong lĩnh vực ESG cần được thực hiện một cách thận trọng, có chiến lược và trách nhiệm. Các tổ chức cần xây dựng một cách tiếp cận toàn diện, bắt đầu từ việc ban hành khung pháp lý rõ ràng, minh bạch về ứng dụng AI trong tài chính và quản trị bền vững. Đồng thời, cần phát triển một hệ thống dữ liệu quốc gia được chuẩn hóa, có khả năng kết nối liên thông giữa các lĩnh vực và ngành nghề.
+Đào tạo nguồn nhân lực kế toán -
+tài chính có tư duy công nghệ gắn liền với đạo đức nghề nghiệp là yếu tố không thể thiếu. Song song đó, đầu tư vào các mô hình AI theo hướng tiết kiệm tài nguyên, minh bạch trong vận hành và thân thiện với môi trường sẽ tạo tiền đề cho một hệ sinh thái ESG thực sự hiệu quả.
+Chỉ khi AI được vận hành trên nền tảng dữ liệu đáng tin cậy, trong một hệ thống quản trị minh bạch và do con người điều phối có trách nhiệm, chúng ta mới có thể khẳng định rằng công nghệ này đang phục vụ đúng sứ mệnh phát triển bền vững.
+Minh Châu

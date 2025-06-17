@@ -1,21 +1,21 @@
-import { useUpdateFiboProperty } from "@vbkg/api-client";
-import { UpdateFiboPropertySchema } from "@vbkg/schemas";
-import { FIBOClass, FIBOProperty } from "@vbkg/types";
+import { useUpdateOntologyProperty } from "@vbkg/api-client";
+import { UpdateOntologyPropertySchema } from "@vbkg/schemas";
+import { OntologyClass, OntologyProperty } from "@vbkg/types";
 import { AppForm, FieldConfig, toast } from "@/components";
 import { z } from "zod";
 
-interface FormEditFiboPropertyProps {
-  selectedProperty: FIBOProperty;
-  fiboClasses: FIBOClass[];
-  getClassById: (id: number) => FIBOClass | undefined;
+interface FormEditOntologyPropertyProps {
+  selectedProperty: OntologyProperty;
+  ontologyClasses: OntologyClass[];
+  getClassById: (id: number) => OntologyClass | undefined;
 }
 
-export default function FormEditFiboProperty({
+export default function FormEditOntologyProperty({
   selectedProperty,
-  fiboClasses,
+  ontologyClasses,
   getClassById,
-}: FormEditFiboPropertyProps) {
-  const { mutate: updateProperty, isPending: loading } = useUpdateFiboProperty({
+}: FormEditOntologyPropertyProps) {
+  const { mutate: updateProperty, isPending: loading } = useUpdateOntologyProperty({
     onSuccess: () => {
       toast("Property updated successfully");
     },
@@ -25,16 +25,16 @@ export default function FormEditFiboProperty({
   });
 
   const handleUpdateProperty = async (
-    data: z.infer<typeof UpdateFiboPropertySchema>,
+    data: z.infer<typeof UpdateOntologyPropertySchema>,
   ) => {
     updateProperty({
       ...data,
       id: selectedProperty.id,
       domain_class_id: data.domain_class_uri
-        ? fiboClasses.find((c) => c.uri === data.domain_class_uri)?.id
+        ? ontologyClasses.find((c) => c.uri === data.domain_class_uri)?.id
         : null,
       range_class_id: data.range_class_uri
-        ? fiboClasses.find((c) => c.uri === data.range_class_uri)?.id
+        ? ontologyClasses.find((c) => c.uri === data.range_class_uri)?.id
         : null,
     });
   };
@@ -44,9 +44,9 @@ export default function FormEditFiboProperty({
       name: "uri",
       label: "URI",
       type: "text",
-      placeholder: "https://spec.edmcouncil.org/fibo/ontology/...",
+      placeholder: "https://spec.edmcouncil.org/ontology/ontology/...",
       required: true,
-      description: "URI duy nhất của FIBO property",
+      description: "URI duy nhất của Ontology property",
     },
     {
       name: "label",
@@ -78,7 +78,7 @@ export default function FormEditFiboProperty({
       name: "domain_class_uri",
       label: "Domain Class",
       type: "select",
-      options: fiboClasses.map((c) => ({
+      options: ontologyClasses.map((c) => ({
         label: `${c.label || c.uri} (${c.domain || "No domain"})`,
         value: c.uri,
       })),
@@ -88,7 +88,7 @@ export default function FormEditFiboProperty({
       name: "range_class_uri",
       label: "Range Class",
       type: "select",
-      options: fiboClasses.map((c) => ({
+      options: ontologyClasses.map((c) => ({
         label: `${c.label || c.uri} (${c.domain || "No domain"})`,
         value: c.uri,
       })),
@@ -99,13 +99,13 @@ export default function FormEditFiboProperty({
       label: "Custom Property",
       type: "switch",
       defaultValue: false,
-      description: "Đây có phải là custom property không thuộc FIBO chuẩn",
+      description: "Đây có phải là custom property không thuộc Ontology chuẩn",
     },
   ];
   return (
     <AppForm
       fields={getPropertyFormFields()}
-      schema={UpdateFiboPropertySchema}
+      schema={UpdateOntologyPropertySchema}
       defaultValues={{
         ...selectedProperty,
         domain_class_uri: selectedProperty.domain_class_id

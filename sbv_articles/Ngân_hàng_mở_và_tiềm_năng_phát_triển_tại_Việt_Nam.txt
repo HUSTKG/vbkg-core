@@ -1,0 +1,220 @@
+TIÊU ĐỀ: Ngân hàng mở và tiềm năng phát triển tại Việt Nam
+
+URL: https://sbv.gov.vn/vi/w/sbv490429
+
+------------------ NỘI DUNG ------------------
+
+Ngày 16/03/2022, Ủy ban Chính sách thuộc Hiệp hội Ngân hàng Việt Nam (HHNH) phối hợp với Ngân hàng TMCP Đầu tư và Phát triển Việt Nam (BIDV) tổ chức hội thảo quốc tế “Tiềm năng phát triển ngân hàng mở tại Việt Nam – Những khuyến nghị về chính sách và khuôn khổ pháp lý”. Phó Thống đốc Ngân hàng Nhà nước Việt Nam (NHNN) Phạm Tiến Dũng tham dự và chủ trì hội thảo.
+Phó Thống đốc NHNN Phạm Tiến Dũng phát biểu tại hội thảo.
+Hội thảo có sự tham dự của đại diện lãnh đạo
+các Vụ, Cục
+thuộc NHNN,
+đại diện lãnh đạo của
+HHNH
+cùng
+các hội viên,
+các chuyên gia, diễn giả trong và ngoài nước…
+Phát biểu khai mạc hội thảo,
+Tổng Thư ký HHNH Nguyễn Quốc Hùng chia sẻ,
+Ngân hàng mở (Open Banking) là một mô hình kinh doanh mới và tiề
+m năng
+,
+cho phép bên thứ ba viết ứng dụng và cung cấp dịch vụ từ chính dữ liệu của ngân hàng. Việc ứng dụng giao diện lập trình (API) - công nghệ cho phép các bên thứ ba truy cập vào dữ liệu mở hay truy cập bảo mật đế
+n
+dữ liệu đóng của một tổ chức khi được sự đồng ý của chủ sở hữu dữ liệu và tuân thủ các quy định pháp luậ
+t có liên quan. Vì vậy,
+khi
+chia sẻ thông
+tin
+Open API, dữ liệu
+có thể được sử dụng để các công ty Fintech tạo thêm nhiều ứng dụng mới, cung cấp thêm tiện ích cho khách hàng, hỗ trợ khách hàng kiểm soát thông tin cũng như ra quyết định tốt hơn.
+Trong mô hình này, ngân hàng sẽ là người cung cấp các dịch vụ thông qua Open API và cùng các đối tác của mình xây dựng một hệ sinh thái nhằm thỏa mãn các yêu cầu của người dùng.
+Bằng cách khuyến khích các ngân hàng và các bên thứ ba kết nối với nhau thông qua các Open API của ngân hàng, trải nghiệm tài chính của khách hàng có thể được cải thiện mạnh mẽ.
+N
+gân hàng mở
+giúp các ngân hàng tiếp cận đa dạng đối tượng khách hàng với chi phí hợp lý thông qua các ứng dụng khác của đối tác, rút ngắ
+n
+quá trình xử lý giao dịch, giảm thiểu các tác vụ thủ công, xây dựng các giải pháp kinh doanh tối ưu và cung cấ
+p các
+dịch vụ toàn diện, tiệ
+n ích
+nhất cho khách hàng. Điể
+n hình, các n
+gân hàng thương mại hiện đại hóa công nghệ đa tiện ích như mobile banking, internet banking, contactless payment, QR code… Nền tả
+ng Open banking đã
+góp phần kết nối và lồng ghép các dịch vụ ngân hàng vào các lĩnh vực của cuộc số
+ng
+như thanh toán hóa đơn điện
+,
+nước, viễn thông, y tế, giáo dục, dịch vụ công trực tuyế
+n
+…
+Ngoài ra, quyền truy cập vào dữ liệu
+của
+khách hàng còn hỗ trợ cho việc các ngân hàng chấm điểm tín dụng
+của
+khách hàng một cách chính xác.
+Có thể thấy ngân hàng mở cho phép các bên thứ ba phát triển các ứng dụng quả
+n lý tài chính cá nhân
+tốt hơn.
+Chính vì vậy
+, mô hình này thúc đẩy sự cạnh tranh trong ngành ngân hàng, gây áp lực và buộc các ngân hàng truyền thống phải tăng cường các dịch vụ tài chính hoặc hợp tác với các công ty Fintech.
+Tổng Thư ký HHNH
+cho biết,
+n
+gân hàng mở là một trong những dấu ấn quan trọng trong quá trình
+chuyển đổi
+công nghệ tài chính, thúc đẩy quá trình chuyển đổi số
+theo
+hướ
+ng thông minh,
+cởi mở
+, đưa
+ra những cơ hội kinh doanh mới cho các ngân hàng.
+Kết quả đạt được là rất tích cực, tuy nhiên cũng
+còn có
+những rủi ro
+có thể xảy ra vì sự
+cởi mở của mô hình này.
+Vì vậy, các ngân hàng đang xem xét,
+chuẩn bị tốt
+để
+có thể ứng phó với các rủ
+i ro
+đầu vào, hiệu ứng cộng hưởng và các vấn đề khó đoán đị
+nh
+; đặt ra s
+ự cần thiết phải xây dựng các cơ chế phát hành và cách ly đảm
+bảo
+tính bền vững của API
+.
+Bên cạnh đó,
+NHNN
+đang dần hoàn thiện các khung pháp lý để quản lý hoạt động số hóa Ngân hàng
+theo
+tinh thầ
+n
+Chỉ thị số 16/CT-TTg
+của Thủ tướng Chính phủ
+về việc tăng cường năng lực tiếp cận cuộc cách mạng công nghệ 4.0. Thống đốc NHNN đã thành lập Ban Chỉ đạo về lĩnh vực Fintech
+theo
+Qu
+yết định số 328/QĐ-NHNN ngày
+16/0
+3/2017.
+Song
+hành lang pháp lý cho việc ứng dụng các nền tảng công nghệ mới còn chưa ổn định; Thông tin dữ liệu khách hàng cấp vĩ mô đang chuẩn hóa, nhưng còn thiếu; Tỉ lệ giao dịch offline, giao dịch tiền mặt còn cao, đặc biệt ở các khu vực nông thôn tỉ lệ này ở mức rất cao; Nhiều hệ sinh thái được phát triển một cách tự phát và chưa có sự liên thông; Cơ chế thử nghiệm có kiểm soát hoạt động công nghệ tài chính trong lĩnh vực ngân hàng sau nhiều vòng lấy ý kiến của các cơ quan, Bộ ngành nhưng đến nay vẫn chưa được ban hành.
+Trong bối cảnh
+đại dịch Covid-19 bùng phát
+,
+tiềm ẩn nguy cơ thua lỗ, phá sản, đóng cửa của các doanh nghiệp
+, chưa kể có thể tính đến cả
+các TCTD.
+Cuộc chiến chố
+ng Covid-19
+còn kéo dài và diễn biến phức tạp
+,
+gây đứt gãy dòng tiền, có thể dẫn đến sự nguy hiểm của hệ thống
+doanh nghiệp,
+các TCTD và nền kinh tế nói
+chung
+.
+Từ đó, mô hình
+n
+gân hàng mở vừa là cơ hội kinh doanh mới vừa là một thách thức đối với các ngân hàng trong khoảng thời gian này.
+Nó thúc đẩy các ngân hàng tại Việt Nam bước vào công cuộc chuyển đổi số để tồn tại và phát triển.
+Khắc phục những khó khăn và vướng mắc trên, việc đẩy
+mạnh
+hoàn thiện hành lang pháp lý liên quan đến áp dụng công nghệ số, hoàn thiện cơ sở dữ liệu thông tin quốc gia thống nhất, cho phép ngân hàng
+thương mại được khai thác, phục vụ quá trình cung cấp sản phẩm dịch vụ cho khách hàng là hết sức cần thiết.
+Sự chuyển
+dịch
+mô hình kinh doanh ngân hàng từ hệ sinh thái đóng sang hệ sinh thái mở sẽ là bước đột phá quan trọng mang lại nhiều lợi ích hơn cho nền kinh tế, nhưng những rủi ro, thách thức vẫn đi cùng là điều khó tránh.
+Vì vậy, các
+NHTM
+cần chủ động tích cực trong quá trình chuyển đổi, bảo đảm lợi thế cạnh tranh và đáp ứng yêu cầu của lộ trình xây dựng hệ thống ngân hàng số quốc gia.
+Tuy nhiên để thành công thì cần có hành
+lang
+pháp lý đầy đủ, phù hợp với thực tiễn trên quan điểm áp dụng công nghệ số trong hoạt động ngân hàng.
+Chủ nhiệm Ủy ban Chính sách, HHNH Trần Phương phát biểu tại hội thảo.
+Chia sẻ tại hội thảo, Chủ nhiệm Ủy ban Chính sách, HHNH, Phó Tổng Giám đốc Ngân hàng BIDV Trần Phương cho biết,
+chuyển đổi số
+và dịch chuyển mô hình kinh doanh ngân hàng sang hệ sinh thái mở với việc ứng dụng Open Banking đang là xu hướng tất yếu hiện nay.
+Do đó,
+một mặt, các NHTM cần chủ động và tích cực trong quá trình chuyển đổi số nói
+chung
+và phát triển ngân hàng mở nói riêng.
+Nhưng mặt khác, các cơ quan quản lý nhà nước cũng cần đồng hành trong việc hình thành các cơ chế, chính sách, khuôn khổ pháp lý phù hợp.
+Ông Phương cho biết
+Ủy ban Chính sách, HHNN luôn mong muốn đóng góp những ý kiến tham mưu cho NHNN, các bộ ngành xây dựng chính sách phù hợp, thúc đẩy thị trường phát triển nhanh và bền vững.
+Ở Việt Nam hiện nay chưa có quy định và hướng dẫn riêng và đầy đủ về lĩnh vực Ngân hàng mở, mà hiện mới chỉ có những chính sách chung về chuyển đổi số và một số quy định riêng lẻ liên quan tới một số khía cạnh của Ngân hàng mở cả về pháp lý cũng như kĩ thuật. Ngày 10/1
+2
+/2021 vừa qua, Thống đốc NHNN đã ký Quyết định số 1977
+/QĐ-NHNN
+t
+hành lập Ban chỉ đạo và Tổ công tác Chuyển đổi số ngành Ngân hàng
+do Thống đố
+c là T
+rưởng
+ban
+và Phó Thống đốc Phạm Tiến Dũng là
+Phó Trưởng ban thường trực
+.
+Đây được xem là một cú hích đối với quá trình chuyển đổi số củ
+a ngành Ngân hàng.
+Đối với
+việc xây dựng, triển khai ngân hàng mở tại các NHTM tại Việt Nam, về khung pháp lý các ngân hàng đang
+chủ yếu dựa vào Thông tư 39/2014/TT-NHNN ngày 11/12/2014 hướng dẫn về dịch vụ trung gian thanh toán trong đó có các điều khoản cho phép ngân hàng được hợp tác với bên thứ 3 cung cấp dịch vụ
+tài chính; ngoài ra
+còn có
+các Nghị định của Chính phủ, Thông tư của các bộ ngành quy định về
+ngân hàng điện tử, thanh toán không dùng tiền mặt, mở và sử dụng tài khoản thanh toán, các điều kiện an toàn kĩ thuật, bảo mật thông tin khách hàng…
+Những
+nội dung này đã ít nhiều quy định các khía cạnh khác nhau liên quan tới ngân hàng mở.
+Tuy nhiên
+,
+hiệ
+n
+vẫn còn thiếu hành
+lang
+pháp lý riêng, đầy đủ, cụ thể để hỗ trợ thuận lợi cho các TCTD triển khai ngân hàng mở.
+Đó là một trong những công việc sắp tới của cơ quan quản lý nhà nước.
+Tìm hiểu kinh nghiệm quốc tế cả giác độ chính sách lẫn giác độ ứng dụng cụ thể các định chế tài chính chắc chắn sẽ rất hữu ích cho quá trình xây dựng chính sách và hành
+lang
+pháp lý cho ngân hàng mở Việt Nam.
+Quang cảnh hội thảo.
+Phát biểu chỉ đạo hội thảo, Phó Thống đốc NHNN Phạm Tiến Dũng
+khẳng định
+,
+hội thảo
+với chủ đề hết sức thiết thực bắt kịp xu thế hiện nay. Các ý kiến phát biểu đều rất tâm huyết, chia sẻ những vấn đề cụ thể, thiết thực, đặt ra những câu hỏi, những vấn đề khá hóc búa phải kịp thời giải quyết để xây dựng ngân hàng mở tại Việt Nam. Đó là, Dữ liệu thì chia sẻ cái gì, quyền và trách nhiệm của mỗi bên thế nào
+?;
+Dịch vụ nào cần phải có điều kiện, còn dịch vụ nào thì không?
+Bên thứ ba là những ai, và được làm cái gì?
+Theo Phó Thống đốc, các nội dung của
+hội thảo
+cũng là nội dung mà
+NHNN
+quan tâm, sẽ tiếp tục nghiên cứu, bởi lẽ nếu không hiểu thấu đáo thì không ban hành văn bản quản lý.
+Các phát biểu đã đi đúng trọng tâm của chủ đề đặt ra, vì thế để triển khai được Open Banking cần có sự vào cuộc của nhiều bên.
+Open Banking là lĩnh vực hoàn toàn mới, trong đó khâu then chốt là Open API.
+Với tư cách là phương thức kỹ thuật để các bên giao tiếp thì API cần có các quy định hướng dẫn, không có Open API thì sẽ không có Open Banking.
+Theo Phó Thống đốc, hiện trạng khuôn khổ pháp lý về ngân hàng mở tại Việt Nam đã có nhưng chưa đầy đủ, được quy định rời rạc tại một số điều trong Bộ luật Dân sự 2015, Luật Giao dịch điện tử, Luật Các tổ chức tín dụng, Luật An toàn thông tin mạng, Luật bảo vệ quyền lợi người tiêu dùng quy định về trách nhiệm của ngân hàng trong việc bảo mật thông tin khách hàng; Tại
+Nghị định số 117/2018/NĐ-CP quy định khách có quyền yêu cầu tổ chức tín dụng cung cấp thông tin của chính khách hàng theo thỏa thuận giữa các bên và phù hợp với quy định của pháp luật; Và một số Nghị định quy định xử lý vi phạm về thông tin cá nhân. Điều quan tâm nhất là
+HHNH
+phối hợp với các Vụ, Cục
+NHNN
+góp ý vào dự thảo các Nghị định của Chính phủ về bảo vệ dữ liệu cá nhân; về định danh và xác thực điện tử, để khi ban hành sẽ đi vào cuộc sống một cách thực chất.
+Tại Hội thảo, các đại biểu tập trung trao đổi về
+các nội dung xoay quanh ngân hàng mở, bài toán đặt ra đối với hệ thống
+các
+ngân hàng Việt Nam, kinh nghiệm triển khai tại NHTM trong nước, hành lang pháp lý về ngân hàng mở tại Việ
+t Nam
+… Các diễn giả nước ngoài cũng chia sẻ nhiều nội dung hữu ích liên quan tới việc phát triển ngân hàng mở từ góc nhìn khu vực,
+p
+hát triển ngân hàng mở và
+khung chính sách toàn cầu,
+APIs,
+thương mại, tin cậy và kết nố
+i…
+LK

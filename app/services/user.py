@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from postgrest.base_request_builder import APIResponse
 
 from app.core.supabase import get_supabase
-from app.schemas.user import UserUpdate
+from app.schemas.user import ResourceType, UserAction, UserUpdate
 
 
 class UserService:
@@ -518,11 +518,11 @@ class UserService:
         self,
         user_id: str,
         action: str,
-        resource_type: str = None,
-        resource_id: str = None,
-        details: Dict[str, Any] = None,
-        ip_address: str = None,
-        user_agent: str = None,
+        resource_type: Optional[str] = None,
+        resource_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
     ):
         """Log user activity"""
         try:

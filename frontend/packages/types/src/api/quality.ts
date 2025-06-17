@@ -8,6 +8,7 @@ import {
 	KGEditResult,
 	PaginatedResponse,
 	QualityReport,
+	ResolutionMethod,
 } from "../models";
 
 export interface IGetQualityDashboardRequest { }
@@ -67,7 +68,10 @@ export interface IDetectConflictsResponse
 
 export interface IResolveConflictRequest {
 	conflict_id: string;
-	resolution: ConflictResolution;
+	resolution_method: ResolutionMethod;
+	resolution_data: Record<string, any>;
+	reasoning: string;
+	confidence_score?: number;
 }
 export interface IResolveConflictResponse
 	extends ApiResponse<{

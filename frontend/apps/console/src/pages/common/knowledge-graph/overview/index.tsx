@@ -13,12 +13,17 @@ import { Database, GitBranch, Layers, Network, RefreshCw } from "lucide-react";
 
 export default function KnowledgeGraphOverview() {
 	const {
-		data: stats,
+		data: _stats,
 		isFetching: loading,
 		refetch: refetchStats,
 	} = useKGStats();
 
-	console.log(stats);
+	const stats = _stats?.data || {};
+
+	const entityTypes = stats?.entity_types?.sort((a, b) => b.count - a.count);
+	const relationshipTypes = stats?.relationship_types?.sort(
+		(a, b) => b.count - a.count,
+	);
 	return (
 		<div className="p-6 space-y-6">
 			{/* Header */}
@@ -87,8 +92,8 @@ export default function KnowledgeGraphOverview() {
 			{/* Main Content Grid */}
 			<div className="grid grid-cols-2 gap-6">
 				{/* Entity Types Distribution */}
-				<Card className="lg:col-span-1 overflow-y-auto max-h-[80vh]">
-					<CardHeader>
+				<Card className="lg:col-span-1 px-0 overflow-y-auto space-y-0 max-h-max">
+					<CardHeader className="sticky px-6 top-0 bg-white/95">
 						<CardTitle className="flex items-center gap-2">
 							<Layers size={20} />
 							Loại thực thể
@@ -107,7 +112,7 @@ export default function KnowledgeGraphOverview() {
 							</div>
 						) : (
 							<div className="space-y-4">
-								{stats?.entity_types?.map((type, i) => (
+								{entityTypes?.map((type, i) => (
 									<div key={String(i)} className="space-y-2">
 										<div className="flex justify-between items-center">
 											<Badge variant="outline">{type.entity_type}</Badge>
@@ -119,7 +124,7 @@ export default function KnowledgeGraphOverview() {
 											<div
 												className="bg-blue-500 h-2 rounded-full"
 												style={{
-													width: `${(type.count / stats.total_entities) * 100}%`,
+													width: `${(type.count / Number(stats?.total_entities)) * 100}%`,
 												}}
 											/>
 										</div>
@@ -131,8 +136,8 @@ export default function KnowledgeGraphOverview() {
 				</Card>
 
 				{/* Relationship Types Distribution */}
-				<Card className="lg:col-span-1 overflow-y-auto max-h-[80vh]">
-					<CardHeader className="sticky top-0 bg-white/95">
+				<Card className="lg:col-span-1 px-0 overflow-y-auto space-y-0 max-h-max">
+					<CardHeader className="sticky px-6 top-0 bg-white/95">
 						<CardTitle className="flex items-center gap-2">
 							<GitBranch size={20} />
 							Loại mối quan hệ
@@ -151,7 +156,7 @@ export default function KnowledgeGraphOverview() {
 							</div>
 						) : (
 							<div className="space-y-4">
-								{stats?.relationship_types?.map((type, i) => (
+								{relationshipTypes?.map((type, i) => (
 									<div key={String(i)} className="space-y-2">
 										<div className="flex justify-between items-center">
 											<Badge variant="secondary">

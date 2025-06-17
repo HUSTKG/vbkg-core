@@ -54,19 +54,19 @@ export default function RelationshipTable({
 		{
 			header: "Nguồn → Đích",
 			cell: (rel: any) => (
-				<div className="space-y-1">
+				<div className="space-y-1 line-clamp-2 w-56">
 					<div className="flex items-center gap-2">
-						<div className="font-medium">{rel.source_entity.entity_text}</div>
+						<div className="font-medium">{rel.source_entity?.entity_text}</div>
 						<ArrowRight size={14} className="text-muted-foreground" />
-						<div className="font-medium">{rel.target_entity.entity_text}</div>
+						<div className="font-medium">{rel.target_entity?.entity_text}</div>
 					</div>
 					<div className="flex items-center gap-2 text-xs text-muted-foreground">
 						<Badge variant="secondary" className="text-xs">
-							{rel.source_entity.entity_type}
+							{rel.source_entity?.entity_type}
 						</Badge>
 						<ArrowRight size={10} />
 						<Badge variant="secondary" className="text-xs">
-							{rel.target_entity.entity_type}
+							{rel.target_entity?.entity_type}
 						</Badge>
 					</div>
 				</div>
@@ -79,7 +79,7 @@ export default function RelationshipTable({
 					{Object.entries(rel.properties || {})
 						.slice(0, 2)
 						.map(([key, value]) => (
-							<div key={key} className="text-sm">
+							<div key={key} className="text-sm line-clamp-2">
 								<span className="text-muted-foreground">{key}:</span>{" "}
 								{String(value)}
 							</div>

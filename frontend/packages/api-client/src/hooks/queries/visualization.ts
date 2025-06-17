@@ -1,73 +1,74 @@
 import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import {
-  IReadVisualizationsRequest,
-  IReadVisualizationRequest,
-  IReadVisualizationResponse,
-  IReadPublicVisualizationsRequest,
-  IReadPublicVisualizationsResponse,
-  IGetVisualizationDataRequest,
-  IGetVisualizationDataResponse,
-  IGetVisualizationTemplatesRequest,
-  IGetVisualizationTemplatesResponse,
+	IReadVisualizationsRequest,
+	IReadVisualizationRequest,
+	IReadVisualizationResponse,
+	IReadPublicVisualizationsRequest,
+	IReadPublicVisualizationsResponse,
+	IGetVisualizationDataRequest,
+	IGetVisualizationDataResponse,
+	IGetVisualizationTemplatesRequest,
+	IGetVisualizationTemplatesResponse,
+	IReadVisualizationsResponse,
 } from "@vbkg/types";
 import { VisualizationService } from "../../services/visualization";
 
 // Fetch all visualizations
 export const useVisualizations = (
-  input: IReadVisualizationsRequest,
-  options?: UseQueryOptions<any, Error>,
+	input: IReadVisualizationsRequest,
+	options?: UseQueryOptions<IReadVisualizationsResponse, Error>,
 ) => {
-  return useQuery<any, Error>({
-    queryKey: ["visualizations", input],
-    queryFn: () => VisualizationService.readVisualizations(input),
-    ...options,
-  });
+	return useQuery<IReadVisualizationsResponse, Error>({
+		queryKey: ["visualizations", input],
+		queryFn: () => VisualizationService.readVisualizations(input),
+		...options,
+	});
 };
 
 // Fetch public visualizations
 export const usePublicVisualizations = (
-  input: IReadPublicVisualizationsRequest,
-  options?: UseQueryOptions<IReadPublicVisualizationsResponse, Error>,
+	input: IReadPublicVisualizationsRequest,
+	options?: UseQueryOptions<IReadPublicVisualizationsResponse, Error>,
 ) => {
-  return useQuery<IReadPublicVisualizationsResponse, Error>({
-    queryKey: ["publicVisualizations", input],
-    queryFn: () => VisualizationService.readPublicVisualizations(input),
-    ...options,
-  });
+	return useQuery<IReadPublicVisualizationsResponse, Error>({
+		queryKey: ["publicVisualizations", input],
+		queryFn: () => VisualizationService.readPublicVisualizations(input),
+		...options,
+	});
 };
 
 // Fetch a specific visualization
 export const useVisualization = (
-  input: IReadVisualizationRequest,
-  options?: UseQueryOptions<IReadVisualizationResponse, Error>,
+	input: IReadVisualizationRequest,
+	options?: UseQueryOptions<IReadVisualizationResponse, Error>,
 ) => {
-  return useQuery<IReadVisualizationResponse, Error>({
-    queryKey: ["visualization", input.id],
-    queryFn: () => VisualizationService.readVisualization(input),
-    ...options,
-  });
+	return useQuery<IReadVisualizationResponse, Error>({
+		queryKey: ["visualization", input.id],
+		queryFn: () => VisualizationService.readVisualization(input),
+		...options,
+	});
 };
 
 // Fetch visualization data
 export const useVisualizationData = (
-  input: IGetVisualizationDataRequest,
-  options?: UseQueryOptions<IGetVisualizationDataResponse, Error>,
+	input: IGetVisualizationDataRequest,
+	options?: Partial<UseQueryOptions<IGetVisualizationDataResponse, Error>>,
 ) => {
-  return useQuery<IGetVisualizationDataResponse, Error>({
-    queryKey: ["visualizationData", input.id],
-    queryFn: () => VisualizationService.getVisualizationData(input),
-    ...options,
-  });
+	return useQuery<IGetVisualizationDataResponse, Error>({
+		queryKey: ["visualizationData", input.id],
+		queryFn: () => VisualizationService.getVisualizationData(input),
+		...options,
+	});
 };
 
 // Fetch visualization templates
 export const useVisualizationTemplates = (
-  input: IGetVisualizationTemplatesRequest,
-  options?: UseQueryOptions<IGetVisualizationTemplatesResponse, Error>,
+	input: IGetVisualizationTemplatesRequest,
+	options?: UseQueryOptions<IGetVisualizationTemplatesResponse, Error>,
 ) => {
-  return useQuery<IGetVisualizationTemplatesResponse, Error>({
-    queryKey: ["visualizationTemplates", input],
-    queryFn: () => VisualizationService.getVisualizationTemplates(input),
-    ...options,
-  });
+	return useQuery<IGetVisualizationTemplatesResponse, Error>({
+		queryKey: ["visualizationTemplates", input],
+		queryFn: () => VisualizationService.getVisualizationTemplates(input),
+		...options,
+	});
 };

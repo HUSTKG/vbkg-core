@@ -1,0 +1,16 @@
+TIÊU ĐỀ: Bảo đảm an toàn, an ninh mạng trong thời gian các sự kiện quan trọng và các dịp lễ, tết năm 2021
+
+URL: https://sbv.gov.vn/vi/w/sbv427243
+
+------------------ NỘI DUNG ------------------
+
+Ngày 21/01/2021, Ngân hàng Nhà nước Việt Nam (NHNN) ban hành văn bản số 467/NHNN-CNTT yêu cầu các tổ chức tín dụng, chi nhánh ngân hàng nước ngoài, các tổ chức cung ứng dịch vụ trung gian thanh toán, bảo hiểm tiền gửi Việt Nam, Công ty cổ phần Thanh toán Quốc gia Việt Nam, Công ty Quản lý tài sản của các tổ chức tín dụng Việt Nam, Nhà máy In tiền Quốc gia bảo đảm an toàn, an ninh mạng trong thời gian các sự kiện quan trọng và các dịp lễ tết năm 2021.
+Theo văn bản này, để đảm bảo an toàn, an ninh hệ thống công nghệ thông tin cũng như bảo đảm an toàn hoạt động của các đơn vị trong thời gian diễn ra các sự kiện quan trọng của đất nước và dịp Tết Nguyên đán 2021, NHNN đề nghị các đơn vị triển khai thực hiện các công việc sau:
+Quán triệt và thực hiện nghiêm túc các chỉ đạo về bảo đảm an toàn thông tin của Thống đốc NHNN tại Chỉ thị số 01/CT-NHNN ngày 07/01/2021 về tổ chức thực hiện các nhiệm vụ trọng tâm của của ngành Ngân hàng năm 2021, công văn số 5138/NHNN-CNTT ngày 14/7/2020 về tăng cường bảo đảm an ninh, an toàn hệ thống thông tin ngành Ngân hàng. Nghiêm túc thực hiện các yêu cầu triển khai tại các công văn, thông báo về các chiến dịch tấn công mạng, các loại mã độc mới, các lỗ hổng an ninh bảo mật đối với hệ thống thông tin đã được NHNN và các đơn vị cảnh báo.
+Tăng cường các biện pháp giám sát, theo dõi hoạt động và nhật ký (log) của các hệ thống thông tin quan trọng như Corebanking, ATM, Internet Banking, Mobile Banking, các cổng, trang tin điện tử và hệ thống quan trọng khác để kịp thời phát hiện và xử lý sớm các cuộc tấn công có thể xảy ra và thông báo cho NHNN (Cục Công nghệ thông tin) nắm, phối hợp xử lý.
+Đồng thời, chủ động thực hiện hoặc thuê dịch vụ rà soát, đánh giá an toàn bảo mật các hệ thống thông tin, đặc biệt là các hệ thống thông tin quan trọng để kịp thời phát hiện và khắc phục các điểm yếu, gỡ bỏ phần mềm độc hại, phần mềm gián điệp, tấn công có chủ đích.
+Rà soát việc bảo đảm an toàn, an ninh mạng và hoạt động liên tục của các dịch vụ công nghệ thông tin do bên thứ 3 cung cấp cho các hệ thống thông tin cấp độ 3 trở lên, các hệ thống thông tin xử lý thông tin khách hàng và các hệ thống thông tin sử dụng dịch vụ điện toán đám mây theo quy định tại Thông tư 09/2020/TT-NHNN ngày 21/10/2020 của NHNN về bảo đảm an toàn hệ thống thông tin trong hoạt động ngân hàng.
+Cùng với đó, rà soát, kiểm tra bảo đảm sẵn sàng các phương án, kịch bản ứng cứu sự cố và dự phòng thảm họa cho các hệ thống thông tin quan trọng. Kiểm tra công tác sao lưu dữ liệu, ứng dụng quan trọng đảm bảo việc phục hồi khi cần thiết.
+Hoàn thành công tác sao lưu trước kỳ nghỉ Tết Nguyên đán. Cử cán bộ trực, xử lý, đảm bảo an ninh, an toàn các hệ thống thông tin và dịch vụ cung cấp cho khách hàng trong suốt thời gian nghỉ Tết. Bố trí cán bộ đến sớm, kiểm tra bảo đảm toàn bộ các hệ thống sẵn sàng hoạt động bình thường sau kỳ nghỉ Tết.
+Mặt khác, tăng cường tuyên truyền, phổ biến nâng cao nhận thức về an toàn thông tin cho các cán bộ, nhân viên tại đơn vị.
+CKH

@@ -1,29 +1,35 @@
-from typing import List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.security import HTTPBearer
 
-from app.api.deps import RequireKGEdit, RequireKGRead
+from app.api.deps import RequireKGEdit, RequireKGRead, validate_rate_limits
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
-from app.schemas.domain import (CreateDomainRequest, CreateEntityTypeRequest,
-                                CreateRelationshipTypeRequest,
+from app.schemas.domain import (BulkOntologyClassAssociationRequest,
+                                BulkOntologyPropertyAssociationRequest,
+                                BulkOperationResponse, CreateDomainRequest,
                                 DomainDetailResponse, DomainResponse,
-                                DomainStatsResponse, EntityTypeResponse,
-                                RelationshipTypeResponse,
-                                TypeDomainMappingRequest,
-                                TypeValidationRequest, TypeValidationResponse,
-                                UpdateDomainRequest, UpdateEntityTypeRequest,
-                                UpdateRelationshipTypeRequest)
+                                DomainStatsResponse,
+                                OntologyClassDomainMappingRequest,
+                                OntologyClassResponse,
+                                OntologyPropertyDomainMappingRequest,
+                                OntologyPropertyResponse,
+                                OntologyValidationRequest,
+                                OntologyValidationResponse,
+                                UpdateDomainRequest)
 from app.services.domain import DomainService
 from app.utils.rate_limiter import RateLimitScope, get_rate_limiter
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(validate_rate_limits)],  # Add rate limiting
+        )
+
 security = HTTPBearer()
 
 # =============================================
 # DOMAIN ENDPOINTS
 # =============================================
-
 
 @router.post("/domains", response_model=DomainResponse, tags=["Domains"])
 async def create_domain(
@@ -57,14 +63,13 @@ async def create_domain(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get(
-    "/domains", response_model=PaginatedResponse[DomainResponse], tags=["Domains"]
-)
+@router.get("/domains", response_model=PaginatedResponse[DomainResponse], tags=["Domains"])
 async def search_domains(
     query: Optional[str] = Query(default=None, description="Search query"),
-    is_active: Optional[bool] = Query(
-        default=None, description="Filter by active status"
-    ),
+    is_active: Optional[bool] = Query(default=None, description="Filter by active status"),
+    has_ontology_classes: Optional[bool] = Query(default=None, description="Filter by having ontology classes"),
+    has_ontology_properties: Optional[bool] = Query(default=None, description="Filter by having ontology properties"),
+    ontology_namespace: Optional[str] = Query(default=None, description="Filter by ontology namespace"),
     limit: int = Query(default=50, le=200, description="Results per page"),
     skip: int = Query(default=0, ge=0, description="Results skip"),
     current_user: dict = Depends(RequireKGRead),
@@ -73,7 +78,13 @@ async def search_domains(
     """Search domains"""
 
     response = await domain_service.search_domains(
-        query=query, is_active=is_active, limit=limit, skip=skip
+        query=query, 
+        is_active=is_active,
+        has_ontology_classes=has_ontology_classes,
+        has_ontology_properties=has_ontology_properties,
+        ontology_namespace=ontology_namespace,
+        limit=limit, 
+        skip=skip
     )
 
     return PaginatedResponse(
@@ -88,20 +99,16 @@ async def search_domains(
     )
 
 
-@router.get(
-    "/domains/{domain_id}", response_model=DomainDetailResponse, tags=["Domains"]
-)
+@router.get("/domains/{domain_id}", response_model=DomainDetailResponse, tags=["Domains"])
 async def get_domain(
     domain_id: int,
-    include_types: bool = Query(
-        default=False, description="Include entity/relationship types"
-    ),
+    include_ontology: bool = Query(default=False, description="Include ontology classes/properties"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Get domain by ID with optional types"""
+    """Get domain by ID with optional ontology classes/properties"""
 
-    domain = await domain_service.get_domain(domain_id, include_types)
+    domain = await domain_service.get_domain(domain_id, include_ontology)
 
     if not domain:
         raise HTTPException(status_code=404, detail="Domain not found")
@@ -145,9 +152,7 @@ async def delete_domain(
     return {"message": "Domain deleted successfully"}
 
 
-@router.get(
-    "/domains/{domain_id}/stats", response_model=DomainStatsResponse, tags=["Domains"]
-)
+@router.get("/domains/{domain_id}/stats", response_model=ApiResponse[DomainStatsResponse], tags=["Domains"])
 async def get_domain_stats(
     domain_id: int,
     current_user: dict = Depends(RequireKGRead),
@@ -156,306 +161,184 @@ async def get_domain_stats(
     """Get domain statistics"""
 
     stats = await domain_service.get_domain_stats(domain_id)
-    return stats
-
+    return ApiResponse(
+        data=stats,
+        message="Domain statistics retrieved successfully",
+        status=200,
+    )
 
 # =============================================
-# ENTITY TYPE ENDPOINTS
+# ONTOLOGY CLASS ENDPOINTS
 # =============================================
 
-
-@router.post("/entity-types", response_model=EntityTypeResponse, tags=["Entity Types"])
-async def create_entity_type(
-    type_request: CreateEntityTypeRequest,
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Create a new entity type"""
-
-    try:
-        entity_type = await domain_service.create_entity_type(
-            type_request.dict(), current_user["id"]
-        )
-        return entity_type
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get(
-    "/entity-types",
-    response_model=PaginatedResponse[EntityTypeResponse],
-    tags=["Entity Types"],
-)
-async def search_entity_types(
+@router.get("/domains/{domain_id}/ontology-classes", response_model=PaginatedResponse[OntologyClassResponse], tags=["Ontology Classes"])
+async def get_domain_ontology_classes(
+    domain_id: int,
     query: Optional[str] = Query(default=None, description="Search query"),
-    domain_ids: Optional[List[int]] = Query(
-        default=None, description="Filter by domain IDs"
-    ),
-    is_mapped: Optional[bool] = Query(
-        default=None, description="Filter by mapped status"
-        ),
-    is_active: Optional[bool] = Query(
-        default=None, description="Filter by active status"
-    ),
+    is_custom: Optional[bool] = Query(default=None, description="Filter by custom classes"),
     include_usage: bool = Query(default=False, description="Include usage statistics"),
     limit: int = Query(default=50, le=200, description="Results per page"),
     skip: int = Query(default=0, ge=0, description="Results skip"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Search entity types"""
+    """Get ontology classes for a domain"""
 
-    response = await domain_service.search_entity_types(
+    response = await domain_service.get_ontology_classes_for_domain(
+        domain_id=domain_id,
         query=query,
-        domain_ids=domain_ids,
-        is_active=is_active,
-        is_mapped=is_mapped,
+        is_custom=is_custom,
         include_usage=include_usage,
         limit=limit,
         skip=skip,
     )
 
     return PaginatedResponse(
-        data=response["entity_types"],
+        data=response["ontology_classes"],
         meta=PaginatedMeta(
             limit=limit,
             skip=skip,
             total=response["total"],
         ),
-        message="Entity types retrieved successfully",
+        message="Ontology classes retrieved successfully",
         status=200,
     )
 
 
-@router.get(
-    "/entity-types/{type_id}", response_model=EntityTypeResponse, tags=["Entity Types"]
-)
-async def get_entity_type(
-    type_id: int,
-    include_domains: bool = Query(
-        default=False, description="Include associated domains"
-    ),
-    include_usage: bool = Query(default=False, description="Include usage statistics"),
-    current_user: dict = Depends(RequireKGRead),
-    domain_service: DomainService = Depends(),
-):
-    """Get entity type by ID"""
-
-    entity_type = await domain_service.get_entity_type(
-        type_id, include_domains, include_usage
-    )
-
-    if not entity_type:
-        raise HTTPException(status_code=404, detail="Entity type not found")
-
-    return entity_type
-
-
-@router.put(
-    "/entity-types/{type_id}", response_model=EntityTypeResponse, tags=["Entity Types"]
-)
-async def update_entity_type(
-    type_id: int,
-    update_request: UpdateEntityTypeRequest,
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Update entity type"""
-
-    try:
-        # Filter out None values
-        update_data = {k: v for k, v in update_request.dict().items() if v is not None}
-        entity_type = await domain_service.update_entity_type(
-            type_id, update_data, current_user["id"]
-        )
-        return entity_type
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.delete("/entity-types/{type_id}", tags=["Entity Types"])
-async def delete_entity_type(
-    type_id: int,
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Delete entity type"""
-
-    success = await domain_service.delete_entity_type(type_id, current_user["id"])
-
-    if not success:
-        raise HTTPException(status_code=404, detail="Entity type not found")
-
-    return {"message": "Entity type deleted successfully"}
-
-
-# =============================================
-# RELATIONSHIP TYPE ENDPOINTS
-# =============================================
-
-
-@router.post(
-    "/relationship-types",
-    response_model=RelationshipTypeResponse,
-    tags=["Relationship Types"],
-)
-async def create_relationship_type(
-    type_request: CreateRelationshipTypeRequest,
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Create a new relationship type"""
-
-    try:
-        relationship_type = await domain_service.create_relationship_type(
-            type_request.dict(), current_user["id"]
-        )
-        return relationship_type
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get(
-    "/relationship-types",
-    response_model=PaginatedResponse[RelationshipTypeResponse],
-    tags=["Relationship Types"],
-)
-async def search_relationship_types(
+@router.get("/ontology-classes", response_model=PaginatedResponse[OntologyClassResponse], tags=["Ontology Classes"])
+async def search_ontology_classes(
     query: Optional[str] = Query(default=None, description="Search query"),
-    domain_ids: Optional[List[int]] = Query(
-        default=None, description="Filter by domain IDs"
-    ),
-    source_entity_type_id: Optional[int] = Query(
-        default=None, description="Filter by source entity type"
-    ),
-    is_mapped: Optional[bool] = Query(
-        default=None, description="Filter by mapped status"
-        ),
-    target_entity_type_id: Optional[int] = Query(
-        default=None, description="Filter by target entity type"
-    ),
-    is_bidirectional: Optional[bool] = Query(
-        default=None, description="Filter by bidirectional"
-    ),
-    is_active: Optional[bool] = Query(
-        default=None, description="Filter by active status"
-    ),
+    domain_ids: Optional[List[int]] = Query(default=None, description="Filter by domain IDs"),
+    is_custom: Optional[bool] = Query(default=None, description="Filter by custom classes"),
+    parent_class_id: Optional[int] = Query(default=None, description="Filter by parent class"),
     include_usage: bool = Query(default=False, description="Include usage statistics"),
     limit: int = Query(default=50, le=200, description="Results per page"),
     skip: int = Query(default=0, ge=0, description="Results skip"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Search relationship types"""
+    """Search ontology classes"""
 
-    response = await domain_service.search_relationship_types(
+    response = await domain_service.search_ontology_classes(
         query=query,
         domain_ids=domain_ids,
-        source_entity_type_id=source_entity_type_id,
-        target_entity_type_id=target_entity_type_id,
-        is_bidirectional=is_bidirectional,
-        is_active=is_active,
-        is_mapped=is_mapped,
+        is_custom=is_custom,
+        parent_class_id=parent_class_id,
         include_usage=include_usage,
         limit=limit,
         skip=skip,
     )
 
     return PaginatedResponse(
-        data=response["relationship_types"],
+        data=response["ontology_classes"],
         meta=PaginatedMeta(
             limit=limit,
             skip=skip,
             total=response["total"],
         ),
-        message="Relationship types retrieved successfully",
+        message="Ontology classes retrieved successfully",
+        status=200,
+    )
+
+# =============================================
+# ONTOLOGY PROPERTY ENDPOINTS
+# =============================================
+
+@router.get("/domains/{domain_id}/ontology-properties", response_model=PaginatedResponse[OntologyPropertyResponse], tags=["Ontology Properties"])
+async def get_domain_ontology_properties(
+    domain_id: int,
+    query: Optional[str] = Query(default=None, description="Search query"),
+    property_type: Optional[str] = Query(default=None, description="Filter by property type"),
+    domain_class_id: Optional[int] = Query(default=None, description="Filter by domain class"),
+    range_class_id: Optional[int] = Query(default=None, description="Filter by range class"),
+    is_custom: Optional[bool] = Query(default=None, description="Filter by custom properties"),
+    include_usage: bool = Query(default=False, description="Include usage statistics"),
+    limit: int = Query(default=50, le=200, description="Results per page"),
+    skip: int = Query(default=0, ge=0, description="Results skip"),
+    current_user: dict = Depends(RequireKGRead),
+    domain_service: DomainService = Depends(),
+):
+    """Get ontology properties for a domain"""
+
+    response = await domain_service.get_ontology_properties_for_domain(
+        domain_id=domain_id,
+        query=query,
+        property_type=property_type,
+        domain_class_id=domain_class_id,
+        range_class_id=range_class_id,
+        is_custom=is_custom,
+        include_usage=include_usage,
+        limit=limit,
+        skip=skip,
+    )
+
+    return PaginatedResponse(
+        data=response["ontology_properties"],
+        meta=PaginatedMeta(
+            limit=limit,
+            skip=skip,
+            total=response["total"],
+        ),
+        message="Ontology properties retrieved successfully",
         status=200,
     )
 
 
-@router.get(
-    "/relationship-types/{type_id}",
-    response_model=RelationshipTypeResponse,
-    tags=["Relationship Types"],
-)
-async def get_relationship_type(
-    type_id: int,
-    include_domains: bool = Query(
-        default=False, description="Include associated domains"
-    ),
+@router.get("/ontology-properties", response_model=PaginatedResponse[OntologyPropertyResponse], tags=["Ontology Properties"])
+async def search_ontology_properties(
+    query: Optional[str] = Query(default=None, description="Search query"),
+    domain_ids: Optional[List[int]] = Query(default=None, description="Filter by domain IDs"),
+    property_type: Optional[str] = Query(default=None, description="Filter by property type"),
+    domain_class_id: Optional[int] = Query(default=None, description="Filter by domain class"),
+    range_class_id: Optional[int] = Query(default=None, description="Filter by range class"),
+    is_custom: Optional[bool] = Query(default=None, description="Filter by custom properties"),
     include_usage: bool = Query(default=False, description="Include usage statistics"),
+    limit: int = Query(default=50, le=200, description="Results per page"),
+    skip: int = Query(default=0, ge=0, description="Results skip"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Get relationship type by ID"""
+    """Search ontology properties"""
 
-    relationship_type = await domain_service.get_relationship_type(
-        type_id, include_domains, include_usage
+    response = await domain_service.search_ontology_properties(
+        query=query,
+        domain_ids=domain_ids,
+        property_type=property_type,
+        domain_class_id=domain_class_id,
+        range_class_id=range_class_id,
+        is_custom=is_custom,
+        include_usage=include_usage,
+        limit=limit,
+        skip=skip,
     )
 
-    if not relationship_type:
-        raise HTTPException(status_code=404, detail="Relationship type not found")
-
-    return relationship_type
-
-
-@router.put(
-    "/relationship-types/{type_id}",
-    response_model=RelationshipTypeResponse,
-    tags=["Relationship Types"],
-)
-async def update_relationship_type(
-    type_id: int,
-    update_request: UpdateRelationshipTypeRequest,
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Update relationship type"""
-
-    try:
-        # Filter out None values
-        update_data = {k: v for k, v in update_request.dict().items() if v is not None}
-        relationship_type = await domain_service.update_relationship_type(
-            type_id, update_data, current_user["id"]
-        )
-        return relationship_type
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-
-@router.delete("/relationship-types/{type_id}", tags=["Relationship Types"])
-async def delete_relationship_type(
-    type_id: int,
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Delete relationship type"""
-
-    success = await domain_service.delete_relationship_type(type_id, current_user["id"])
-
-    if not success:
-        raise HTTPException(status_code=404, detail="Relationship type not found")
-
-    return {"message": "Relationship type deleted successfully"}
-
+    return PaginatedResponse(
+        data=response["ontology_properties"],
+        meta=PaginatedMeta(
+            limit=limit,
+            skip=skip,
+            total=response["total"],
+        ),
+        message="Ontology properties retrieved successfully",
+        status=200,
+    )
 
 # =============================================
 # DOMAIN MAPPING ENDPOINTS
 # =============================================
 
-
-@router.post("/entity-types/{type_id}/domains", tags=["Domain Mappings"])
-async def add_entity_type_to_domain(
-    type_id: int,
-    mapping_request: TypeDomainMappingRequest,
+@router.post("/ontology-classes/{class_id}/domains", tags=["Domain Mappings"])
+async def add_ontology_class_to_domain(
+    class_id: int,
+    mapping_request: OntologyClassDomainMappingRequest,
     current_user: dict = Depends(RequireKGEdit),
     domain_service: DomainService = Depends(),
 ):
-    """Add entity type to domain"""
+    """Add ontology class to domain"""
 
     try:
-        mapping = await domain_service.add_entity_type_to_domain(
-            type_id=type_id,
+        mapping = await domain_service.add_ontology_class_to_domain(
+            class_id=class_id,
             domain_id=mapping_request.domain_id,
             is_primary=mapping_request.is_primary,
             config=mapping_request.domain_specific_config,
@@ -465,35 +348,35 @@ async def add_entity_type_to_domain(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/entity-types/{type_id}/domains/{domain_id}", tags=["Domain Mappings"])
-async def remove_entity_type_from_domain(
-    type_id: int,
+@router.delete("/ontology-classes/{class_id}/domains/{domain_id}", tags=["Domain Mappings"])
+async def remove_ontology_class_from_domain(
+    class_id: int,
     domain_id: int,
     current_user: dict = Depends(RequireKGEdit),
     domain_service: DomainService = Depends(),
 ):
-    """Remove entity type from domain"""
+    """Remove ontology class from domain"""
 
-    success = await domain_service.remove_entity_type_from_domain(type_id, domain_id)
+    success = await domain_service.remove_ontology_class_from_domain(class_id, domain_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="Mapping not found")
 
-    return {"message": "Entity type removed from domain successfully"}
+    return {"message": "Ontology class removed from domain successfully"}
 
 
-@router.post("/relationship-types/{type_id}/domains", tags=["Domain Mappings"])
-async def add_relationship_type_to_domain(
-    type_id: int,
-    mapping_request: TypeDomainMappingRequest,
+@router.post("/ontology-properties/{property_id}/domains", tags=["Domain Mappings"])
+async def add_ontology_property_to_domain(
+    property_id: int,
+    mapping_request: OntologyPropertyDomainMappingRequest,
     current_user: dict = Depends(RequireKGEdit),
     domain_service: DomainService = Depends(),
 ):
-    """Add relationship type to domain"""
+    """Add ontology property to domain"""
 
     try:
-        mapping = await domain_service.add_relationship_type_to_domain(
-            type_id=type_id,
+        mapping = await domain_service.add_ontology_property_to_domain(
+            property_id=property_id,
             domain_id=mapping_request.domain_id,
             is_primary=mapping_request.is_primary,
             config=mapping_request.domain_specific_config,
@@ -503,115 +386,145 @@ async def add_relationship_type_to_domain(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete(
-    "/relationship-types/{type_id}/domains/{domain_id}", tags=["Domain Mappings"]
-)
-async def remove_relationship_type_from_domain(
-    type_id: int,
+@router.delete("/ontology-properties/{property_id}/domains/{domain_id}", tags=["Domain Mappings"])
+async def remove_ontology_property_from_domain(
+    property_id: int,
     domain_id: int,
     current_user: dict = Depends(RequireKGEdit),
     domain_service: DomainService = Depends(),
 ):
-    """Remove relationship type from domain"""
+    """Remove ontology property from domain"""
 
-    success = await domain_service.remove_relationship_type_from_domain(
-        type_id, domain_id
-    )
+    success = await domain_service.remove_ontology_property_from_domain(property_id, domain_id)
 
     if not success:
         raise HTTPException(status_code=404, detail="Mapping not found")
 
-    return {"message": "Relationship type removed from domain successfully"}
-
+    return {"message": "Ontology property removed from domain successfully"}
 
 # =============================================
 # VALIDATION ENDPOINTS
 # =============================================
 
-
-@router.post("/validate", response_model=TypeValidationResponse, tags=["Validation"])
-async def validate_type_constraints(
-    validation_request: TypeValidationRequest,
+@router.post("/validate-ontology", response_model=OntologyValidationResponse, tags=["Validation"])
+async def validate_ontology_constraints(
+    validation_request: OntologyValidationRequest,
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Validate relationship type constraints"""
+    """Validate ontology property constraints"""
 
-    if not all(
-        [
-            validation_request.relationship_type_id,
-            validation_request.source_entity_type_id,
-            validation_request.target_entity_type_id,
-        ]
-    ):
+    if not all([
+        validation_request.ontology_property_id,
+        validation_request.source_ontology_class_id,
+        validation_request.target_ontology_class_id,
+    ]):
         raise HTTPException(
             status_code=400,
-            detail="relationship_type_id, source_entity_type_id, and target_entity_type_id are required",
+            detail="ontology_property_id, source_ontology_class_id, and target_ontology_class_id are required",
         )
 
-    validation_result = await domain_service.validate_relationship_type_constraints(
-        validation_request.relationship_type_id,
-        validation_request.source_entity_type_id,
-        validation_request.target_entity_type_id,
+    validation_result = await domain_service.validate_ontology_property_constraints(
+        validation_request.ontology_property_id,
+        validation_request.source_ontology_class_id,
+        validation_request.target_ontology_class_id,
     )
 
     return validation_result
 
+# =============================================
+# SUGGESTION ENDPOINTS
+# =============================================
+
+@router.post("/suggest/ontology-classes", response_model=ApiResponse[List[Dict]], tags=["Suggestions"])
+async def suggest_ontology_classes(
+    text: str,
+    domain_id: Optional[int] = Query(default=None, description="Domain ID filter"),
+    max_suggestions: int = Query(default=5, ge=1, le=20, description="Maximum suggestions"),
+    current_user: dict = Depends(RequireKGRead),
+    domain_service: DomainService = Depends(),
+):
+    """Suggest ontology classes for text"""
+
+    suggestions = await domain_service.suggest_ontology_classes_for_text(
+        text=text,
+        domain_id=domain_id,
+        max_suggestions=max_suggestions,
+    )
+
+    return ApiResponse(
+        data=suggestions,
+        message="Ontology class suggestions retrieved successfully",
+        status=200,
+    )
+
+
+@router.post("/suggest/ontology-properties", response_model=ApiResponse[List[Dict]], tags=["Suggestions"])
+async def suggest_ontology_properties(
+    source_class_id: int,
+    target_class_id: Optional[int] = Query(default=None, description="Target class ID"),
+    domain_id: Optional[int] = Query(default=None, description="Domain ID filter"),
+    max_suggestions: int = Query(default=5, ge=1, le=20, description="Maximum suggestions"),
+    current_user: dict = Depends(RequireKGRead),
+    domain_service: DomainService = Depends(),
+):
+    """Suggest ontology properties for classes"""
+
+    suggestions = await domain_service.suggest_ontology_properties_for_classes(
+        source_class_id=source_class_id,
+        target_class_id=target_class_id,
+        domain_id=domain_id,
+        max_suggestions=max_suggestions,
+    )
+
+    return ApiResponse(
+        data=suggestions,
+        message="Ontology property suggestions retrieved successfully",
+        status=200,
+    )
 
 # =============================================
 # UTILITY ENDPOINTS
 # =============================================
 
-
-@router.get(
-    "/entity-types/by-domain/{domain_name}",
-    response_model=ApiResponse[List[EntityTypeResponse]],
-    tags=["Utilities"],
-)
-async def get_entity_types_by_domain(
+@router.get("/domains/by-name/{domain_name}/ontology-classes", response_model=ApiResponse[List[OntologyClassResponse]], tags=["Utilities"])
+async def get_ontology_classes_by_domain_name(
     domain_name: str,
-    primary_only: bool = Query(default=False, description="Only primary entity types"),
+    primary_only: bool = Query(default=False, description="Only primary ontology classes"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Get entity types for a specific domain by name"""
+    """Get ontology classes for a specific domain by name"""
 
-    # This would use the database function created in migration
     from app.core.supabase import get_supabase
 
     supabase = await get_supabase()
 
     # Call the database function
     response = await supabase.rpc(
-        "get_domain_entity_types", {"domain_name": domain_name}
+        "get_domain_ontology_classes", {"domain_name": domain_name}
     ).execute()
 
-    entity_types = response.data
+    ontology_classes = response.data
 
     if primary_only:
-        entity_types = [et for et in entity_types if et.get("is_primary")]
+        ontology_classes = [oc for oc in ontology_classes if oc.get("is_primary")]
 
     return ApiResponse(
-        data=[EntityTypeResponse(**et) for et in entity_types],
-        message="Entity types retrieved successfully",
+        data=[OntologyClassResponse(**oc) for oc in ontology_classes],
+        message="Ontology classes retrieved successfully",
         status=200,
     )
 
 
-@router.get(
-    "/relationship-types/by-domain/{domain_name}",
-    response_model=List[RelationshipTypeResponse],
-    tags=["Utilities"],
-)
-async def get_relationship_types_by_domain(
+@router.get("/domains/by-name/{domain_name}/ontology-properties", response_model=ApiResponse[List[OntologyPropertyResponse]], tags=["Utilities"])
+async def get_ontology_properties_by_domain_name(
     domain_name: str,
-    primary_only: bool = Query(
-        default=False, description="Only primary relationship types"
-    ),
+    primary_only: bool = Query(default=False, description="Only primary ontology properties"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Get relationship types for a specific domain by name"""
+    """Get ontology properties for a specific domain by name"""
 
     from app.core.supabase import get_supabase
 
@@ -619,185 +532,114 @@ async def get_relationship_types_by_domain(
 
     # Call the database function
     response = await supabase.rpc(
-        "get_domain_relationship_types", {"domain_name": domain_name}
+        "get_domain_ontology_properties", {"domain_name": domain_name}
     ).execute()
 
-    relationship_types = response.data
+    ontology_properties = response.data
 
     if primary_only:
-        relationship_types = [rt for rt in relationship_types if rt.get("is_primary")]
+        ontology_properties = [op for op in ontology_properties if op.get("is_primary")]
 
-    return relationship_types
+    return ApiResponse(
+        data=[OntologyPropertyResponse(**op) for op in ontology_properties],
+        message="Ontology properties retrieved successfully",
+        status=200,
+    )
 
 
-@router.get("/compatible-relationships", tags=["Utilities"])
-async def get_compatible_relationships(
-    source_entity_type_id: int = Query(..., description="Source entity type ID"),
-    target_entity_type_id: Optional[int] = Query(
-        default=None, description="Target entity type ID"
-    ),
-    domain_ids: Optional[List[int]] = Query(
-        default=None, description="Filter by domain IDs"
-    ),
+@router.get("/compatible-ontology-properties", tags=["Utilities"])
+async def get_compatible_ontology_properties(
+    source_class_id: int = Query(..., description="Source ontology class ID"),
+    target_class_id: Optional[int] = Query(default=None, description="Target ontology class ID"),
+    domain_ids: Optional[List[int]] = Query(default=None, description="Filter by domain IDs"),
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
-    """Get relationship types compatible with given entity types"""
+    """Get ontology properties compatible with given classes"""
 
-    # Search relationship types that allow the given source/target entity types
+    # Search ontology properties that allow the given source/target classes
     filters = {
-        "source_entity_type_id": source_entity_type_id,
+        "domain_class_id": source_class_id,
         "domain_ids": domain_ids,
-        "is_active": True,
         "limit": 100,
     }
 
-    if target_entity_type_id:
-        filters["target_entity_type_id"] = target_entity_type_id
+    if target_class_id:
+        filters["range_class_id"] = target_class_id
 
-    compatible_relationships = await domain_service.search_relationship_types(**filters)
+    compatible_properties = await domain_service.search_ontology_properties(**filters)
 
     return {
-        "source_entity_type_id": source_entity_type_id,
-        "target_entity_type_id": target_entity_type_id,
-        "compatible_relationships": compatible_relationships["relationship_types"],
+        "source_class_id": source_class_id,
+        "target_class_id": target_class_id,
+        "compatible_properties": compatible_properties["ontology_properties"],
     }
 
+# =============================================
+# BULK OPERATIONS
+# =============================================
+
+@router.post("/bulk/ontology-classes/associate", response_model=BulkOperationResponse, tags=["Bulk Operations"])
+async def bulk_associate_ontology_classes(
+    request: BulkOntologyClassAssociationRequest,
+    current_user: dict = Depends(RequireKGEdit),
+    domain_service: DomainService = Depends(),
+):
+    """Bulk associate ontology classes with domain"""
+
+    # Check admin permissions for bulk operations
+    user_roles = current_user.get("roles", [])
+    if not any(role in ["admin", "editor"] for role in user_roles):
+        raise HTTPException(
+            status_code=403, detail="Admin or Editor role required for bulk operations"
+        )
+
+    result = await domain_service.bulk_associate_ontology_classes(
+        ontology_class_ids=request.ontology_classes,
+        domain_id=request.domain_id,
+        is_primary=request.is_primary,
+        config=request.config,
+        user_id=current_user["id"],
+    )
+
+    return result
+
+
+@router.post("/bulk/ontology-properties/associate", response_model=BulkOperationResponse, tags=["Bulk Operations"])
+async def bulk_associate_ontology_properties(
+    request: BulkOntologyPropertyAssociationRequest,
+    current_user: dict = Depends(RequireKGEdit),
+    domain_service: DomainService = Depends(),
+):
+    """Bulk associate ontology properties with domain"""
+
+    # Check admin permissions for bulk operations
+    user_roles = current_user.get("roles", [])
+    if not any(role in ["admin", "editor"] for role in user_roles):
+        raise HTTPException(
+            status_code=403, detail="Admin or Editor role required for bulk operations"
+        )
+
+    result = await domain_service.bulk_associate_ontology_properties(
+        ontology_property_ids=request.ontology_properties,
+        domain_id=request.domain_id,
+        is_primary=request.is_primary,
+        config=request.config,
+        user_id=current_user["id"],
+    )
+
+    return result
 
 # =============================================
 # ANALYTICS ENDPOINTS
 # =============================================
 
-
-@router.get("/analytics/overview", tags=["Analytics"])
+@router.get("/analytics/overview", response_model=Dict[str, Any], tags=["Analytics"])
 async def get_domain_analytics_overview(
     current_user: dict = Depends(RequireKGRead),
     domain_service: DomainService = Depends(),
 ):
     """Get domain system analytics overview"""
 
-    from app.core.supabase import get_supabase
-
-    supabase = await get_supabase()
-
-    # Get counts for overview
-    domains_count = (
-        await supabase.table("domains")
-        .select("*", count="exact")
-        .eq("is_active", True)
-        .execute()
-    ).count
-    entity_types_count = (
-        await supabase.table("entity_types")
-        .select("*", count="exact")
-        .eq("is_active", True)
-        .execute()
-    ).count
-    relationship_types_count = (
-        await supabase.table("relationship_types")
-        .select("*", count="exact")
-        .eq("is_active", True)
-        .execute()
-    ).count
-
-    # Get domain distribution
-    domains = await domain_service.search_domains(is_active=True, limit=100)
-
-    domain_stats = []
-    for domain in domains["domains"]:
-        stats = await domain_service.get_domain_stats(domain["id"])
-        stats["domain_name"] = domain["name"]
-        stats["display_name"] = domain["display_name"]
-        domain_stats.append(stats)
-
-    return {
-        "overview": {
-            "total_domains": domains_count,
-            "total_entity_types": entity_types_count,
-            "total_relationship_types": relationship_types_count,
-            "active_domains": len([d for d in domains["domains"] if d["is_active"]]),
-        },
-        "domain_stats": domain_stats,
-        "generated_at": datetime.now().isoformat(),
-    }
-
-
-# =============================================
-# BULK OPERATIONS
-# =============================================
-
-
-@router.post("/bulk/entity-types", tags=["Bulk Operations"])
-async def bulk_create_entity_types(
-    entity_types: List[CreateEntityTypeRequest],
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Bulk create entity types"""
-
-    # Check admin permissions for bulk operations
-    user_roles = current_user.get("roles", [])
-    if not any(role in ["admin", "editor"] for role in user_roles):
-        raise HTTPException(
-            status_code=403, detail="Admin or Editor role required for bulk operations"
-        )
-
-    results = []
-    errors = []
-
-    for i, entity_type_request in enumerate(entity_types):
-        try:
-            entity_type = await domain_service.create_entity_type(
-                entity_type_request.dict(), current_user["id"]
-            )
-            results.append(entity_type)
-        except Exception as e:
-            errors.append(
-                {"index": i, "name": entity_type_request.name, "error": str(e)}
-            )
-
-    return {
-        "created": results,
-        "errors": errors,
-        "total_attempted": len(entity_types),
-        "successful": len(results),
-        "failed": len(errors),
-    }
-
-
-@router.post("/bulk/relationship-types", tags=["Bulk Operations"])
-async def bulk_create_relationship_types(
-    relationship_types: List[CreateRelationshipTypeRequest],
-    current_user: dict = Depends(RequireKGEdit),
-    domain_service: DomainService = Depends(),
-):
-    """Bulk create relationship types"""
-
-    # Check admin permissions for bulk operations
-    user_roles = current_user.get("roles", [])
-    if not any(role in ["admin", "editor"] for role in user_roles):
-        raise HTTPException(
-            status_code=403, detail="Admin or Editor role required for bulk operations"
-        )
-
-    results = []
-    errors = []
-
-    for i, relationship_type_request in enumerate(relationship_types):
-        try:
-            relationship_type = await domain_service.create_relationship_type(
-                relationship_type_request.dict(), current_user["id"]
-            )
-            results.append(relationship_type)
-        except Exception as e:
-            errors.append(
-                {"index": i, "name": relationship_type_request.name, "error": str(e)}
-            )
-
-    return {
-        "created": results,
-        "errors": errors,
-        "total_attempted": len(relationship_types),
-        "successful": len(results),
-        "failed": len(errors),
-    }
+    analytics = await domain_service.get_domain_analytics_overview()
+    return analytics

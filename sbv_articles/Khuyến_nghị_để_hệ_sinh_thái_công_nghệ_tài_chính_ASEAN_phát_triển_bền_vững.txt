@@ -1,0 +1,38 @@
+TIÊU ĐỀ: Khuyến nghị để hệ sinh thái công nghệ tài chính ASEAN phát triển bền vững
+
+URL: https://sbv.gov.vn/vi/w/sbv455438
+
+------------------ NỘI DUNG ------------------
+
+Khu vực Đông Nam Á được đánh giá là nơi có hoạt động công nghệ tài chính (Fintech), hoạt động thương mại điện tử cũng như các hoạt động thanh toán trên điện thoại di động phát triển nhanh và năng động nhất thế giới. Sự phát triển của công nghệ thông tin trong kỷ nguyên số với nhiều sản phẩm, mô hình, dịch vụ tài chính mới, hiện đại, đặc biệt cùng với lợi thế dân số trẻ và sở thích sử dụng điện thoại thông minh cùng số giờ truy cập Internet cao nhất thế giới khiến khu vực này được dự đoán có nền kinh tế Internet năng động nhất toàn cầu.
+Hình ảnh minh họa (nguồn Internet)
+Khi việc sử dụng điện thoại di động và Internet tăng lên thì người dùng và các tổ chức liên quan đến sản phẩm, dịch vụ cung cấp trực tuyến cũng phải đối mặt nhiều hơn với các nguy cơ bị tấn công mạng. Trong đó, tội phạm mạng trong lĩnh vực tài chính nổi lên như một thách thức với các cơ quan quản lý, các nhà hoạch định chính sách trong việc đảm bảo an ninh, an toàn các giao dịch tài chính, kiểm soát, phòng ngừa rủi ro và bảo vệ quyền lợi người tiêu dùng. Báo cáo bảo mật X-force 2020 do IBM thực hiện trên cơ sở phân tích và theo dõi hơn 150 tỷ sự kiện bảo mật hàng ngày tại hơn 130 quốc gia trên thế giới cho thấy lĩnh vực tài chính là mục tiêu xếp thứ hai của các nhóm tin tặc (hacker) sau ngành sản xuất và cung cấp năng lượng
+1
+. Tại Việt Nam, theo BKAV, Covid-19 đã làm gia tăng các cuộc tấn công mạng trong năm 2020 và xu hướng tấn công trong năm 2021 sẽ là các giao dịch trên điện thoại di động
+2
+.
+Mới đây, trong một nghiên cứu về an ninh mạng công bố vào đầu năm 2021, Paypal (
+một công ty hoạt động trong lĩnh vực thương mại điện tử
+) đã tiến hành khảo sát thực trạng về an toàn, an ninh mạng khu vực công nghệ tài chính tại ASEAN.
+Kết quả khảo sát cho thấy, các nước khu vực ASEAN nơi có hệ sinh thái Fintech phát triển như Indonexia, Việt Nam, Singapore… cũng đã nhận thức được những thách thức về bảo đảm an ninh, an toàn mạng đối với khu vực Fintech bởi đây là nơi lưu giữ và xử lý khối lượng lớn thông tin người dùng, liên quan đến khối lượng lớn tài sản của người dân trong khi các quy định về an toàn, bảo mật công nghệ thông tin chưa nghiêm ngặt như đối với hệ thống ngân hàng. Để hệ sinh thái Fintech phát triển bền vững và an toàn, Chính phủ các quốc gia Đông Nam Á, tùy theo điều kiện từng nước, đã có những chính sách và quy định khá đồng bộ đối với khu vực này như xây dựng cơ chế quản lý thử nghiệm có kiểm soát (sandbox) cho hoạt động Fintech, quy định cơ chế đảm bảo an ninh, an toàn mạng, triển khai nhiều chương trình đầu tư, đào tạo, phát triển nguồn nhân lực công nghệ thông tin, ưu tiên ngân sách quốc gia cho các kế hoạch đảm bảo an ninh mạng, tổ chức truyền thông, giáo dục nâng cao kiến thức về tài chính và an ninh mạng,… Tuy nhiên, mức độ triển khai chính sách giữa các nước vẫn còn khoảng cách lớn đòi hỏi có sự phối hợp chặt chẽ và thống nhất hơn ở tầm khu vực.
+Trên cơ sở khảo sát, Paypal đã đưa ra sáu khuyến nghị chính để hệ sinh thái công nghệ tài chính ASEAN phát triển bền vững và tăng cường khả năng phòng, chống các mối nguy trên không gian mạng, đó là:
+Một là, mỗi nước cần ban hành quy định pháp lý về an ninh mạng cho lĩnh vực Fintech.
+Gần 1/3 các công ty được khảo sát cho rằng các yêu cầu tuân thủ là động lực chính cho các khoản đầu tư của họ vào an ninh mạng. Tuy nhiên, điều quan trọng cần lưu ý là sự tuân thủ và bảo mật không phải lúc nào cũng song hành cùng nhau. Do đó, ASEAN cần thoát khỏi cách tiếp cận mang tính nguyên tắc để khuyến khích đầu tư vào an ninh mạng dựa trên mức độ rủi ro và mức độ phức tạp của các dịch vụ tài chính.
+Hai là, ASEAN cần áp dụng các chính sách đảm bảo an ninh mạng mạnh mẽ ở cấp độ khu vực và phù hợp với tiêu chuẩn an ninh toàn cầu
+. Lĩnh vực Fintech của ASEAN có cơ hội gặt hái thành công từ sự phát triển năng động của khu vực; tuy nhiên, điều này chỉ có thể đạt được nếu các quy định và tiêu chuẩn về an ninh mạng trên khu vực được chuẩn hóa. Các nguy cơ trên không gian mạng là không biên giới và việc đối phó với nó đòi hỏi cách tiếp cận mang tính hợp tác nhiều hơn; theo đó, ASEAN có thể xem xét xây dựng một khung khổ quy định về an ninh mạng trong khu vực phù hợp với các tiêu chuẩn và thông lệ quốc tế, khung khổ này cũng cho phép các nước có thể trao đổi nếu có giải pháp bảo vệ không gian mạng sáng tạo và loại bỏ các quy trình cản trở áp dụng công nghệ.
+Ba là, thúc đẩy một cơ chế quản lý thử nghiệm (Sandbox) chung trong khu vực để chia sẻ kiến thức và quản lý rủi ro.
+Sandbox cho phép cơ quan quản lý mỗi nước thúc đẩy đổi mới sáng tạo hệ sinh thái Fintech của mình, đồng thời nắm bắt được những rủi ro tiềm ẩn của các sản phẩm mới trong khu vực để có cách thức bảo vệ người dùng và hệ thống tài chính trước những rủi ro đó. Sandbox này có thể là kênh liên lạc chung cho phép hợp tác và chia sẻ thông tin giữa các nước trong khu vực để công ty Fintech mỗi nước có thể học hỏi kinh nghiệm và tìm kiếm cơ hội hợp tác kinh doanh cũng như để phòng tránh rủi ro; trong dài hạn, đây sẽ là kênh để các công ty Fintech thử nghiệm sản phẩm, giải pháp của họ trên cơ sở “khẩu vị” người tiêu dùng ASEAN.
+Bốn là, đầu tư phát triển nguồn nhân lực an ninh mạng.
+Khảo sát của Paypal cho thấy hơn 1/4 các công ty Fintech không có chuyên gia chuyên trách để xử lý các vấn đề liên quan đến an ninh mạng. Vì vậy, cần có sự hợp tác chặt chẽ giữa khu vực nhà nước và tư nhân để phát triển đội ngũ chuyên gia an ninh mạng đáp ứng yêu cầu với chi phí đầu tư “rẻ” hơn và hiệu quả hơn
+Năm là, thiết lập chương trình đào tạo tổng thể để nâng cao nhận thức của người dân và doanh nghiệp về an ninh mạng.
+Thực tế là ngay cả những hệ thống bảo vệ tinh vi nhất, cơ sở hạ tầng tiên tiến nhất với quy định nghiêm ngặt nhất cũng không thể bảo vệ người dùng cuối thiếu hiểu biết về an ninh mạng; đặc biệt những người tiêu dùng mới làm quen với số hóa sẽ dễ bị tấn công và lừa đảo hơn trên môi trường mạng. Vì vậy, cần có sự phối hợp chặt chẽ giữa nhà nước, doanh nghiệp và các cơ sở đào tạo để nâng cao nhận thức của người dùng về an ninh mạng và trang bị cho họ kiến thức, kỹ năng bảo vệ mình trước các mối nguy này. Chính phủ các nước ASEAN có thể cùng thiết lập một kho dữ liệu thông tin về rủi ro trên không gian mạng để chia sẻ, trao đổi hay cảnh báo.
+Cuối cùng, khuyến khích hợp tác công – tư trong nghiên cứu, tuyển dụng và chia sẻ thông tin.
+Hoạt động bảo vệ an toàn, an ninh mạng nên có sự kết hợp giữa khu vực công và tư để các bên có thể chia sẻ thông tin, kinh nghiệm xử lý hay trao đổi nhu cầu về nhân lực, nhu cầu đào tạo… đồng thời, giúp thúc đẩy hợp tác trong nghiên cứu, tập hợp chuyên gia, nhà khoa học trong cộng đồng. Sự hợp tác công – tư hiệu quả cũng là phương thức hiệu quả trong xây dựng các quy định, giải pháp, công nghệ liên quan đến bảo vệ an ninh mạng, giúp các nước và khu vực xây dựng và bảo vệ hệ sinh thái Fintech của mình tốt hơn trước những rủi ro./.
+MĐ-VA
+Nguồn: Paypal (2021), Fintech Cybersecurity (Highlights): An Asean Outlook
+1
+https://www.ibm.com/security/data-breach/threat-intelligence
+2
+BKAV,
+Tổng kết an ninh mạng năm 2020 và dự báo 2021
+, tháng 01/2021.

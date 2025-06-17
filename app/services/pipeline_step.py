@@ -627,7 +627,7 @@ class PipelineStepService:
                     "entity_types", ["PERSON", "ORG", "LOCATION"]
                 ),
                 "relation_types": step_custom_config.get("relation_types", []),
-                "confidence_threshold": max(0.7, trust_score),
+                "confidence_threshold": 0.7,
                 **step_custom_config,
             }
 
@@ -682,7 +682,7 @@ class PipelineStepService:
                 **base_config,
                 "enrichment_sources": step_custom_config.get("enrichment_sources", []),
                 "enrichment_types": step_custom_config.get(
-                    "enrichment_types", ["attributes"]
+                    "enrichment_types", ["embeddings", "conflict_detection"]
                 ),
                 "enrichment_strategy": step_custom_config.get(
                     "enrichment_strategy", "append"
@@ -694,7 +694,7 @@ class PipelineStepService:
         elif step_type == "kg_writer":
             config = {
                 **base_config,
-                "graph_format": step_custom_config.get("graph_format", "rdf"),
+                "graph_format": step_custom_config.get("graph_format", "neo4j"),
                 "batch_size": step_custom_config.get("batch_size", 1000),
                 "validate_before_write": trust_score < 0.7,
                 "update_if_exists": "merge",

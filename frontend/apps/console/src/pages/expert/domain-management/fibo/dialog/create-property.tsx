@@ -1,28 +1,28 @@
 import { Dialog } from "@/components";
-import FormCreateFiboProperty from "../form/create-property";
-import { FIBOClass } from "@vbkg/types";
+import FormCreateOntologyProperty from "../form/create-property";
+import { OntologyClass } from "@vbkg/types";
 
-interface CreaeFiboPropertyDialogProps {
+interface CreaeOntologyPropertyDialogProps {
   isCreatePropertyModalOpen: boolean;
   setIsCreatePropertyModalOpen: (open: boolean) => void;
-  fiboClasses?: FIBOClass[];
+  ontologyClasses?: OntologyClass[];
 }
 
-export default function CreateFiboPropertyDialog({
+export default function CreateOntologyPropertyDialog({
   isCreatePropertyModalOpen,
   setIsCreatePropertyModalOpen,
-  fiboClasses = [],
-}: CreaeFiboPropertyDialogProps) {
+  ontologyClasses = [],
+}: CreaeOntologyPropertyDialogProps) {
   return (
     <Dialog
-      title="Create FIBO Property"
-      description="Tạo mới một FIBO property"
+      title="Create Ontology Property"
+      description="Tạo mới một Ontology property"
       open={isCreatePropertyModalOpen}
       size="2xl"
       showFooter={false}
       onOpenChange={setIsCreatePropertyModalOpen}
     >
-      <FormCreateFiboProperty fiboClasses={fiboClasses} />
+      <FormCreateOntologyProperty ontologyClasses={ontologyClasses} />
     </Dialog>
   );
 }

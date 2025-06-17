@@ -1,0 +1,20 @@
+TIÊU ĐỀ: Kế hoạch triển khai và công bố danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN
+
+URL: https://sbv.gov.vn/vi/w/sbv488612
+
+------------------ NỘI DUNG ------------------
+
+Ngày 03/3/2022, Thống đốc Ngân hàng Nhà nước Việt Nam (NHNN) đã ban hành Quyết định số 305/QĐ-NHNN về Kế hoạch triển khai và công bố danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN.
+Theo đó, mục đích của Kế hoạch này là xác định Danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN là cơ sở để triển khai các nhiệm vụ tiếp theo trong Kế hoạch của NHNN triển khai Nghị định số 47/2020/NĐ-CP ban hành kèm theo Quyết định số 1345/QĐ-NHNN ngày 04/08/2020 của NHNN; Thực hiện quản lý, kết nối và chia sẻ dữ liệu số của NHNN, tạo lập nền tảng cho việc xây dựng Chính phủ điện tử và hướng tới xây dựng Chính phủ số tại NHNN; Xác định trách nhiệm của các đơn vị thuộc NHNN trong việc tổ chức quản lý, kết nối và chia sẻ dữ liệu số của NHNN.
+Kế hoạch đề ra các nội dung triển khai và công bố danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN, cụ thể như sau:
+Tuyên truyền, phổ biến nội dung của Nghị định số 47/2020/NĐ-CP, các thông tin, văn bản có liên quan đến quản lý, kết nối và chia sẻ dữ liệu số của cơ quan nhà nước; Rà soát, đề xuất, kiến nghị cơ quan có thẩm quyền kịp thời sửa đổi, bổ sung, thay thế hoặc ban hành mới các văn bản quy phạm pháp luật liên quan đến quản lý, kết nối và chia sẻ dữ liệu số của cơ quan nhà nước để đảm bảo phù hợp, thống nhất với Nghị định số 47/2020/NĐ-CP; Phân công nhiệm vụ cụ thể cho các đơn vị có liên quan trong việc triển khai công bố Danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN.
+Xây dựng Danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN; Định kỳ rà soát, cập nhật, bổ sung danh mục khi có thay đổi; Công bố Danh mục dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN trên Cổng Thông tin điện tử của NHNN (http://www.sbv.gov.vn);
+Nội dung công bố gồm: Tên cơ sở dữ liệu; Dữ liệu; Chủ quản cơ sở dữ liệu; Định kỳ cung cấp; Thời hạn cung cấp; Cơ sở pháp lý thực hiện công bố thông tin; Địa chỉ chia sẻ dữ liệu.
+Cũng theo Kế hoạch này, dữ liệu chia sẻ theo hình thức chia sẻ dữ liệu mặc định của NHNN bao gồm:
+(1) Cơ sở dữ liệu Kết quả thực hiện nhiệm vụ khoa học và công nghệ được chia sẻ tại Cổng Thông tin Khoa học và Công nghệ ngành Ngân hàng (
+http://www.khoahocnganhang.org.vn
+) và Cơ sở dữ liệu Quốc gia về Khoa học và Công nghệ (http://sti.vista.gov.vn) .
+(2) Cơ sở dữ liệu Hệ thống thông tin quản lý văn bản và điều hành (edoc) được chia sẻ tại Cổng thông tin điện tử của Văn phòng Chính phủ (
+http://chinhphu.vn
+).
+CKH

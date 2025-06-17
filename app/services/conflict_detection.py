@@ -49,7 +49,84 @@ class ConflictDetectionService:
             else:
                 all_conflicts.extend(result)
 
-        return all_conflicts
+        # Filter out conflicts that already exist in database
+        filtered_conflicts = await self._filter_existing_conflicts(all_conflicts)
+
+        return filtered_conflicts
+
+    async def _filter_existing_conflicts(self, conflicts: List[ConflictCreate]) -> List[ConflictCreate]:
+        """Filter out conflicts that already exist in the database"""
+        
+        if not conflicts:
+            return conflicts
+
+        supabase = await get_supabase()
+        filtered_conflicts = []
+
+        # Get all existing conflicts in batch for efficiency
+        existing_conflicts_response = await supabase.table("conflicts").select(
+            "conflict_type, source_entity_id, target_entity_id, source_relationship_id, target_relationship_id"
+        ).in_("status", ["detected", "under_review", "resolved_auto", "resolved_manual"]).execute()
+
+        existing_conflicts = existing_conflicts_response.data
+
+        # Create lookup sets for different conflict types
+        duplicate_entity_conflicts = set()
+        relationship_conflicts = set()
+        attribute_conflicts = set()
+
+        for existing in existing_conflicts:
+            conflict_type = existing["conflict_type"]
+            
+            if conflict_type == "duplicate_entity":
+                # For duplicate entity conflicts, check both directions
+                if existing["source_entity_id"] and existing["target_entity_id"]:
+                    source_id = existing["source_entity_id"]
+                    target_id = existing["target_entity_id"]
+                    duplicate_entity_conflicts.add((source_id, target_id))
+                    duplicate_entity_conflicts.add((target_id, source_id))  # Both directions
+            
+            elif conflict_type in ["contradictory_relationship", "temporal_conflict"]:
+                if existing["source_relationship_id"] and existing["target_relationship_id"]:
+                    rel1_id = existing["source_relationship_id"]
+                    rel2_id = existing["target_relationship_id"]
+                    relationship_conflicts.add((rel1_id, rel2_id))
+                    relationship_conflicts.add((rel2_id, rel1_id))  # Both directions
+            
+            elif conflict_type in ["attribute_mismatch", "source_conflict"]:
+                if existing["source_entity_id"] and existing["target_entity_id"]:
+                    source_id = existing["source_entity_id"]
+                    target_id = existing["target_entity_id"]
+                    attribute_conflicts.add((conflict_type, source_id, target_id))
+                    attribute_conflicts.add((conflict_type, target_id, source_id))  # Both directions
+
+        # Filter new conflicts
+        for conflict in conflicts:
+            should_add = True
+            
+            if conflict.conflict_type == ConflictType.DUPLICATE_ENTITY:
+                if (conflict.source_entity_id and conflict.target_entity_id and
+                    (conflict.source_entity_id, conflict.target_entity_id) in duplicate_entity_conflicts):
+                    should_add = False
+                    logger.debug(f"Skipping duplicate entity conflict: {conflict.source_entity_id} -> {conflict.target_entity_id}")
+            
+            elif conflict.conflict_type in [ConflictType.CONTRADICTORY_RELATIONSHIP, ConflictType.TEMPORAL_CONFLICT]:
+                if (conflict.source_relationship_id and conflict.target_relationship_id and
+                    (conflict.source_relationship_id, conflict.target_relationship_id) in relationship_conflicts):
+                    should_add = False
+                    logger.debug(f"Skipping relationship conflict: {conflict.source_relationship_id} -> {conflict.target_relationship_id}")
+            
+            elif conflict.conflict_type in [ConflictType.ATTRIBUTE_MISMATCH, ConflictType.SOURCE_CONFLICT]:
+                conflict_key = (conflict.conflict_type.value, conflict.source_entity_id, conflict.target_entity_id)
+                if conflict_key in attribute_conflicts:
+                    should_add = False
+                    logger.debug(f"Skipping attribute/source conflict: {conflict.conflict_type.value} - {conflict.source_entity_id} -> {conflict.target_entity_id}")
+
+            if should_add:
+                filtered_conflicts.append(conflict)
+
+        logger.info(f"Filtered {len(conflicts) - len(filtered_conflicts)} existing conflicts. New conflicts: {len(filtered_conflicts)}")
+        return filtered_conflicts
 
     async def detect_duplicate_entities(
         self, entity_ids: Optional[List[str]] = None, batch_size: int = 100
@@ -62,19 +139,46 @@ class ConflictDetectionService:
         # Get entities to check
         query = supabase.table("kg_entities").select(
             "id, entity_text, entity_type, properties, embedding"
-        )
+        ).eq("is_active", True)
 
         if entity_ids:
-            # Check specific entities
+            # Check specific entities in batches
             for i in range(0, len(entity_ids), 50):
                 batch_ids = [str(id) for id in entity_ids[i : i + 50]]
-                query = query.in_("id", batch_ids)
+                batch_query = query.in_("id", batch_ids)
+                response = await batch_query.execute()
+                entities = response.data
+                
+                # Process this batch
+                batch_conflicts = await self._process_entity_batch(entities)
+                conflicts.extend(batch_conflicts)
         else:
             # Check all entities in batches
-            query = query.limit(batch_size)
+            offset = 0
+            while True:
+                batch_query = query.range(offset, offset + batch_size - 1)
+                response = await batch_query.execute()
+                entities = response.data
+                
+                if not entities:
+                    break
+                
+                # Process this batch
+                batch_conflicts = await self._process_entity_batch(entities)
+                conflicts.extend(batch_conflicts)
+                
+                offset += batch_size
+                
+                # If we got fewer than batch_size, we're done
+                if len(entities) < batch_size:
+                    break
 
-        response = await query.execute()
-        entities = response.data
+        return conflicts
+
+    async def _process_entity_batch(self, entities: List[Dict]) -> List[ConflictCreate]:
+        """Process a batch of entities for duplicate detection"""
+        
+        conflicts = []
 
         # Group entities by type for more efficient comparison
         entities_by_type = {}
@@ -189,36 +293,48 @@ class ConflictDetectionService:
         supabase = await get_supabase()
         conflicts = []
 
-        # Get relationships with their entities
-        response = (
-            await supabase.table("kg_relationships")
-            .select(
-                "id, relationship_type, source_entity_id, target_entity_id, properties, confidence"
-            )
-            .limit(batch_size)
-            .execute()
-        )
-
-        relationships = response.data
-
-        # Group relationships by entity pairs
-        entity_pair_relationships = {}
-        for rel in relationships:
-            source_id = rel["source_entity_id"]
-            target_id = rel["target_entity_id"]
-            pair_key = f"{source_id}_{target_id}"
-
-            if pair_key not in entity_pair_relationships:
-                entity_pair_relationships[pair_key] = []
-            entity_pair_relationships[pair_key].append(rel)
-
-        # Check for contradictions within each pair
-        for pair_key, pair_relationships in entity_pair_relationships.items():
-            if len(pair_relationships) > 1:
-                contradictions = await self._detect_relationship_contradictions(
-                    pair_relationships
+        offset = 0
+        while True:
+            # Get relationships with their entities in batches
+            response = (
+                await supabase.table("kg_relationships")
+                .select(
+                    "id, relationship_type, source_entity_id, target_entity_id, properties, confidence"
                 )
-                conflicts.extend(contradictions)
+                .eq("is_active", True)
+                .range(offset, offset + batch_size - 1)
+                .execute()
+            )
+
+            relationships = response.data
+            
+            if not relationships:
+                break
+
+            # Group relationships by entity pairs
+            entity_pair_relationships = {}
+            for rel in relationships:
+                source_id = rel["source_entity_id"]
+                target_id = rel["target_entity_id"]
+                pair_key = f"{source_id}_{target_id}"
+
+                if pair_key not in entity_pair_relationships:
+                    entity_pair_relationships[pair_key] = []
+                entity_pair_relationships[pair_key].append(rel)
+
+            # Check for contradictions within each pair
+            for pair_key, pair_relationships in entity_pair_relationships.items():
+                if len(pair_relationships) > 1:
+                    contradictions = await self._detect_relationship_contradictions(
+                        pair_relationships
+                    )
+                    conflicts.extend(contradictions)
+
+            offset += batch_size
+            
+            # If we got fewer than batch_size, we're done
+            if len(relationships) < batch_size:
+                break
 
         return conflicts
 
@@ -303,31 +419,44 @@ class ConflictDetectionService:
         supabase = await get_supabase()
         conflicts = []
 
-        # Get relationships with temporal information
-        response = (
-            await supabase.table("kg_relationships")
-            .select(
-                "id, relationship_type, source_entity_id, target_entity_id, properties"
+        offset = 0
+        while True:
+            # Get relationships with temporal information
+            response = (
+                await supabase.table("kg_relationships")
+                .select(
+                    "id, relationship_type, source_entity_id, target_entity_id, properties"
+                )
+                .eq("is_active", True)
+                .range(offset, offset + batch_size - 1)
+                .execute()
             )
-            .execute()
-        )
 
-        relationships = response.data
+            relationships = response.data
+            
+            if not relationships:
+                break
 
-        # Group by entity to check temporal consistency
-        entity_timelines = {}
-        for rel in relationships:
-            props = rel.get("properties", {})
-            if "start_date" in props or "end_date" in props or "date" in props:
-                source_id = rel["source_entity_id"]
-                if source_id not in entity_timelines:
-                    entity_timelines[source_id] = []
-                entity_timelines[source_id].append(rel)
+            # Group by entity to check temporal consistency
+            entity_timelines = {}
+            for rel in relationships:
+                props = rel.get("properties", {})
+                if "start_date" in props or "end_date" in props or "date" in props:
+                    source_id = rel["source_entity_id"]
+                    if source_id not in entity_timelines:
+                        entity_timelines[source_id] = []
+                    entity_timelines[source_id].append(rel)
 
-        # Check temporal consistency for each entity
-        for entity_id, timeline in entity_timelines.items():
-            temporal_conflicts = await self._detect_timeline_conflicts(timeline)
-            conflicts.extend(temporal_conflicts)
+            # Check temporal consistency for each entity
+            for entity_id, timeline in entity_timelines.items():
+                temporal_conflicts = await self._detect_timeline_conflicts(timeline)
+                conflicts.extend(temporal_conflicts)
+
+            offset += batch_size
+            
+            # If we got fewer than batch_size, we're done
+            if len(relationships) < batch_size:
+                break
 
         return conflicts
 
@@ -339,30 +468,43 @@ class ConflictDetectionService:
         supabase = await get_supabase()
         conflicts = []
 
-        # Get entities grouped by source document
-        response = (
-            await supabase.table("kg_entities")
-            .select(
-                "id, entity_text, entity_type, source_document_id, properties, confidence"
+        offset = 0
+        while True:
+            # Get entities grouped by source document
+            response = (
+                await supabase.table("kg_entities")
+                .select(
+                    "id, entity_text, entity_type, source_document_id, properties, confidence"
+                )
+                .eq("is_active", True)
+                .range(offset, offset + batch_size - 1)
+                .execute()
             )
-            .execute()
-        )
 
-        entities = response.data
+            entities = response.data
+            
+            if not entities:
+                break
 
-        # Group entities by text and type but different sources
-        entity_groups = {}
-        for entity in entities:
-            key = f"{entity['entity_text'].lower()}_{entity['entity_type']}"
-            if key not in entity_groups:
-                entity_groups[key] = []
-            entity_groups[key].append(entity)
+            # Group entities by text and type but different sources
+            entity_groups = {}
+            for entity in entities:
+                key = f"{entity['entity_text'].lower()}_{entity['entity_type']}"
+                if key not in entity_groups:
+                    entity_groups[key] = []
+                entity_groups[key].append(entity)
 
-        # Check for conflicts between different sources
-        for group in entity_groups.values():
-            if len(group) > 1:
-                source_conflicts = await self._detect_inter_source_conflicts(group)
-                conflicts.extend(source_conflicts)
+            # Check for conflicts between different sources
+            for group in entity_groups.values():
+                if len(group) > 1:
+                    source_conflicts = await self._detect_inter_source_conflicts(group)
+                    conflicts.extend(source_conflicts)
+
+            offset += batch_size
+            
+            # If we got fewer than batch_size, we're done
+            if len(entities) < batch_size:
+                break
 
         return conflicts
 
@@ -405,17 +547,193 @@ class ConflictDetectionService:
 
     async def _detect_attribute_inconsistencies(
         self, entity1_id: str, entity2_id: str
-    ) -> None:
+    ) -> List[ConflictCreate]:
         """Detect specific attribute inconsistencies between two entities"""
-        # Implementation for detailed attribute analysis
-        pass
+        
+        supabase = await get_supabase()
+        conflicts = []
 
-    async def _detect_timeline_conflicts(self, timeline: List[Dict]) -> None:
+        # Get both entities
+        entity1_response = await supabase.table("kg_entities").select("*").eq("id", entity1_id).single().execute()
+        entity2_response = await supabase.table("kg_entities").select("*").eq("id", entity2_id).single().execute()
+
+        if not entity1_response.data or not entity2_response.data:
+            return conflicts
+
+        entity1 = entity1_response.data
+        entity2 = entity2_response.data
+
+        props1 = entity1.get("properties", {})
+        props2 = entity2.get("properties", {})
+
+        # Find conflicting attributes
+        conflicting_attrs = {}
+        for key in set(props1.keys()) & set(props2.keys()):
+            if props1[key] != props2[key]:
+                conflicting_attrs[key] = {
+                    "entity1_value": props1[key],
+                    "entity2_value": props2[key]
+                }
+
+        if conflicting_attrs:
+            conflict = ConflictCreate(
+                conflict_type=ConflictType.ATTRIBUTE_MISMATCH,
+                severity=ConflictSeverity.MEDIUM,
+                description=f"Attribute mismatch between '{entity1['entity_text']}' and '{entity2['entity_text']}'",
+                confidence_score=0.8,
+                source_entity_id=entity1_id,
+                target_entity_id=entity2_id,
+                conflicting_attributes=conflicting_attrs,
+                context_data={
+                    "entity1": entity1,
+                    "entity2": entity2,
+                    "mismatched_attributes": list(conflicting_attrs.keys())
+                },
+                detected_by="system",
+            )
+            conflicts.append(conflict)
+
+        return conflicts
+
+    async def _detect_timeline_conflicts(self, timeline: List[Dict]) -> List[ConflictCreate]:
         """Detect temporal inconsistencies in entity timeline"""
-        # Implementation for temporal conflict detection
-        pass
+        
+        conflicts = []
+        
+        # Sort by date fields
+        dated_relationships = []
+        for rel in timeline:
+            props = rel.get("properties", {})
+            date_val = None
+            
+            if "start_date" in props:
+                date_val = props["start_date"]
+            elif "date" in props:
+                date_val = props["date"]
+            elif "end_date" in props:
+                date_val = props["end_date"]
+                
+            if date_val:
+                try:
+                    from datetime import datetime
+                    parsed_date = datetime.fromisoformat(str(date_val).replace('Z', '+00:00'))
+                    dated_relationships.append((rel, parsed_date))
+                except:
+                    continue
 
-    async def _detect_inter_source_conflicts(self, entities: List[Dict]) -> None:
+        # Check for temporal inconsistencies
+        dated_relationships.sort(key=lambda x: x[1])
+        
+        for i in range(len(dated_relationships) - 1):
+            rel1, date1 = dated_relationships[i]
+            rel2, date2 = dated_relationships[i + 1]
+            
+            # Check for logical inconsistencies
+            if self._are_temporally_conflicting(rel1, rel2, date1, date2):
+                conflict = ConflictCreate(
+                    conflict_type=ConflictType.TEMPORAL_CONFLICT,
+                    severity=ConflictSeverity.HIGH,
+                    description=f"Temporal conflict between {rel1['relationship_type']} and {rel2['relationship_type']}",
+                    confidence_score=0.7,
+                    source_relationship_id=rel1["id"],
+                    target_relationship_id=rel2["id"],
+                    context_data={
+                        "relationship1": rel1,
+                        "relationship2": rel2,
+                        "date1": date1.isoformat(),
+                        "date2": date2.isoformat()
+                    },
+                    detected_by="system",
+                )
+                conflicts.append(conflict)
+
+        return conflicts
+
+    def _are_temporally_conflicting(self, rel1: Dict, rel2: Dict, date1, date2) -> bool:
+        """Check if two relationships are temporally conflicting"""
+        
+        type1 = rel1["relationship_type"]
+        type2 = rel2["relationship_type"]
+        
+        # Define conflicting temporal patterns
+        temporal_conflicts = {
+            "BORN": ["DIED"],  # Can't die before being born
+            "STARTED_WORK": ["RETIRED"],  # Can't retire before starting work
+            "MARRIED": ["DIVORCED"],  # Must marry before divorce
+        }
+        
+        # Check if the later relationship conflicts with earlier one
+        if type1 in temporal_conflicts and type2 in temporal_conflicts[type1]:
+            return date2 <= date1  # Conflict if later event happens before earlier
+            
+        return False
+
+    async def _detect_inter_source_conflicts(self, entities: List[Dict]) -> List[ConflictCreate]:
         """Detect conflicts between entities from different sources"""
-        # Implementation for source conflict detection
-        pass
+        
+        conflicts = []
+        
+        # Group by source document
+        by_source = {}
+        for entity in entities:
+            source_id = entity.get("source_document_id", "unknown")
+            if source_id not in by_source:
+                by_source[source_id] = []
+            by_source[source_id].append(entity)
+
+        # Only check if we have entities from different sources
+        if len(by_source) > 1:
+            source_list = list(by_source.keys())
+            
+            for i in range(len(source_list)):
+                for j in range(i + 1, len(source_list)):
+                    source1_entities = by_source[source_list[i]]
+                    source2_entities = by_source[source_list[j]]
+                    
+                    # Compare entities between different sources
+                    for entity1 in source1_entities:
+                        for entity2 in source2_entities:
+                            # Check if they refer to the same thing but have different info
+                            text_similarity = calculate_similarity(
+                                entity1["entity_text"], 
+                                entity2["entity_text"], 
+                                method="fuzzy"
+                            )
+                            
+                            if text_similarity > 0.8:  # Similar entities from different sources
+                                props1 = entity1.get("properties", {})
+                                props2 = entity2.get("properties", {})
+                                
+                                # Check for conflicting properties
+                                has_conflicts = False
+                                conflicting_attrs = {}
+                                
+                                for key in set(props1.keys()) & set(props2.keys()):
+                                    if props1[key] != props2[key]:
+                                        has_conflicts = True
+                                        conflicting_attrs[key] = {
+                                            "source1_value": props1[key],
+                                            "source2_value": props2[key]
+                                        }
+                                
+                                if has_conflicts:
+                                    conflict = ConflictCreate(
+                                        conflict_type=ConflictType.SOURCE_CONFLICT,
+                                        severity=ConflictSeverity.MEDIUM,
+                                        description=f"Source conflict for '{entity1['entity_text']}'",
+                                        confidence_score=text_similarity,
+                                        source_entity_id=entity1["id"],
+                                        target_entity_id=entity2["id"],
+                                        conflicting_attributes=conflicting_attrs,
+                                        context_data={
+                                            "source1_document": source_list[i],
+                                            "source2_document": source_list[j],
+                                            "text_similarity": text_similarity,
+                                            "entity1": entity1,
+                                            "entity2": entity2
+                                        },
+                                        detected_by="system",
+                                    )
+                                    conflicts.append(conflict)
+
+        return conflicts

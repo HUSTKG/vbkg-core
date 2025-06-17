@@ -1,23 +1,23 @@
-import { FIBOClass } from "@vbkg/types";
+import { OntologyClass } from "@vbkg/types";
 import { ActionButton, Badge, DataTable, SimpleColumnDef, toast } from "@/components";
 import { Edit, ExternalLink, Eye, Trash2 } from "lucide-react";
 import { useState } from "react";
-import EditFiboClassDialog from "../dialog/edit-class";
-import ViewFiboClassDialog from "../dialog/view-class";
-import { useDeleteFiboClass } from "@vbkg/api-client";
+import EditOntologyClassDialog from "../dialog/edit-class";
+import ViewOntologyClassDialog from "../dialog/view-class";
+import { useDeleteOntologyClass } from "@vbkg/api-client";
 
 interface ClassListTableProps {
-	classes: FIBOClass[];
-	getClassById: (id: number) => FIBOClass | undefined;
+	classes: OntologyClass[];
+	getClassById: (id: number) => OntologyClass | undefined;
 }
 export default function ClassListTable({
 	classes,
 	getClassById,
 }: ClassListTableProps) {
-	const [selectedClass, setSelectedClass] = useState<FIBOClass | null>(null);
+	const [selectedClass, setSelectedClass] = useState<OntologyClass | null>(null);
 	const [isEditClassModalOpen, setIsEditClassModalOpen] = useState(false);
 	const [isViewClassModalOpen, setIsViewClassModalOpen] = useState(false);
-	const { mutate: deleteClass } = useDeleteFiboClass({
+	const { mutate: deleteClass } = useDeleteOntologyClass({
 		onSuccess: () => {
 			toast("Xóa lớp thành công");
 		},
@@ -26,8 +26,8 @@ export default function ClassListTable({
 		},
 	});
 
-	// Table columns for FIBO Classes
-	const classColumns: SimpleColumnDef<FIBOClass, any>[] = [
+	// Table columns for Ontology Classes
+	const classColumns: SimpleColumnDef<OntologyClass, any>[] = [
 		{
 			accessorKey: "label",
 			header: "Label",
@@ -70,7 +70,7 @@ export default function ClassListTable({
 			header: "Type",
 			cell: (row) => (
 				<Badge variant={row?.is_custom ? "outline" : "default"}>
-					{row?.is_custom ? "Custom" : "FIBO"}
+					{row?.is_custom ? "Custom" : "Ontology"}
 				</Badge>
 			),
 		},
@@ -82,7 +82,7 @@ export default function ClassListTable({
 		},
 	];
 	// Action buttons
-	const classActionButtons: ActionButton<FIBOClass>[] = [
+	const classActionButtons: ActionButton<OntologyClass>[] = [
 		{
 			label: "Xem",
 			icon: <Eye size={16} />,
@@ -136,14 +136,14 @@ export default function ClassListTable({
 				showColumnFilters={true}
 				showPagination={true}
 			/>
-			<EditFiboClassDialog
+			<EditOntologyClassDialog
 				isEditClassModalOpen={isEditClassModalOpen}
 				setIsEditClassModalOpen={setIsEditClassModalOpen}
 				getClassById={getClassById}
-				fiboClasses={classes}
+				ontologyClasses={classes}
 				selectedClass={selectedClass}
 			/>
-			<ViewFiboClassDialog
+			<ViewOntologyClassDialog
 				isViewClassModalOpen={isViewClassModalOpen}
 				setIsViewClassModalOpen={setIsViewClassModalOpen}
 				selectedClass={selectedClass}

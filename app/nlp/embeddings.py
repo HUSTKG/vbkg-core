@@ -1,25 +1,11 @@
 import asyncio
 import hashlib
 import logging
-from functools import lru_cache
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-try:
-    import openai
-    from openai import AsyncOpenAI
-except ImportError:
-    openai = None
-
-try:
-    from sentence_transformers import SentenceTransformer
-
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-
-from app.core.config import settings
+from app.core.llm_client import get_llm_client
 from app.core.supabase import get_supabase
 
 logger = logging.getLogger(__name__)
@@ -29,21 +15,8 @@ class EmbeddingService:
     """Service for generating text embeddings using various providers"""
 
     def __init__(self):
-        self.openai_client = None
-        self.sentence_transformer = None
+        self.llm_client = get_llm_client()
         self.embedding_cache = {}
-
-        # Initialize OpenAI client
-        if settings.OPENAI_API_KEY:
-            self.openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-
-        # Initialize Sentence Transformer (fallback)
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                self.sentence_transformer = SentenceTransformer("all-MiniLM-L6-v2")
-                logger.info("✅ Sentence Transformer model loaded")
-            except Exception as e:
-                logger.warning(f"Failed to load Sentence Transformer: {e}")
 
     async def get_text_embedding(
         self, text: str, model: Optional[str] = None, cache: bool = True
@@ -73,63 +46,33 @@ class EmbeddingService:
                 return self.embedding_cache[cache_key]
 
         # Try OpenAI first (best quality)
-        if self.openai_client:
-            embedding = await self._get_openai_embedding(text, model)
+        if self.llm_client:
+            embedding = await self._get_llm_embedding(text, model)
             if embedding:
                 if cache:
                     self.embedding_cache[cache_key] = embedding
                 return embedding
 
-        # Fallback to Sentence Transformer
-        if self.sentence_transformer:
-            embedding = await self._get_sentence_transformer_embedding(text)
-            if embedding:
-                if cache:
-                    self.embedding_cache[cache_key] = embedding
-                return embedding
-
-        # Fallback to simple TF-IDF
-        logger.warning("No embedding service available, using TF-IDF fallback")
         embedding = self._get_tfidf_embedding(text)
         if cache and embedding:
             self.embedding_cache[cache_key] = embedding
 
         return embedding
 
-    async def _get_openai_embedding(
+    async def _get_llm_embedding(
         self, text: str, model: Optional[str] = None
     ) -> Optional[List[float]]:
-        """Get embedding from OpenAI"""
+        """Get embedding from LLM"""
 
         try:
-            model = model or settings.OPENAI_EMBEDDING_MODEL
+            model = model
 
-            response = await self.openai_client.embeddings.create(
-                input=text, model=model
-            )
+            response = await self.llm_client.embedding(text=text, model=model)
 
-            return response.data[0].embedding
+            return response
 
         except Exception as e:
             logger.error(f"OpenAI embedding failed: {e}")
-            return None
-
-    async def _get_sentence_transformer_embedding(
-        self, text: str
-    ) -> Optional[List[float]]:
-        """Get embedding from Sentence Transformer"""
-
-        try:
-            # Run in thread pool since sentence transformers is not async
-            loop = asyncio.get_event_loop()
-            embedding = await loop.run_in_executor(
-                None, self.sentence_transformer.encode, text
-            )
-
-            return embedding.tolist()
-
-        except Exception as e:
-            logger.error(f"Sentence Transformer embedding failed: {e}")
             return None
 
     def _get_tfidf_embedding(self, text: str) -> Optional[List[float]]:

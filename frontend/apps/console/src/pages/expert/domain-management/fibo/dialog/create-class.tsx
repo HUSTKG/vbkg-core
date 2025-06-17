@@ -1,26 +1,26 @@
-import { FIBOClass } from "@vbkg/types";
-import FormCreateFiboClass from "../form/create-class";
+import { OntologyClass } from "@vbkg/types";
+import FormCreateOntologyClass from "../form/create-class";
 import { Dialog } from "@/components";
 
-export default function CreateFiboClassDialog({
+export default function CreateOntologyClassDialog({
   isCreateClassModalOpen,
   setIsCreateClassModalOpen,
-  fiboClasses = [],
+  ontologyClasses = [],
 }: {
   isCreateClassModalOpen: boolean;
   setIsCreateClassModalOpen: (open: boolean) => void;
-  fiboClasses?: FIBOClass[];
+  ontologyClasses?: OntologyClass[];
 }) {
   return (
     <Dialog
-      title="Create FIBO Class"
-      description="Tạo mới một FIBO class"
+      title="Create Ontology Class"
+      description="Tạo mới một Ontology class"
       open={isCreateClassModalOpen}
       size="2xl"
       showFooter={false}
       onOpenChange={setIsCreateClassModalOpen}
     >
-      <FormCreateFiboClass fiboClasses={fiboClasses} />
+      <FormCreateOntologyClass ontologyClasses={ontologyClasses} />
     </Dialog>
   );
 }

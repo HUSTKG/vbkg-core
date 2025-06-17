@@ -78,6 +78,25 @@ class Settings(BaseSettings):
 
     FLOWER_UNAUTHENTICATED_API: str = "true"
 
+    # LLM Configuration
+    DEFAULT_LLM_MODEL: str = "gpt-4o-mini"
+    DEFAULT_EMBEDDING_MODEL: str = "text-embedding-3-small"
+    LITELLM_VERBOSE: bool = False
+
+    # API Keys cho các nhà cung cấp LLM
+    OPENAI_API_KEY: Optional[str] = None
+    ANTHROPIC_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None
+    COHERE_API_KEY: Optional[str] = None
+
+    # Azure OpenAI Configuration (nếu sử dụng)
+    AZURE_API_KEY: Optional[str] = None
+    AZURE_API_BASE: Optional[str] = None
+    AZURE_API_VERSION: Optional[str] = "2024-02-15-preview"
+
+    # Hugging Face Configuration (nếu sử dụng)
+    HUGGINGFACE_API_KEY: Optional[str] = None
+
     class Config:
         env_file = ".env"
         from_attributes = True

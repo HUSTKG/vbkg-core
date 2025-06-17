@@ -1,4 +1,4 @@
-import { ResolutionMethodBadge } from "@/pages/common/quality-management/conflicts/components/ResolutionMethodBadge";
+import { ResolutionMethodBadge } from "@/pages/admin/quality-management/conflicts/components/ResolutionMethodBadge";
 import { AlertTriangle, Check, ChevronDown, ChevronUp, Lightbulb, RefreshCw } from "lucide-react";
 import { useState } from "react";
 

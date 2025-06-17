@@ -31,7 +31,7 @@ export default function FormImportOntology({
           name: "file_id",
           label: "Upload File",
           type: "custom",
-          placeholder: "Chọn tệp FIBO ontology",
+          placeholder: "Chọn tệp Ontology ontology",
           customComponent: ({ onChange }) => (
             <FileUploadFormItem
               maxFiles={1}

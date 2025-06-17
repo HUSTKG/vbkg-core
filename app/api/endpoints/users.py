@@ -93,7 +93,6 @@ async def read_permissions(
     )
 
 
-
 # Role Management Endpoints
 @router.get("/roles", response_model=ApiResponse[List[Dict[str, Any]]])
 async def read_roles(
@@ -108,6 +107,23 @@ async def read_roles(
         data=response, status=status.HTTP_200_OK, message="Roles retrieved successfully"
     )
 
+@router.get("/api-keys", response_model=ApiResponse[List[Dict[str, Any]]])
+async def get_user_api_keys(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> ApiResponse[List[Dict[str, Any]]]:
+    """
+    Get current user's API keys.
+    """
+    user_service = UserService()
+    api_keys = await user_service.get_user_api_keys(current_user["id"])
+
+    return ApiResponse(
+        data=api_keys,
+        status=status.HTTP_200_OK,
+        message="API keys retrieved successfully",
+    )
+
+
 
 @router.get("/{user_id}", response_model=ApiResponse[User])
 async def read_user(
@@ -119,7 +135,9 @@ async def read_user(
     user_service = UserService()
     user = await user_service.get_user_by_id(user_id)
     return ApiResponse(
-        data=User(**user), status=status.HTTP_200_OK, message="User retrieved successfully"
+        data=User(**user),
+        status=status.HTTP_200_OK,
+        message="User retrieved successfully",
     )
 
 
@@ -190,23 +208,6 @@ async def create_api_key(
     )
 
 
-@router.get("/api-keys", response_model=ApiResponse[List[Dict[str, Any]]])
-async def get_user_api_keys(
-    current_user: Dict[str, Any] = Depends(get_current_user),
-) -> ApiResponse[List[Dict[str, Any]]]:
-    """
-    Get current user's API keys.
-    """
-    user_service = UserService()
-    api_keys = await user_service.get_user_api_keys(current_user["id"])
-
-    return ApiResponse(
-        data=api_keys,
-        status=status.HTTP_200_OK,
-        message="API keys retrieved successfully",
-    )
-
-
 @router.delete("/api-keys/{api_key_id}")
 async def revoke_api_key(
     api_key_id: str, current_user: Dict[str, Any] = Depends(get_current_user)
@@ -272,7 +273,6 @@ async def get_user_activity(
         status=status.HTTP_200_OK,
         message="User activity retrieved successfully",
     )
-
 
 
 @router.post("/{user_id}/roles/{role_name}")

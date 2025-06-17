@@ -233,3 +233,115 @@ export interface IGetKnowledgeGraphStatsResponse extends ApiResponse<unknown> { 
 
 export interface ICreateOrMergeEntityRequest extends EntityCreate { }
 export interface ICreateOrMergeEntityResponse extends ApiResponse<Entity> { }
+
+// KG Completion Request Types
+export interface IKGCompletionRequest {
+  entity_ids?: string[];
+  completion_types: string[];
+  auto_apply_suggestions: boolean;
+  confidence_threshold: number;
+  limit_entities?: number;
+  limit_relationships?: number;
+}
+
+export interface ISuggestionActionRequest {
+  suggestion_ids: string[];
+  action: 'accept' | 'reject' | 'apply';
+  review_notes?: string;
+  rejection_reason?: string;
+}
+
+export interface ISuggestionFilterRequest {
+  suggestion_type?: 'entity' | 'relationship';
+  status?: 'pending' | 'accepted' | 'rejected' | 'applied';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  min_confidence?: number;
+  max_confidence?: number;
+  source?: string;
+  limit?: number;
+  skip?: number;
+}
+
+// KG Completion Response Types
+export interface ICompletionSuggestion {
+  id: string;
+  suggestion_type: 'entity' | 'relationship';
+  status: 'pending' | 'accepted' | 'rejected' | 'applied';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  confidence: number;
+  reason: string;
+  source: string;
+  
+  // Entity specific
+  suggested_entity_text?: string;
+  suggested_entity_type?: string;
+  
+  // Relationship specific
+  source_entity_id?: string;
+  target_entity_id?: string;
+  source_entity_text?: string;
+  target_entity_text?: string;
+  suggested_relationship_type?: string;
+  
+  // Applied tracking
+  applied_entity_id?: string;
+  applied_relationship_id?: string;
+  applied_at?: string;
+  applied_by?: string;
+  
+  // Review tracking
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_notes?: string;
+  rejection_reason?: string;
+  
+  // Metadata
+  context_data?: Record<string, any>;
+  validation_errors?: Record<string, any>;
+  
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IKGCompletionStats {
+  total_suggestions: number;
+  pending_suggestions: number;
+  accepted_suggestions: number;
+  rejected_suggestions: number;
+  applied_suggestions: number;
+  entity_suggestions: number;
+  relationship_suggestions: number;
+  avg_confidence: number;
+  high_priority_pending: number;
+}
+
+export interface IKGCompletionResponse {
+  suggestions: ICompletionSuggestion[];
+  stats: {
+    input_entities: number;
+    input_relationships: number;
+    suggested_entities: number;
+    suggested_relationships: number;
+    auto_applied: number;
+  };
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface ISuggestionActionResponse {
+  processed_suggestions: string[];
+  applied_entities: string[];
+  applied_relationships: string[];
+  errors: string[];
+  success: boolean;
+  message: string;
+}
+
+// API Response wrapper types
+export interface IKGCompletionRequestResponse extends ApiResponse<IKGCompletionResponse> {}
+export interface IKGCompletionSuggestionsResponse extends PaginatedResponse<ICompletionSuggestion> {}
+export interface IKGCompletionStatsResponse extends ApiResponse<IKGCompletionStats> {}
+export interface IKGCompletionActionResponse extends ApiResponse<ISuggestionActionResponse> {}
+export interface IKGCompletionSuggestionResponse extends ApiResponse<ICompletionSuggestion> {}

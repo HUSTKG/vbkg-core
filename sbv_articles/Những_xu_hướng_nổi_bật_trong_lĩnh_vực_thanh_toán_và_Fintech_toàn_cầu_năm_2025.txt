@@ -1,0 +1,628 @@
+TIÊU ĐỀ: Những xu hướng nổi bật trong lĩnh vực thanh toán và Fintech toàn cầu năm 2025
+
+URL: https://sbv.gov.vn/vi/w/sbv625813
+
+------------------ NỘI DUNG ------------------
+
+Mới đây, Juniper Research - Công ty chuyên cung cấp các dịch vụ dự báo và định lượng thị trường, phân tích cạnh tranh, đánh giá chiến lược và mô hình kinh doanh của các tổ chức tài chính và đổi mới sáng tạo hàng đầu trên thế giới đã nhận định 10 xu hướng có ảnh hưởng nhất trong lĩnh vực thanh toán và công nghệ tài chính (Fintech) trong năm 2025, được dự báo sẽ phần định hình những gián đoạn trên thị trường và đòi hỏi các bên liên quan phản ứng nhanh chóng, kịp thời để nắm bắt cơ hội và đảm bảo duy trì lợi thế cạnh tranh trên thị trường thanh toán toàn cầu đang thay đổi nhanh chóng.
+Ảnh minh họa (Nguồn: Internet)
+Những xu hướng này
+được
+chia
+thành 04 chủ đề chính, bao gồm
+: Khả năng bền vững
+(
+Fintech
+bền vững, sinh trắc học hành vi, công nghệ pháp lý
+/tuân thủ (
+Regtech)
+, Ví kỹ thuật số giao tiếp trường gần
+- NFC
+),
+G
+ian lận
+(ứng dụng
+trí tuệ nhân tạo
+(AI)
+trong phòng ngừa gian lận
+, lừa đảo
+; ngân hàng mở; thanh toán giữa các doanh nghiệp
+- B2B Payments),
+N
+gân hàng
+(mạng lưới thẻ ngân hàng; thanh toán
+toàn cầu
+), và
+thanh toán
+(thanh toán tức thời).
+Nguồn: Juniper Research
+Công nghệ Apple NFC thúc đẩy cạnh tranh trong lĩnh vực Ví kỹ thuật số
+/Ví điện tử
+Thị trường thanh toán phi tiếp xúc
+bằng
+Ví kỹ thuật số được xác định bởi tính mở của các hệ sinh thái liên quan. Với các thiết bị trên hệ điều hành Android, quyền truy cập NFC của các Ví không phải là nhà sản xuất thiết bị gốc
+(OEM)
+là không hạn chế, nghĩa là bất kỳ nhà phát triển ứng dụng nào cũng có thể sử dụng NFC để thực hiện thanh toán. Tuy nhiên, Apple đại diện cho một hệ sinh thái khép kín đối với thanh toán bằng công nghệ NFC, và điều này từ lâu
+được xem
+là thách thức đối với các cơ quan quản lý tại
+khu vực
+c
+hâu Âu.
+Vào tháng 12/2023, có thông tin cho rằng Apple sẽ đề nghị mở quyền truy cập NFC trong khối Liên minh
+c
+hâu Âu (EU)
+để giải quyết các mối quan ngại về quy định, với việc xác nhận vào tháng 7/2024 rằng EU đã chấp nhận đề nghị của Apple, đạt được thảo thuận mở quyền truy cập NFC trong khối EU, miễn phí cho nhà phát triển dịch vụ (bên thứ ba
+).
+Tiếp đó, đ
+ến
+tháng 8/202
+4
+, Apple thông báo rằng họ sẽ mở rộng đáng kể quyền truy c
+ậ
+p này bằng cách cho phép các bên thứ ba cung cấp dịch vụ thanh toán trên
+điện thoại thông minh
+iPhone bên ngoài lãnh thổ EU. Đợt triển khai này bao gồm các quốc gia như Úc, Brazil, Canada, New Zealand, Vương quốc Anh và Hoa Kỳ, sau đó sẽ mở rộng ra các vùng lãnh thổ khác.
+V
+ới những diễn biến này,
+thực
+trạng
+phát triển
+Ví kỹ thuật số đang bị ảnh hưởng nghiêm trọng. Vậy, câu hỏi quan trọng là
+điều này sẽ
+gây ra
+tác động gì và sẽ biến đổi như thế nào?
+Theo
+Juniper
+Research,
+động thái
+nêu trên
+sẽ tạo ra một cuộc
+đua
+về đổi mới sáng tạo trên thị trường Ví kỹ thuật số
+và
+năm 2025
+được dự báo sẽ
+chứng kiến mức độ cạnh tranh chưa từng có
+trong lĩnh vực này
+. Có nhiều lý do
+, nguyên nhân
+c
+ó thể liệt kê
+như:
+(i)
+Khả năng mở rộng của Ví hiện có
+:
+Paypal đã tuyên bố rằng họ có ý định tận dụng sự phát triển này để cung cấp NFC được tích hợp trên
+điện thoại
+iPhone, cho phép các dịch vụ Ví trước đây không phải là
+người chơi trong cửa hàng chuyển sang
+ứng dụng
+này
+cũng như
+có thể cho phép tách Ví khỏi các thiết bị.
+Hiện tại, Ví Samsung và Google được sử dụng trong hệ sinh thái của họ, nhưng cả hai đều có thể được ứng dụng cho iPhone, phá vỡ mối liên kết giữa Ví và hệ sinh thái xung quanh nó
+.
+(ii)
+Các ứng dụng hiện có trở thành Ví
+:
+Cá
+c nhà cung ứng thẻ tín dụng có thể phát triển một Ví có thương hiệu để sử dụng trực tiếp với thẻ tín dụng hoặc một sàn giao dịch hoặc dịch vụ tiền mã hoá, có khả năng tạo ra một Ví cho phép thanh toán bằng tiền mã hóa tại điểm
+chấp nhận thanh toán
+, điển hình là các doanh nghiệp
+bán lẻ
+(
+như Walmart, Tesco và Starbucks
+…)
+có hệ thống thanh toán riêng, thường dựa trên mã QR, có thể chuyển các hệ thống này để sử dụng NFC,
+qua
+đó
+nâng cao khả năng
+cạnh tranh
+của doanh nghiệp
+trên thị trường
+.
+(iii)
+Ví được hỗ trợ bởi ngân hàng
+: Các ngân hàng thường có những cách tiếp cận khác nhau với thị trường Ví. Vai trò thống lĩnh thị trường của nhà sản xuất thiết bị gốc đã hạn chế nghiêm trọng sự phát triển của phân khúc này, nhưng với việc NFC được ứng dụng
+rộng rãi
+đã mang đến cơ hội
+tiềm năng khác
+cho thị trường, giúp các ngân hàng và tổ chức phát hành thẻ giữ chân
+tập
+khách hàng lâu hơn trong hệ sinh thái của riêng họ và có khả năng tạo ra thêm doanh thu, hoặc ít nhất là không bị mất doanh thu vào các dịch vụ Ví do bên thứ ba cung cấp.
+Ví ảo tạo ra cuộc cách mạng hóa việc mua sắm và chi phí theo mô hình B2B
+Thẻ vật lý từ lâu đã là một yếu tố
+hàng đầu
+trong chi phí của nhân viên và hoạt động quản lý chi phí
+của doanh nghiệp
+, cho dù đó là nhân viên sử dụng
+thẻ
+cá nhân của họ và yêu cầu hoàn lại chi phí hay nhân viên được cấp thẻ để thanh toán. Tuy nhiên, có một số hạn chế đối với hoạt động này, do:
+Sử dụng thẻ sai mục đích hoặc cố ý
+(sử dụng thẻ
+do doanh nghiệp phát hành
+để mua hàng không tính vào chi phí hoặc chọn chi phí nhiều hơn mức cần thiết cho một mặt hàng
+khi
+vì mặt hàng đó
+thuộc
+danh mục thanh toán trong
+thẻ);
+Sử dụng sai mục đích hoặc vô ý
+(nhân viên vô tình thanh toán bằng thẻ hoặc chi tiêu quá mức
+do thiếu minh bạch
+, rõ ràng
+về
+nguyên tắc,
+quy
+định
+);
+mất thẻ
+(thẻ bị mất hoặc bị đánh cắp
+buộc
+doanh nghiệp
+phải hủy thẻ);
+trộm thông tin thẻ
+(thông tin thẻ bị
+kẻ gian
+đánh cắp).
+Những hạn chế
+này
+có thể
+dẫn đến việc sử dụng thẻ ảo nhiều hơn đối với chi phí của doanh nghiệp vào năm 2020, chủ yếu đến từ các thị trường
+cạnh tranh,
+có mức độ thâm nhập cao như Vương quốc Anh hoặc Hoa Kỳ.
+Juniper Research cho rằng, vào năm 2025, đ
+iểm mấu chốt sẽ là sự tích hợp dễ dàng
+, thuận tiện
+các giải pháp thẻ ảo của doanh nghiệp với các hệ thống thanh toán hiện có
+, vì thẻ ảo sẽ chỉ đóng vai trò trong chiến lược thanh toán tổng thể của doanh nghiệp,
+mà
+không làm gián đoạn
+hoặc phá vỡ
+quy trình
+thanh toán
+đã
+được doanh nghiệp
+thiết lập,
+cũng như
+cung cấp các lợi ích về khả năng hiển thị và kiểm soát
+rủi ro
+mà bản chất kỹ thuật số của Ví ảo cho phép.
+Sinh trắc học hành vi thúc đẩy sự dịch chuyển sang xác thực
+danh tính cá nhân
+thụ động
+Một trong những hình thức xác thực sinh trắc học phổ biến hiện nay là sinh trắc học
+bằng
+khuôn mặt, một hình thức sinh trắc học tĩnh
+(static authentication)
+,
+yêu cầu người dùng phải trải qua một phương pháp xác thực duy nhất. Mặc dù hình thức xác thực này rất khó làm giả, nhưng những kẻ gian lận cũng không thiếu những giải pháp đổi mới sáng tạo
+để vượt qua hệ thống bảo mật
+. Juniper cho rằng năm 2025 sẽ chứng kiến việc triển khai rộng rãi hơn sinh trắc học hành vi (behavioral authentication), một hình thức xác thực danh tính cá nhân thụ động để cho phép các doanh nghiệp theo dõi
+hiệu quả hành vi liên tục của người dùng và cho phép xác thực liên tục và nếu được sử dụng kết hợp với sinh trắc học tĩnh sẽ cung cấp thêm một lớp bảo mật cho hệ sinh thái của doanh nghiệp, qua đó đảm bảo an toàn, bảo mật trong các giao dịch thanh toán của doanh nghiệp và
+góp phần
+nâng cao hiệu suất kinh doanh, quản trị doanh nghiệp.
+Về bản chất, c
+ả sinh trắc học hành vi chủ động và thụ động đều sử dụng công nghệ AI để tự động hóa quy trình giám sát người dùng và đưa ra cảnh báo các dấu hiệu đáng ngờ. Sự ứng dụng rộng rãi AI trong ngành công nghiệp Fintech trong những năm qua sẽ thúc đẩy sự tích hợp rộng rãi các phương thức sinh trắc học hành vi để xác minh
+danh tính cá nhân
+và phòng g
+ian
+gian lận
+, cải thiện trải nghiệm người dùng cuối.
+Đơn vị chấp nhận thanh toán thương mại điện tử áp dụng thanh toán “Glocal”
+Juniper Research dự báo thị trường thương mại
+điện tử sẽ tăng trưởng từ 7 nghìn tỷ USD vào năm 2024 lên 11,4 nghìn tỷ USD vào năm 2029, với tốc độ
+tăng
+9,9%, được thúc đẩy bởi sự mở rộng của cơ sở hạ tầng kỹ thuật
+thanh toán
+và sự cải tiến
+, đổi mới
+trong dịch vụ hậu cần và giao hàng ở các nền kinh tế mới nổi, giúp
+các doanh nghiệp và người tiêu dùng dễ tiếp cận hơn với
+thương mại điện tử.
+Điều này được kết hợp với các phương thức thanh toán mới mở rộng quyền truy cập vào nền kinh tế số cho những người chưa có tài kh
+oản
+ngân hàng
+(
+chẳng hạn như giải pháp
+tiền di động
+)
+. Sự hội tụ các yếu tố này trong năm 2025 sẽ
+mang đến
+cơ hội
+tiềm năng
+cho các tổ chức thanh toán quốc tế
+có kế hoạch
+mở rộng
+thị trường và điều này đòi hỏi cần có các giải pháp thanh toán mới
+khác biệt, vượt trội
+để đáp ứng yêu cầu ngày càng
+cao
+của thị trường. Bên cạnh đó, một động lực khác thúc đẩy việc áp dụng thanh toán toàn cầu là sở thích của người tiêu dùng đang có xu hướng dịch chuyển khỏi thanh toán bằng tiền mặt và thẻ ngân hàng truyền thống sang các phương thức thanh toán trong nước
+(
+như
+hệ thống thanh toán
+P
+IX
+ở Brazil
+,
+UPI ở Ấn Độ
+…).
+Để tối ưu hóa chuyển đổi khách hàng, điều cần thiết là người tiêu dùng được cung cấp lựa chọn phương thức thanh toán ưa thích
+, vì
+khi
+khách hàng không thể thanh toán bằng phương thức quen thuộc, rất có thể họ sẽ từ bỏ việc mua hàng. Mặt khác, việc cung cấp quá nhiều tùy chọn tha
+n
+h toán
+khác nhau
+cũng có thể khiến người tiêu
+dùng gặp khó khăn trong việc lựa chọn
+. Vì vậy, việc cung cấp đúng phương thức thanh toán được bản địa hóa theo sở thích của người tiêu dùng và
+đơn vị chấp nhận thanh toán
+là rất quan trọng.
+Đối với các công ty
+thanh toán
+toàn cầu
+,
+để bản địa hóa thanh toán, các đơn vị chấp nhận thanh toán thương mại điện tử sẽ dùng nền tảng điều phối thanh toán cho phép và tối ưu hóa thanh toán toàn cầu
+, với vai trò là
+các
+tổ chức
+trung gian quản lý quy trình thanh toán qua nhiều nhà cung cấp dịch vụ, phương thức thanh toán và các quốc gia
+, vùng lãnh thổ
+.
+Tuân thủ pháp
+lý thúc đẩy thách thức
+các ngân hàng dưới dạng dịch vụ (
+BaaS)
+Những thách thức về tuân thủ pháp lý đã gây ra các vấn đề cho các công ty BaaS,
+đến từ cả
+các cơ quan quản lý và
+truyền thông
+.
+Một ví dụ
+điển hình là từ năm 2024 khi
+Cục
+Dự trữ Liên bang
+Mỹ
+ban hành lệnh “ngừng và hủy bỏ” đối với Evolve Bancorp và công ty con Evolve Bank & Trust. Ngân hàng có trụ sở tại Memphis
+,
+Mỹ
+này điều
+hành một bộ phận Ngân hàng mở cùng với các dịch vụ ngân hàng truyền thống và cung cấp các giải pháp cho các công ty Fintech như tài khoản tiền gửi
+và các giải pháp xử lý thanh toán.
+Vào tháng 8
+/
+2023,
+sau khi đánh giá sự an toàn, lành mạnh trong hoạt động của Evolve, Cục Dự trữ Liên bang
+Mỹ
+đã ban hành một báo cáo
+đánh giá
+, trong đó xác định những thiếu hụt trong
+vấn đề
+quản lý rủi ro tuân thủ người tiêu dùng của Evolve Bank
+đối với
+bộ phận
+phụ trách giải pháp
+n
+gân hàng mở.
+Các giám sát viên
+đã ban hành một báo cáo sau khi tiến hành kiểm tra, xác định thêm những thiếu sót
+trong hoạt động quản trị rủi ro và tuân thủ quy định về chống rửa tiền, Đạo luật Bảo mật Ngân hàng và các quy định của Văn phòng Kiểm soát Tài sản nước ngoài. Đến tháng 6
+/
+2024, lệnh ngừng
+và hủy bỏ đã được công bố, với hình phạt chứng minh các thiếu sót mà các nhà cung cấp BaaS phải giải quyết triệt để. Một trường hợp tương tự khác như sự đổ vỡ của nền tảng BaaS Synapse đã khiến thị trường BaaS rơi vào tình trạng hỗn loạn và dẫn đến các cuộc tranh luận gay gắt liệu đây có phải là sự tính toán của BaaS như một mô hình kinh doanh hay không.
+Bất chấp những lo ngại về quy định này, thị trường BaaS không phải rơi vào khủng hoảng và những cuộc tranh luận như vậy có thể được xem là một dấu hiệu bước ngoặt trên thị trường.
+Khi khuôn khổ pháp lý bắt kịp sự đổi mới nhanh chóng trên thị trường BaaS, yêu cầu về tính minh bạch và trách nhiệm giải trình về quản trị rui ro đối với các bên liên quan trong hệ sinh thái là thực sự cần thiết.
+V
+iệc đầu tư vào các công cụ quản trị rủi ro của bên thứ ba có th
+ể
+giúp
+các bên
+cung ứng
+BaaS thu thập và đánh giá tốt hơn tác động đến rủi ro của bên thứ ba, như sáp nhập hoặc mua lại, thay đổi quy định pháp lý, rủi ro vượt ra ngoài các nhà cung cấp trực tiếp. Các công cụ này có thể giúp
+các ngân hàng
+tăng cường bảo mật và khả năng phục hồi đối với vi phạm dữ liệu hoặc gián đoạn kinh doanh
+liên tục
+.
+Các ngân hàng sẵn sàng đầu tư vào PSD3 và PSR1
+Tại khu vực châu Âu,
+n
+gân hàng mở đã và đang thu hút sự quan tâm lớn
+khi
+các
+mối
+quan hệ đối tác
+chiến lược
+được hình thành giữa các ngân hàng, công ty công nghệ tài chính và doanh nghiệp
+trong năm 2024
+, đến từ hiệu ứng cải cách
+môi trường pháp lý tại EU với
+Chỉ thị Dịch vụ Thanh toán 2 (
+PSD2
+sửa đổi
+),
+điều chỉnh quyền truy cập dữ liệu thanh toán của người tiêu dùng bởi bên
+thứ ba
+không phải là ngân hàng nhằm thúc đẩy đổi mới sáng tạo và
+năng lực
+cạnh tranh trên thị trường thanh toán
+trong khu vực
+.
+Trên thực tế,
+PSD2 đóng vai trò cơ bản
+đối với
+sự phát triển
+của
+n
+gân hàng mở trong khu vực
+, thúc đẩy sự phổ biến của dịch vụ này và tạo ra nhiều dịch vụ đa dạng, đổi mới thông qua
+n
+gân hàng mở.
+Trong khi đó, PSD3 là phiên bản sửa đổi, nâng cấp
+cao hơn
+của PSD2 và là sự phát triển các nguyên tắc hiện có về chia sẻ dữ liệu và bảo mật, như đặt ra các quy định về xác thực khách hàng mạnh (Strong Customer Authentication
+-
+SCA) mở rộng hơn và các quy tắc chặt chẽ hơn về quyền truy cập vào hệ thống thanh toán và thông tin tài khoản
+khách hàng
+. Tuy nhiên, lĩnh vực cải tiến quan trọng mà PSD3 hướng đến là chất lượng API
+,
+bao gồm các yêu cầu mới, chức năng tối thiểu và các biện pháp chống lại độ trễ cao. PSD3 kết hợp với Quy định về
+D
+ịch vụ
+T
+hanh toán (Payment Service Regulation
+-
+PSR
+1
+), bao gồm các
+điều khoản
+quy định trong
+PSD2
+cộng với
+giải thích và các điều khoản
+quy định
+mới
+bổ sung
+,
+qua đó giúp cân bằng
+thị trường thanh toán và giảm sự khác biệt
+, phân biệt đối xử
+giữa các quốc gia khu vực EU.
+Đối với các ngân hàng, PDS3 và PSR1 sẽ
+đẩy mạnh
+ứng
+dụng
+n
+gân hàng mở, tạo điều kiện thuận lợi cho việc “nhúng” các dịch vụ tài chính vào các giải pháp của bên thứ ba, từ đó làm cho hoạt động ngân hàng linh hoạt hơn,
+tuy vậy,
+cũng khiến các ngân hàng kém khả thi hơn trong việc triển khai.
+Cụ thể là
+,
+quy định
+PSD3 và PSR1 sẽ yêu cầu các ngân hàng cải thiện hiệu quả kỹ thuật, đáp ứng các yêu cầu tuân thủ hoặc phải đối mặt với các lệnh trừng phạt nghiêm ngặt hơn và chấm dứt sự khác biệt về
+cung ứng
+dịch vụ
+thanh toán
+trên phạm vi quốc gia.
+Ngoài ra, các ngân hàng và các tổ chức tài chính sẽ có thể tiếp cận hệ sinh thái thanh toán mở rộng bằng cách cải thiện năng lực kỹ thuật
+, công nghệ
+của mình.
+Một số ngân hàng
+tại Vương quốc Anh (
+như HSBC
+,
+Monzo
+…)
+cung cấp các giải pháp mua hàng trả sau (BNPL)
+cho người tiêu dùng
+thông qua dịch vụ ngân hàng mở, tạo
+thuận lợi cho việc kiểm tra hồ sơ tín dụng, việc cung cấp dịch vụ BNPL nội bộ
+, và
+cho phép các ngân hàng truyền thống cạnh tranh với các công ty Fintech như một tùy chọn thanh toán trả chậm.
+Thương vụ mua lại Capital One đặt ra thách thức cho Visa và MasterCard
+Trong năm 2024, thương vụ mua lại mới lớn nhất trong lĩnh vực Fintech và thanh toán là Capital One thông báo kế hoạch mua lại
+công ty phát hành thẻ
+Discover Financial Services với giá 35,5 tỷ USD, đánh dấu cột mốc hai trong số những công ty phát hành thẻ lớn nhất của Hoa Kỳ sáp nhập. Mạng lưới thẻ tại Hoa Kỳ và nhiều thị trường khác đã bị Visa và MasterCard thống trị, so với sự hiện diện của American Express và Discover. Điều này dấy lên quan ngại về sự cạnh tranh trong thị trường thẻ như việc Bộ Tư pháp Mỹ
+khởi
+kiện Visa vào tháng 9/2024, cáo buộc công ty này độc quyền thị trường thẻ ghi nợ, trong khi Visa mô tả cáo buộc này là “vô căn cứ”
+, thiếu hiểu biết và
+cạnh tranh trong thị trường thẻ.
+Vào năm 2025, Juniper Research dự báo rằng việc mua lại sẽ hoàn tất, nhưng khách hàng sử dụng thẻ Capital One sẽ không chuyển sang hệ thống thẻ Discover
+ngay tức thì
+. Thay vào đó, khách hàng sẽ sử dụng quảng cáo để quảng bá thương thiệu thẻ hoạt động trên mạng lưới Discover, song sẽ không cung cấp các thẻ trên mạng lưới của Visa và MasterCard.
+Về phía người tiêu dùng, khách hàng của Capital One bị thu hút bởi các ưu đãi tín dụng đặc thù mà Discover cung cấp. Tuy nhiên, điều này sẽ không làm giảm số lượng chủ sở hữu thẻ Visa và MasterCard trong thời gian ngắn.
+Trong những năm gần đây, tỷ lệ chấp nhận sử dụng thẻ Discover đã được cải thiện đáng kể, với 99% các đơn vị chấp nhận thẻ tín dụng tại Hoa Kỳ chấp nhận
+thẻ
+Discover (tính đến tháng 10/2024), mặc dù vẫn thấp hơn Visa và MasterCard.
+Với việc
+chú trọng phát triển
+mạng lưới thẻ Discover, Capital One phải quyết định liệu họ sẽ chuyển tệp khách hàng hiện tại sang mạng lưới thẻ
+của
+Discover, hay sẽ
+cung cấp
+các dịch vụ khác
+dàn
+trải
+trên
+các
+mạng lưới thẻ khác nhau. Lợi thế của việc chuyển khách hàng sang mạng lưới thẻ Discover là họ sẽ không phải trả tiền cho Visa và MasterCard, khoản tiết kiệm mà họ có thể sử dụng để cải tiến các ưu đãi thưởng hoặc giảm phí giao dịch. Và lợi thế của việc tiếp tục cung cấp
+một số dịch vụ thẻ tín dụng trên mạng lưới Visa và MasterCard là những dịch vụ này được quốc tế công nhận rộng rãi và được thiết lập
+, nhận diện thương hiệu
+tốt hơn trên thị trường thẻ ghi nợ, tuy vậy,
+cũng có quan điểm cho rằng
+cần phải xem liệu Visa và MasterCard có muốn làm việc với một đơn vị phát hành cùng sở hữu một mạng lưới thẻ cạnh tranh trực tiếp hay không.
+Hài hòa hóa
+việc chuyển đổi hoạt động thanh toán khu vực
+c
+hâu Âu giữa dịch vụ
+Ví điện tử
+Wero và
+hệ thống
+t
+hanh toán nhanh
+Hoạt động thanh toán tức thời, đặc biệt là thanh toán giữa các tài khoản (account to account - A2A) đã thu hút được sự quan tâm lớn trên toàn cầu, với
+c
+hâu Âu
+ở
+vị trí trung tâm. Tại
+khu vực này
+, việc hài hòa hoạt động thanh toán thông qua các giao dịch thanh toán xuyên biên giới liền mạc
+h
+đã trở thành mối quan tâm hàng đầu đối với người tiêu dùng, doanh nghiệp và các bên liên quan trong ngành công nghiệp thanh toán. Điều này được chứng minh thông qua trường hợp Vipps và MobilePay sáp nhập để phủ sóng toàn bộ khu vực Bắc Âu và một số
+Dự án cấp độ
+quốc gia như Blik của Ba Lan hợp tác với Sáng kiến thanh toán
+c
+hâu Âu (EPI)
+-
+một dịch vụ thanh toán số được phát triển để cung cấp
+giải pháp thanh toán thay thế có bản quyền cho người tiêu dùng trên toàn khu vực. Được ra mắt vào mùa hè năm 2021,
+Wero là Ví điện tử
+được sử dụng phổ biến tại
+c
+hâu Âu do EPI phát triển, hiện đang hoạt động tại các thị trường Bỉ, Pháp và Đức. Điểm khác biệt của Wero so với các dịch vụ và Ví điện tử
+(
+tương tự như PayPal
+)
+là nó được thiết kế dành riêng cho các giao dịch thanh toán tức thời, với việc đăng ký, thiết lập
+, định danh
+dễ dàng, thuận tiện khi chỉ yêu cầu số điện thoại của người tiêu dùng
+,
+theo đó
+người dùng có thể thực hiện thanh toán bằng số điện thoại đã đăng ký. Với hơn 30 ngân hàng hợp tác với Wero, hơn 75% công dân tại
+03
+quốc gia nêu trên đủ điều kiện sử dụng dịch vụ thanh toán này.
+Mặc dù Wero hiện chỉ hỗ trợ thanh toán ngang hàng (peer to peer payment), nhưng Công ty
+có kế hoạch
+mở rộng thanh toán sang P2Pro (Peer to Professional) và mua hàng trực tuyến và POS, nhằm cạnh tranh với PayPal và các dịch vụ tương tự.
+Vì vậy, Wero đặt mục tiêu trở thành giải pháp
+thanh toán
+thay thế cho các Ví điện tử phổ biến ở Mỹ, bao gồm các mô hình số hóa OEM như Apple Pay,
+và tiềm năng này sẽ trở lên gần hơn với hiện thực khi nhiều quốc gia
+kết nối
+liên thông với Wero
+(đơn cử như Hà Lan)
+. Ngoài ra, các tùy chọn khác mà Wero hướng đến để cạnh tranh là thông qua các dịch vụ giá trị gia tăng, như khả năng áp dụng các tùy chọn
+m
+ua ngay,
+t
+rả sau được các ngân hàng hỗ trợ xác minh danh tính số.
+Với những nỗ lực đầu tư đã đạt được sức hút từ các quốc gia mà Wero hoạt động, năm 2025 được xem là
+cột mốc
+quan trọng đối với Wero và
+hệ thống
+thanh toán tức thời
+ở
+khu vực
+c
+hâu Âu. Thanh toán tức thời sẽ
+tiếp tục
+chứng kiến sự tăng trưởng mạnh mẽ
+nhờ những
+phát triển
+vượt bậc
+về IPR và
+n
+gân hàng mở tạo điều kiện
+thúc đẩy
+thanh toán A2A tại
+c
+hâu Âu.
+Sự
+phóng đại
+về AI sẽ giảm dần khi gian lận và danh tính thúc đẩy đổi mới sáng tạo
+Những phát triển gần đây về công nghệ AI, đặc biệt là AI tổng quát (general AI) cùng với việc phát triển và triển khai các công cụ AI thông qua trợ lý ảo và mô hình ngôn ngữ lập trình lớn
+đã và đang được các tổ chức tài chính ứng dụng
+. Tuy nhiên, theo
+dòng
+thời gian, các tổ chức tài chính nhận ra rằng sẽ có
+thể đối mặt
+rủi ro lớn khi phát triển các công cụ AI mà không có mục tiêu
+, chiến lược
+rõ ràng
+, cụ thể
+. Sự cường điệu
+hay phóng đại
+về
+chủ đề AI đã khiến các lãnh đạo
+các tổ chức tài chính
+ưu tiên các dự án trải rộng trên nhiều lĩnh vực khác nhau, bất kể tính hữu ích thực tế của công nghệ này.
+Juniper Research đánh giá rằng một vấn đề lớn dự án AI được phát triển như các dự án ngắn hạn, thay vì được hưởng lợi từ khả năng học hỏi của AI
+; m
+ô hình AI có thể xử lý
+khối lượng lớn
+dữ liệu thì khả năng ứng dụng của nó càng tinh vi
+, phức tạp
+. Khi các ngân hàng và các tổ chức tài chính khác trở lên nhàm chán với sự cường điệu về AI, các nỗ lực về AI sẽ tập trung nhiều vào tự động hóa và cải thiện tính năng phòng ngừa gian lận và xác minh danh tính, và khi đó các giải pháp AI đổi mới sáng tạo sẽ được ứng dụng rộng rãi, đặc biệt là việc triển khai các biện pháp
+bảo mật dựa trên
+AI để
+phòng ngừa, đối phó với
+các thủ đoạn gian lận
+, giả m
+ạo
+mới nổi.
+Fintech
+bền vững trở thành yếu tố khác biệt chính đối với các ngân hàng
+Từ
+nửa sau
+năm 2020, Juniper Research đã xác định rằng dịch vụ tài chính tập trung vào tính bền vững
+(sustainability)
+sẽ tr
+ở
+thành một tính năng nổi trội đối với các ngân hàng thách thức (challenger banks). Khi đề cập đến
+mục tiêu tài chính dài hạn, như tiết đầu tư và tiết kiệm, biến đổi khí hậu và tác động xã hội
+, môi trường…
+đã trở thành mối quan tâm
+hàng đầu
+của người tiêu dùng khi
+đưa ra
+quyết định sử dụng nền tảng/ứng dụng ngân hàng. Hiện nay, hơn bao giờ hết, người tiêu dùng ngày càng hiểu rõ hơn về tác động sâu sắc của ngành dịch vụ tài chính trên thế giới và
+tầm quan trọng của các quy định,
+thông lệ
+quốc tế
+áp dụng tốt nhất
+trong quá trình phát triển, cung ứng các sản phẩm, dịch vụ, mô hình kinh doanh đổi mới sáng tạo
+. Trong xu thế đó, các ngân hàng số
+có khuynh hướng
+tận dụng cơ hội để xây dựng các công cụ tài chính nhúng
+(embedded finance)
+hoặc tích hợp vào các Ví điện tử hoặc ứng dụng ngân hàng của mình, cho phép
+người tiêu dùng tiếp cận các giải pháp Fintech bền vững.
+Cùng với đó, c
+ác ngân hàng số có nhiều hướng
+đi
+để nghiên cứu đưa các nguyên tắc ESG (Môi trường, Xã hội và Quản trị) vào hoạt động nghiệp vụ của mình, cho dù bằng cách cung cấp các sản phẩm tài chính bền vững như các khoản vay xanh, giảm cường độ năng lượng của nền tảng/ứng dụng
+ngân hàng
+và thúc đẩy hội nhập tài chính trong các
+thị trường
+chưa được phục vụ đầy đủ.
+Khi các ngân hàng số tiếp tục cạnh tranh với các ngân hàng truyền thống, Juniper Research
+cho
+rằng
+,
+các giải pháp và sản phẩm tập trung vào tính bền vững sẽ là động lực chính và tính năng nổi bật trong thị trường này
+và
+các doanh nghiệp và ngân hàng quy mô vừa và nhỏ
+là nhóm đối tượng được dự báo sẽ ứng dụng rộng rãi.
+Cuối cùng,
+Juniper Research
+dự báo rằng để tiếp tục cạnh tranh với các ngân hàng truyền thống, các ngân hàng số
+cần quan tâm đến các quy định về ESG và tài chính xanh, tài chính bền vững
+,
+như
+tính toán lượng phát thải khí carbon và các giải pháp
+triệt tiêu, giảm bớt lượng khí thải
+carbon
+ra môi trường
+. Thời gian tới, các ngân hàng số
+hóa
+sẽ tập trung đầu tư
+nhiều hơn
+vào các dự án
+năng lượng tái tạo (như điện gió, điện mặt trời) bảo vệ
+môi trường
+, biến đổi khí hậu…
+để tạo ra lợi thế cạnh tranh so với các ngân hàng truyền thống
+, hướng tới định hình chiến lược phát triển bền vững trong dài hạn và phù hợp với thông lệ quốc tế./.
+MĐ
+(Theo Juniper Research)

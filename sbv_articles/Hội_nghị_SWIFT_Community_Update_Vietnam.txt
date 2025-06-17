@@ -1,0 +1,170 @@
+TIÊU ĐỀ: Hội nghị SWIFT Community Update Vietnam
+
+URL: https://sbv.gov.vn/vi/w/sbv517029
+
+------------------ NỘI DUNG ------------------
+
+Ngày 11/8/2022, tại thành phố Nha Trang, tỉnh Khánh Hòa, Sở Giao dịch Ngân hàng Nhà nước Việt Nam (NHNN) đã phối hợp với Hiệp hội SWIFT tổ chức Hội nghị SWIFT Community Update Vietnam nhằm trao đổi, cập nhật tình hình hoạt động, các chính sách, chuẩn mực, ứng dụng, giải pháp mới của SWIFT cho các Tổ chức tín dụng và Chi nhánh ngân hàng nước ngoài sử dụng SWIFT tại Việt Nam. Bà Nguyễn Thi Hương – Phó Giám đốc Sở Giao dịch NHNN tham dự và chủ trì Hội nghị. Tham dự Hội nghị có các đại biểu đại diện các Vụ, Cục của NHNN (Sở Giao dịch, Vụ Thanh toán và Cục Công nghệ thông tin) cùng các đại biểu đại diện các Tổ chức tín dụng và Chi nhánh ngân hàng nước ngoài.
+1
+1
+Bà Nguyễn Thị Hương - Phó Giám đốc Sở Giao dịch NHNN chủ trì Hội nghị
+Tại
+Hội nghị
+, các chuyên gia SWIFT đã trao đổi, hướng dẫn cụ thể cách thức
+triển khai áp dụng chuẩn tin điện ISO
+20022
+đối với các thành viên sử dụng hệ thống SWIFT trong thanh toán quốc tế.
+Việc thực hiện chuyển đổi sang ISO 20022 bắt đầu từ
+tháng 11/2022 và kết thúc vào tháng 11/2025. Trong giai đoạn này
+, các ngân hàng cần cài đặt ứng dụng SWIFT lên
+phiên bản
+tối thiểu
+7.6 để có thể xử lý
+đồng thời
+cả định dạng tin điện hiện nay (MT) và định dạng tin điện mới theo ISO20022 (MX)
+.
+SWIFT khuyến cáo các ngân hàng cần khẩn trương xây dựng kế hoạch, triển khai thực hiện đảm bảo tiến độ chuyển đổi.
+Ông Erwin Purnaryadi -
+chuyên gia SWIFT
+hướng dẫn triển khai áp dụng chuẩn ISO20022
+Tại Hội nghị, các chuyên gia của SWIFT
+đã
+giới thiệu, cập nhật và hướng dẫn thử nghiệm các chuẩn mực, ứng dụng, giải pháp mới do SWIFT phát triển nhằm giúp các thành viên SWIFT rút ngắn thời gian, tăng cường bảo mật và thuận tiện trong thanh toán quốc tế.
+Cùng với xu thế chung của thế giới và khu vực Châu Á,
+nhu cầu
+thanh toán
+các khoản có giá trị thấp cho mục đích
+học tập, chữa bệnh, mua sắm
+…
+tại Việt Nam
+ngày càng
+tăng cao.
+Các hoạt động thanh toán kiều hối, thanh toán của doanh nghiệp vừa và nhỏ
+cũng gia tăng mạnh.
+SWIFT Go
+là một chuẩn mực mới trong thanh toán quốc tế giá trị thấp, là giải pháp hàng đầu để các ngân hàng nắm bắt lợi thế trong công tác thanh toán.
+Với SWIFT
+Go, khách hàng có thể
+thực hiện thanh toán nhanh chóng
+(giao dịch nhanh nhất đã thực hiện trong vòng 21 giây) với các khoản phí chi phí được xác định trước
+thông qua việc
+thiết lập song phương giữa các ngân hàng.
+SWIFT Go cho phép thực hiện lệnh thanh toán tối đa là 10.000
+đơn vị tiền tệ (USD,
+GBP
+,
+EUR)
+.
+Bên cạnh đó, SWIFT Go cho phép khách hàng có thể tủy chỉnh giao diện thanh toán một cách trực quan nhằm đơn giản thao tác thực hiện, đồng thời cung
+cấp công cụ báo cáo trung tâm nhằm giúp khách hàng tra cứu, xác nhận, quản lý giao dịch.
+Hiện nay đã có trên 250 tổ chức tại 70 quốc gia đăng ký, sử dụng SWIFT Go.
+Việc triển khai SWIFT Go thu hút sự quan tâm của các đại biểu, đặc biệt là vấn đề
+tuân thủ những quy định của từng
+ngân hàng, từng nước, từng khu vực và chi phí thực hiện.
+Ông Guan Quan Tan – chuyên gia SWIFT trình bày về SWIFT Go
+và các
+ứng dụng
+,
+giải pháp
+mới
+của SWIFT
+Tại Hội nghị, đại diện 04 ngân hàng đầu tiên sử dụng SWIFT Go (bao gồm: Vietcombank, Citibank, JP Morgan Chase, HDBank) đã
+tọ
+a đàm
+chia sẻ
+thông tin, kinh nghiệm thực tiễn khi sử dụng dịch vụ này. Theo đó, SWIFT Go đã đáp ứng
+tốt
+nhu cầu chuyển tiền thanh toán giá trị thấp của các ngân hàng trong thời gian gần đây.
+Các ngân hàng tham gia tọa đàm đều đồng thuận nhận định rằng
+“m
+ột cộng đồng
+có
+nhiều thành viên sử dụng
+SWIFT Go
+sẽ mang lại hiệu quả lớn hơn
+,
+lợi ích chung nhiều hơn
+”.
+Đại diện 04
+ngân hàng chia
+sẻ thông tin, kinh nghiệm sử dụng SWIFT Go
+Ứng dụng xác thực trước thanh toán (Payment Pre-validation) giúp l
+oại bỏ những sự cố, xung đột trong thanh toán
+thông qua việc
+xác minh
+các thông tin về người thụ hưởng. Sự cố
+trong thanh toán quốc tế xảy ra
+với
+hơn 700 triệu giao dịch và làm tiêu tốn số tiền khổng lồ lên tới
+02 tỷ đô la mỗi năm để xử lý
+.
+Tuy nhiên,
+phần lớn sự cố này
+xảy ra ở
+các lỗi hoàn toàn
+có thể tránh được như lỗi chính tả và lỗi định dạng.
+Ứng dụng xác thực trước thanh toán
+giúp cho các ngân hàng trước khi gửi một khoản thanh toán, có thể ngay lập tức kiểm tra
+thông tin, tính hợp lệ của người thụ hưởng,
+đồng thời
+dự đoán
+trước được các sự cố trong các khoản thanh toán để kịp thời sửa chữa
+,
+qua đó giúp
+hạn chế sai sót có thể làm điện bị hoàn trả lại và rút ngắn
+được thời gian chuyển tiền.
+G
+iải pháp tra soát
+(Case Resolution)
+được sử dụng để
+xử lý
+trong
+trường hợp thông tin không chính xác hoặc bị thiếu trong hướng dẫn thanh toán.
+Thông qua truy vết giao dịch
+được ghi lại
+,
+ngân hàng có thể
+theo dõi
+chi tiết quá trình
+giao dịch để tiến hành tra soát tại đúng đại lý được xác định, qua đó rút ngắn được thời gian giải quyết sai sót và giúp người thụ hưởng nhận được tiền sớm hơn.
+Phương thức tra soát được được thực hiện trực tiếp trên ứng dụng,
+có cấu trúc chuẩn hóa và sử dụng định dạng
+theo
+ISO 20022.
+Tại Hội nghị, các đại biểu đại diện các Tổ chức tín dụng, Chi nhánh ngân hàng nước ngoài đã
+nêu
+ra các vướng mắc
+về hạ tầng kỹ thuật và vấn đề tuân thủ các quy định của Ngân hàng Nhà nước
+trong quá trình triển khai thực hiệ
+n
+ISO 20022,
+SWIFT Go và các ứng dụng, giải pháp mới của SWIFT
+.
+Bà Nguyễn Thị Hương
+– Phó Giám đốc Sở Giao dịch NHNN, chủ trì Hội nghị
+đã
+hướng dẫn các ngân hàng xử lý vướng mắc;
+tổng kết,
+đánh giá
+tình hình
+hoạt động
+thanh toán quốc
+tế,
+kết quả thự
+c
+hiện nhiệm vụ
+của Ủy ban VIETSWIFT
+trong thời gian vừa qua và kế hoạch trong thời gian tới
+;
+đề nghị
+các
+ngân hàng
+nghiên cứu, ứng dụng các chuẩn mực, ứng dụng, giải pháp mới của SWIFT phù hợp với tình hình đơn vị,
+đồng thời đề nghị SWIFT tích cực hỗ trợ
+triển khai
+. Bà Nguyễn Thị Hương
+yêu cầu các thành viên sử dụng SWIFT
+tiếp tục thực hiện đầy đủ các yêu cầu của Chương trình An ninh khách hàng năm 2022,
+khẩn trương triển khai thực hiện chuyển đổi ISO 20022 theo yêu cầu của SWIFT nhằm đảm bảo hoạt động thanh toán quốc tế ổn định, thông suốt.
+/.
+Khánh Chung SGD

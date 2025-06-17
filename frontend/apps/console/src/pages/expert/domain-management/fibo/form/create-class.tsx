@@ -1,23 +1,23 @@
-import { useCreateFiboClass } from "@vbkg/api-client";
-import { CreateFiboClassSchema } from "@vbkg/schemas";
-import { FIBOClass } from "@vbkg/types";
+import { useCreateOntologyClass } from "@vbkg/api-client";
+import { CreateOntologyClassSchema } from "@vbkg/schemas";
+import { OntologyClass } from "@vbkg/types";
 import { AppForm, FieldConfig } from "@/components";
 
-interface FormCreateFiboClassProps {
-  fiboClasses: FIBOClass[];
+interface FormCreateOntologyClassProps {
+  ontologyClasses: OntologyClass[];
 }
 
-export default function FormCreateFiboClass({
-  fiboClasses,
-}: FormCreateFiboClassProps) {
+export default function FormCreateOntologyClass({
+  ontologyClasses,
+}: FormCreateOntologyClassProps) {
   const getClassFormFields = (): FieldConfig[] => [
     {
       name: "uri",
       label: "URI",
       type: "text",
-      placeholder: "https://spec.edmcouncil.org/fibo/ontology/...",
+      placeholder: "https://spec.edmcouncil.org/ontology/ontology/...",
       required: true,
-      description: "URI duy nhất của FIBO class",
+      description: "URI duy nhất của Ontology class",
     },
     {
       name: "label",
@@ -38,13 +38,13 @@ export default function FormCreateFiboClass({
       label: "Domain",
       type: "text",
       placeholder: "VD: FBC, SEC, FND",
-      description: "Domain trong FIBO taxonomy",
+      description: "Domain trong Ontology taxonomy",
     },
     {
       name: "parent_class_uri",
       label: "Parent Class",
       type: "select",
-      options: fiboClasses.map((c) => ({
+      options: ontologyClasses.map((c) => ({
         label: `${c.label || c.uri} (${c.domain || "No domain"})`,
         value: c.uri,
       })),
@@ -55,25 +55,25 @@ export default function FormCreateFiboClass({
       label: "Custom Class",
       type: "switch",
       defaultValue: false,
-      description: "Đây có phải là custom class không thuộc FIBO chuẩn",
+      description: "Đây có phải là custom class không thuộc Ontology chuẩn",
     },
   ];
-  const { mutate: createFiboClass, isPending: loading } = useCreateFiboClass(
+  const { mutate: createOntologyClass, isPending: loading } = useCreateOntologyClass(
     {},
   );
   const handleCreateClass = (data: any) => {
     const newClass = {
       ...data,
       parent_class_id: data.parent_class_uri
-        ? fiboClasses.find((c) => c.uri === data.parent_class_uri)?.id || null
+        ? ontologyClasses.find((c) => c.uri === data.parent_class_uri)?.id || null
         : null,
     };
-    createFiboClass(newClass);
+    createOntologyClass(newClass);
   };
   return (
     <AppForm
       fields={getClassFormFields()}
-      schema={CreateFiboClassSchema}
+      schema={CreateOntologyClassSchema}
       onSubmit={handleCreateClass}
       submitButtonText="Create Class"
       isLoading={loading}

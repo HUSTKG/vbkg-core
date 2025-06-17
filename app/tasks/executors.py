@@ -1,25 +1,211 @@
 import json
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
 
-from app.nlp.embeddings import get_embedding_service
-from app.nlp.entity_extraction import EntityExtractionService
-from app.nlp.knowledge_extraction import KnowledgeExtractionService
-from app.nlp.ontogpt import OntoGPTService
-from app.nlp.text_chunking import TextChunker
 from app.schemas.pipeline_step import PipelineStepType
-from app.tasks.ingestion import (ingest_api_data, ingest_database_data,
-                                 ingest_file)
-from app.tasks.transformation import (enrich_entities_with_embeddings,
-                                      sync_entities_to_neo4j,
-                                      sync_relationships_to_neo4j)
+from app.tasks.data_ingestion import DataIngestionTask
+from app.utils.incremental_processor import incremental_processor
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class GraphDataType(Enum):
+    """Types of data trong graph state"""
+
+    RAW_TEXT = "raw_text"
+    PROCESSED_CHUNKS = "processed_chunks"
+    ENTITIES = "entities"
+    RELATIONSHIPS = "relationships"
+    METADATA = "metadata"
+
+
+@dataclass
+class GraphState:
+    """Global state để maintain graph data xuyên suốt pipeline"""
+
+    def __init__(self):
+        self.entities: List[Dict[str, Any]] = []
+        self.relationships: List[Dict[str, Any]] = []
+        self.raw_text_data: List[Dict[str, Any]] = []
+        self.processed_chunks: List[Dict[str, Any]] = []
+        self.cleaned_data: List[Dict[str, Any]] = []
+        self.validation_results: Optional[Dict[str, Any]] = None
+        self.metadata: Dict[str, Any] = {}
+        self.step_history: List[str] = []
+
+    def add_entities(self, new_entities: List[Dict[str, Any]], source_step: str):
+        """Add hoặc merge entities from a step"""
+        if new_entities:
+            # Merge strategy: replace nếu có cặp text-type, add nếu mới
+            existing_set = set()
+
+            for entity in self.entities:
+                existing_set.add((entity.get("entity_type"), 
+                    entity.get("text", entity.get("entity_text")),
+                ))
+
+            for entity in new_entities:
+                entity_key = (
+                    entity.get("entity_type"),
+                    entity.get("text", entity.get("entity_text")),
+                )
+                if entity_key in existing_set:
+                    # Update existing entity
+                    for i, existing_entity in enumerate(self.entities):
+                        existing_key = (
+                            existing_entity.get("entity_type"),
+                            existing_entity.get("text", entity.get("entity_text")),
+                        )
+                        if entity_key == existing_key:
+                            self.entities[i] = self._merge_entity(
+                                existing_entity, entity, source_step
+                            )
+                            break
+                else:
+                    # Add new entity
+                    entity["_source_step"] = source_step
+                    entity["_added_at"] = datetime.now(timezone.utc).isoformat()
+                    self.entities.append(entity)
+
+            logger.info(
+                f"Added {len(new_entities)} entities from {source_step}. Total: {len(self.entities)}"
+            )
+
+    def add_relationships(
+        self, new_relationships: List[Dict[str, Any]], source_step: str
+    ):
+        """Add hoặc merge relationships from a step"""
+        if new_relationships:
+            for relationship in new_relationships:
+                relationship["_source_step"] = source_step
+                relationship["_added_at"] = datetime.now(timezone.utc).isoformat()
+                self.relationships.append(relationship)
+
+            logger.info(
+                f"Added {len(new_relationships)} relationships from {source_step}. Total: {len(self.relationships)}"
+            )
+
+    def set_text_data(
+        self,
+        text_data: List[Dict[str, Any]],
+        data_type: GraphDataType,
+        source_step: str,
+    ):
+        """Set text data based on type"""
+        if data_type == GraphDataType.RAW_TEXT:
+            self.raw_text_data = text_data
+        elif data_type == GraphDataType.PROCESSED_CHUNKS:
+            self.processed_chunks = text_data
+
+        logger.info(f"Set {len(text_data)} {data_type.value} items from {source_step}")
+
+    def set_cleaned_data(self, cleaned_data: List[Dict[str, Any]], source_step: str):
+        """Set cleaned data"""
+        self.cleaned_data = cleaned_data
+        logger.info(f"Set {len(cleaned_data)} cleaned data items from {source_step}")
+
+    def set_validation_results(
+        self, validation_results: Dict[str, Any], source_step: str
+    ):
+        """Set validation results"""
+        self.validation_results = validation_results
+        logger.info(f"Set validation results from {source_step}")
+
+    def add_step_to_history(self, step_name: str):
+        """Track step execution history"""
+        if step_name not in self.step_history:
+            self.step_history.append(step_name)
+
+    def has_step_completed(self, step_name: str) -> bool:
+        """Check if a step has been completed"""
+        return step_name in self.step_history
+
+    def get_latest_entities(self) -> List[Dict[str, Any]]:
+        """Get latest version của entities"""
+        return self.entities
+
+    def get_latest_relationships(self) -> List[Dict[str, Any]]:
+        """Get latest version của relationships"""
+        return self.relationships
+
+    def get_best_text_data(self) -> List[Dict[str, Any]]:
+        """Get best available text data, priority: cleaned > chunks > raw"""
+        if self.cleaned_data:
+            return self.cleaned_data
+        elif self.processed_chunks:
+            return self.processed_chunks
+        else:
+            return self.raw_text_data
+
+    def _merge_entity(
+        self, existing: Dict[str, Any], new: Dict[str, Any], source_step: str
+    ) -> Dict[str, Any]:
+        """Merge entity data, keeping provenance"""
+        merged = existing.copy()
+
+        # Update with new data
+        for key, value in new.items():
+            if key.startswith("_"):
+                continue  # Skip internal fields
+
+            if value is not None:
+                merged[key] = value
+
+        # Add provenance info
+        if "_update_history" not in merged:
+            merged["_update_history"] = []
+
+        merged["_update_history"].append(
+            {
+                "step": source_step,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "updated_fields": list(new.keys()),
+            }
+        )
+
+        return merged
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization"""
+        return {
+            "entities": self.entities,
+            "relationships": self.relationships,
+            "raw_text_data": self.raw_text_data,
+            "processed_chunks": self.processed_chunks,
+            "cleaned_data": self.cleaned_data,
+            "validation_results": self.validation_results,
+            "metadata": self.metadata,
+            "step_history": self.step_history,
+            "summary": {
+                "entity_count": len(self.entities),
+                "relationship_count": len(self.relationships),
+                "text_data_count": len(self.raw_text_data),
+                "chunks_count": len(self.processed_chunks),
+                "completed_steps": self.step_history,
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "GraphState":
+        """Create GraphState from dictionary"""
+        graph_state = cls()
+        if data:
+            graph_state.entities = data.get("entities", [])
+            graph_state.relationships = data.get("relationships", [])
+            graph_state.raw_text_data = data.get("raw_text_data", [])
+            graph_state.processed_chunks = data.get("processed_chunks", [])
+            graph_state.cleaned_data = data.get("cleaned_data", [])
+            graph_state.validation_results = data.get("validation_results")
+            graph_state.metadata = data.get("metadata", {})
+            graph_state.step_history = data.get("step_history", [])
+        return graph_state
 
 
 class PipelineExecutionError(Exception):
@@ -29,17 +215,106 @@ class PipelineExecutionError(Exception):
 
 
 class BaseStepExecutor:
-    """Base class for step executors"""
+    """Enhanced base class với graph state support"""
 
-    def __init__(self, step_config: Dict[str, Any], step_metadata: Dict[str, Any]):
+    def __init__(
+        self,
+        step_config: Dict[str, Any],
+        step_metadata: Dict[str, Any],
+        graph_state: Optional[GraphState] = None,
+    ):
         self.config = step_config
         self.metadata = step_metadata
         self.step_id = step_metadata.get("step_id")
         self.step_name = step_metadata.get("step_name", "Unknown")
+        self.pipeline_id = step_metadata.get("pipeline_id")
+        self.graph_state = graph_state or GraphState()
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the step and return output data"""
+        """Execute the step với graph state management"""
+
+        # 1. Update graph state with any new data from input
+        self._update_graph_state_from_input(input_data)
+
+        # 2. Check prerequisites
+        if not self._check_prerequisites():
+            logger.warning(
+                f"Prerequisites not fully met for {self.step_name}, but continuing..."
+            )
+
+        # 3. Execute step-specific logic
+        step_result = await self._execute_step_logic(input_data)
+
+        # 4. Update graph state with step results
+        self._update_graph_state_from_results(step_result)
+
+        # 5. Add step to history
+        self.graph_state.add_step_to_history(self.step_name)
+
+        # 6. Return combined result với graph_state trong output
+        return {"graph_state": self.graph_state.to_dict()}
+
+    async def _handle_incremental_processing(
+        self, input_data: Dict[str, Any]
+    ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+        """Handle incremental processing if enabled"""
+        incremental_config = self.config.get("incremental_config", {})
+
+        if incremental_config.get("enabled", False):
+            filtered_data, checkpoint = (
+                await incremental_processor.process_incremental_data(
+                    step_id=self.step_id,
+                    pipeline_id=self.pipeline_id,
+                    input_data=input_data,
+                    incremental_config=incremental_config,
+                )
+            )
+            return filtered_data, {"checkpoint": checkpoint}
+
+        return input_data, None
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Override in subclasses - core step logic"""
         raise NotImplementedError
+
+    def _check_prerequisites(self) -> bool:
+        """Check if prerequisites are met - override in subclasses"""
+        return True
+
+    def _update_graph_state_from_input(self, input_data: Dict[str, Any]):
+        """Update graph state với data từ previous steps"""
+
+        # Extract graph state from input if available
+        if "graph_state" in input_data:
+            previous_state_dict = input_data["graph_state"]
+            if previous_state_dict:
+                previous_state = GraphState.from_dict(previous_state_dict)
+
+                # Merge previous state vào current state
+                self.graph_state.entities = previous_state.entities
+                self.graph_state.relationships = previous_state.relationships
+                self.graph_state.raw_text_data = previous_state.raw_text_data
+                self.graph_state.processed_chunks = previous_state.processed_chunks
+                self.graph_state.cleaned_data = previous_state.cleaned_data
+                self.graph_state.validation_results = previous_state.validation_results
+                self.graph_state.metadata = previous_state.metadata
+                self.graph_state.step_history = previous_state.step_history
+
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với results from current step - override in subclasses"""
+        pass
+
+    def _get_best_entities(self) -> List[Dict[str, Any]]:
+        """Get best available entities từ graph state"""
+        return self.graph_state.get_latest_entities()
+
+    def _get_best_relationships(self) -> List[Dict[str, Any]]:
+        """Get best available relationships từ graph state"""
+        return self.graph_state.get_latest_relationships()
+
+    def _get_best_text_data(self) -> List[Dict[str, Any]]:
+        """Get best available text data"""
+        return self.graph_state.get_best_text_data()
 
     def _track_provenance(
         self, data: Any, source: Optional[str] = None
@@ -56,167 +331,188 @@ class BaseStepExecutor:
             },
         }
 
-    def _handle_incremental(self, data: Any) -> Tuple[Any, Dict[str, Any]]:
-        """Handle incremental processing"""
-        incremental_config = self.config.get("incremental_config", {})
-
-        if not incremental_config.get("enabled", False):
-            return data, {}
-
-        checkpoint_field = incremental_config.get("checkpoint_field")
-        last_value = incremental_config.get("checkpoint_value")
-
-        # Filter data based on checkpoint
-        if checkpoint_field and last_value and isinstance(data, list):
-            filtered_data = [
-                item for item in data if item.get(checkpoint_field, "") > last_value
-            ]
-
-            # Update checkpoint value
-            new_checkpoint = None
-            if filtered_data:
-                new_checkpoint = max(
-                    item.get(checkpoint_field)
-                    for item in filtered_data
-                    if item.get(checkpoint_field)
-                )
-
-            return filtered_data, {"new_checkpoint": new_checkpoint}
-
-        return data, {}
-
 
 class FileIngestionExecutor(BaseStepExecutor):
-    """Executor for file ingestion"""
+    """Executor for file ingestion với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            from app.tasks.data_ingestion import DataIngestionTask
 
-            from app.services.file_upload import UploadService
+            # Initialize DataIngestionTask
+            ingestion_task = DataIngestionTask()
 
-            upload_service = UploadService()
-
-            datasource_id = self.config.get("datasource_id", [])
+            datasource_id = self.config.get("datasource_id")
             encoding = self.config.get("encoding", "utf-8")
             extract_metadata = self.config.get("extract_metadata", True)
 
-            logger.info(
-                f"Starting file ingestion for data source {datasource_id} with encoding {encoding}"
+            if not datasource_id:
+                raise PipelineExecutionError(
+                    "datasource_id is required for file ingestion"
+                )
+
+            logger.info(f"Starting file ingestion for data source {datasource_id}")
+
+            # Use DataIngestionTask to handle multiple file ingestion
+            ingestion_result = await ingestion_task.ingest_multiple_files(
+                datasource_id=UUID(datasource_id),
+                encoding=encoding,
+                extract_metadata=extract_metadata,
             )
 
-            file_uploads = await upload_service.get_file_uploads(
-                data_source_id=datasource_id
-            )
+            if "error" in ingestion_result:
+                raise PipelineExecutionError(
+                    f"File ingestion failed: {ingestion_result['error']}"
+                )
 
-            logger.info(
-                f"Retrieved {len(file_uploads.data)} file uploads for data source {datasource_id}"
-            )
-
+            # Process each file with provenance tracking
             processed_files = []
-
-            for file in file_uploads.data:
-                try:
-                    # Use existing ingestion function
-                    file_record = await ingest_file(
-                        file_id=file["id"],
-                        file_name=file["file_name"],
-                        datasource_id=UUID(self.config.get("datasource_id")),
-                    )
-
-                    if not file_record:
-                        logger.error(
-                            f"Failed to ingest file {file['file_name']}: No file record returned"
-                        )
-                        continue
-
-                    logger.info(
-                        f"Ingested file {file['file_name']} with ID {file_record["text_content"]}"
-                    )
-
-                    if file_record:
-                        processed_files.append(
-                            self._track_provenance(file_record, file["storage_path"])
-                        )
-
-                except Exception as e:
-                    logger.error(f"Error ingesting file {file["storage_path"]}: {e}")
-                    continue
+            for file_record in ingestion_result["processed_files"]:
+                processed_files.append(
+                    self._track_provenance(file_record, file_record.get("file_name"))
+                )
 
             return {
                 "files": processed_files,
-                "total_files": len(processed_files),
+                "total_files": ingestion_result["total_files"],
+                "successful_files": ingestion_result["successful_files"],
+                "failed_files": ingestion_result["failed_files"],
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "file_ingestion",
+                    "ingestion_stats": ingestion_result.get("metadata", {}),
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"File ingestion execution failed: {e}")
 
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với ingested file data"""
+        if "files" in step_result:
+            text_data = []
+            for file_item in step_result["files"]:
+                if isinstance(file_item, dict) and "data" in file_item:
+                    file_info = file_item["data"]
+                    text_data.append(
+                        {
+                            "text": str(file_info.get("text_content", "")),
+                            "source": file_info.get("file_name", "unknown"),
+                            "metadata": file_info,
+                            "provenance": file_item.get("provenance", {}),
+                        }
+                    )
+
+            if text_data:
+                self.graph_state.set_text_data(
+                    text_data, GraphDataType.RAW_TEXT, self.step_name
+                )
+
 
 class ApiIngestionExecutor(BaseStepExecutor):
-    """Executor for API data ingestion"""
+    """Enhanced API data ingestion với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            # Initialize DataIngestionTask
+            ingestion_task = DataIngestionTask()
+
             api_url = self.config.get("url")
             auth_params = self.config.get("auth_config", {})
             query_params = self.config.get("params", {})
             headers = self.config.get("headers", {})
             response_format = self.config.get("response_format", "json")
+            datasource_id = self.config.get("datasource_id")
+            user_id = self.config.get("user_id")
 
-            # Use existing ingestion function
-            api_record = await ingest_api_data(
+            if not api_url or not datasource_id:
+                raise PipelineExecutionError(
+                    "api_url and datasource_id are required for API ingestion"
+                )
+
+            # Use DataIngestionTask to handle API ingestion
+            api_record = await ingestion_task.ingest_api_data(
                 api_url=api_url,
                 data_format=response_format,
-                datasource_id=UUID(self.config.get("datasource_id")),
+                datasource_id=UUID(datasource_id),
+                user_id=UUID(user_id) if user_id else None,
                 auth_params=auth_params,
                 query_params=query_params,
                 headers=headers,
-                process_immediately=False,
             )
 
             if not api_record:
                 raise PipelineExecutionError("API ingestion failed")
 
+            result = self._track_provenance(api_record, api_url)
+
             # Handle incremental processing
-            filtered_data, checkpoint_info = self._handle_incremental(api_record)
-
-            result = self._track_provenance(filtered_data, api_url)
-
-            if checkpoint_info:
-                result["checkpoint_info"] = checkpoint_info
+            api_data = {"api_response": result}
+            filtered_data, incremental_info = await self._handle_incremental_processing(
+                api_data
+            )
 
             return {
-                "api_response": result,
+                **filtered_data,
                 "record_count": 1,
+                "incremental_info": incremental_info,
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "api_ingestion",
+                    "api_url": api_url,
+                    "response_format": response_format,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"API ingestion execution failed: {e}")
 
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với API data"""
+        if "api_response" in step_result:
+            api_data = step_result["api_response"]
+            if isinstance(api_data, dict) and "data" in api_data:
+                api_content = api_data["data"]
+                text_data = [
+                    {
+                        "text": str(api_content),
+                        "source": "api",
+                        "metadata": api_content,
+                        "provenance": api_data.get("provenance", {}),
+                    }
+                ]
+
+                self.graph_state.set_text_data(
+                    text_data, GraphDataType.RAW_TEXT, self.step_name
+                )
+
 
 class DatabaseIngestionExecutor(BaseStepExecutor):
-    """Executor for database data ingestion"""
+    """Enhanced Database data ingestion với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            # Initialize DataIngestionTask
+            ingestion_task = DataIngestionTask()
+
             connection_string = self.config.get("connection_string")
             query = self.config.get("query")
             output_format = self.config.get("output_format", "json")
+            datasource_id = self.config.get("datasource_id")
+            user_id = self.config.get("user_id")
 
-            # Use existing ingestion function
-            db_record = await ingest_database_data(
+            if not connection_string or not query or not datasource_id:
+                raise PipelineExecutionError(
+                    "connection_string, query, and datasource_id are required for database ingestion"
+                )
+
+            # Use DataIngestionTask to handle database ingestion
+            db_record = await ingestion_task.ingest_database_data(
                 connection_string=connection_string,
                 query=query,
-                datasource_id=UUID(self.config.get("datasource_id")),
+                datasource_id=UUID(datasource_id),
+                user_id=UUID(user_id) if user_id else None,
                 output_format=output_format,
-                process_immediately=False,
             )
 
             if not db_record:
@@ -224,51 +520,113 @@ class DatabaseIngestionExecutor(BaseStepExecutor):
 
             result = self._track_provenance(db_record, connection_string)
 
+            # Handle incremental processing
+            db_data = {"database_result": result}
+            filtered_data, incremental_info = await self._handle_incremental_processing(
+                db_data
+            )
+
             return {
-                "database_result": result,
+                **filtered_data,
                 "record_count": db_record.get("metadata", {}).get("row_count", 0),
+                "incremental_info": incremental_info,
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "database_ingestion",
+                    "output_format": output_format,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"Database ingestion execution failed: {e}")
 
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với database data"""
+        if "database_result" in step_result:
+            db_data = step_result["database_result"]
+            if isinstance(db_data, dict) and "data" in db_data:
+                db_content = db_data["data"]
+                text_data = [
+                    {
+                        "text": str(db_content),
+                        "source": "database",
+                        "metadata": db_content,
+                        "provenance": db_data.get("provenance", {}),
+                    }
+                ]
+
+                self.graph_state.set_text_data(
+                    text_data, GraphDataType.RAW_TEXT, self.step_name
+                )
+
 
 class TextChunkingExecutor(BaseStepExecutor):
-    """Executor for text chunking"""
+    """Executor for text chunking với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Text chunking cần text data"""
+        text_data = self._get_best_text_data()
+        if not text_data:
+            logger.warning("No text data available for chunking")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            from app.nlp.text_chunking import TextChunker
+
             text_chunker = TextChunker()
             chunk_size = self.config.get("chunk_size", 1000)
             chunk_overlap = self.config.get("chunk_overlap", 200)
             chunking_strategy = self.config.get("chunking_strategy", "recursive")
 
-            # Extract text data from input
-            text_data = self._extract_text_from_input(input_data)
+            # Get text data từ graph state
+            text_data = self._get_best_text_data()
 
             chunked_data = []
 
             for text_item in text_data:
-                text_content: str = text_item.get("content", "")
+                text_content: str = text_item.get("text", "") or text_item.get(
+                    "content", ""
+                )
 
                 if chunking_strategy == "structured":
-                    # Handle structured data
                     if isinstance(text_content, (dict, list)):
                         chunks = text_chunker.text_chunk(text_content, chunk_size)
                     else:
-                        chunks = text_chunker.text_chunk(text_content, chunk_size, chunk_overlap)
+                        chunks = text_chunker.text_chunk(
+                            text_content, chunk_size, chunk_overlap
+                        )
                 else:
-                    # Default text chunking
-                    chunks = text_chunker.text_chunk(text_content, chunk_size, chunk_overlap)
+                    chunks = text_chunker.text_chunk(
+                        text_content, chunk_size, chunk_overlap
+                    )
+
+                logger.info(
+                    f"Chunking text from source '{text_item.get('source', 'unknown')}' "
+                    f"into {len(chunks)} chunks with size {chunk_size} and overlap {chunk_overlap}"
+                )
 
                 for i, chunk in enumerate(chunks):
                     chunked_item = {
                         "chunk_id": f"{text_item.get('source', 'unknown')}_{i}",
-                        "content": chunk,
+                        "content": (
+                            chunk.get("text", chunk)
+                            if isinstance(chunk, dict)
+                            else chunk
+                        ),
+                        "section": (
+                            chunk.get("section", "unknown")
+                            if isinstance(chunk, dict)
+                            else "unknown"
+                        ),
+                        "chunk_type": (
+                            chunk.get("chunk_type", "text")
+                            if isinstance(chunk, dict)
+                            else "text"
+                        ),
+                        "char_count": chunk.get("char_count", len(str(chunk))),
+                        "estimated_tokens": chunk.get("estimated_tokens", 0),
                         "chunk_index": i,
                         "source": text_item.get("source"),
                         "original_provenance": text_item.get("provenance", {}),
@@ -282,67 +640,40 @@ class TextChunkingExecutor(BaseStepExecutor):
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "text_chunking",
                     "chunking_strategy": chunking_strategy,
+                    "chunk_size": chunk_size,
+                    "chunk_overlap": chunk_overlap,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"Text chunking execution failed: {e}")
 
-    def _extract_text_from_input(
-        self, input_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Extract text content from various input formats"""
-        text_data = []
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với processed chunks"""
+        if "chunks" in step_result:
+            chunk_data = []
+            for chunk_item in step_result["chunks"]:
+                if isinstance(chunk_item, dict) and "data" in chunk_item:
+                    chunk_data.append(chunk_item["data"])
 
-        # Handle file ingestion output
-        if "files" in input_data:
-            for file_data in input_data["files"]:
-                if isinstance(file_data, dict) and "data" in file_data:
-                    # Read file content if needed
-                    file_info = file_data["data"]
-                    text_data.append(
-                        {
-                            "content": str(
-                                file_info["text_content"]
-                            ),  # Convert to string representation
-                            "source": file_info.get("file_name", "unknown"),
-                            "provenance": file_data.get("provenance", {}),
-                        }
-                    )
-
-        # Handle API ingestion output
-        elif "api_response" in input_data:
-            api_data = input_data["api_response"]
-            if isinstance(api_data, dict) and "data" in api_data:
-                content = str(api_data["data"])
-                text_data.append(
-                    {
-                        "content": content,
-                        "source": "api",
-                        "provenance": api_data.get("provenance", {}),
-                    }
+            if chunk_data:
+                self.graph_state.set_text_data(
+                    chunk_data, GraphDataType.PROCESSED_CHUNKS, self.step_name
                 )
-
-        # Handle database ingestion output
-        elif "database_result" in input_data:
-            db_data = input_data["database_result"]
-            if isinstance(db_data, dict) and "data" in db_data:
-                content = str(db_data["data"])
-                text_data.append(
-                    {
-                        "content": content,
-                        "source": "database",
-                        "provenance": db_data.get("provenance", {}),
-                    }
-                )
-
-        return text_data
 
 
 class DataCleanerExecutor(BaseStepExecutor):
-    """Executor for data cleaning"""
+    """Enhanced Data cleaner với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Data cleaning cần text data"""
+        text_data = self._get_best_text_data()
+        if not text_data:
+            logger.warning("No text data available for cleaning")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             cleaning_rules = self.config.get("cleaning_rules", {})
             remove_duplicates = cleaning_rules.get("remove_duplicates", True)
@@ -350,8 +681,8 @@ class DataCleanerExecutor(BaseStepExecutor):
             remove_empty = cleaning_rules.get("remove_empty", True)
             custom_rules = cleaning_rules.get("custom_rules", [])
 
-            # Extract data from input
-            data_to_clean = self._extract_data_for_cleaning(input_data)
+            # Use best text data từ graph state
+            data_to_clean = self._get_best_text_data()
 
             cleaning_stats = {
                 "original_count": len(data_to_clean),
@@ -421,42 +752,18 @@ class DataCleanerExecutor(BaseStepExecutor):
         except Exception as e:
             raise PipelineExecutionError(f"Data cleaner execution failed: {e}")
 
-    def _extract_data_for_cleaning(
-        self, input_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Extract data that needs cleaning from various input formats"""
-        data_to_clean = []
-
-        # Handle chunks output
-        if "chunks" in input_data:
-            for chunk in input_data["chunks"]:
-                if isinstance(chunk, dict) and "data" in chunk:
-                    data_to_clean.append(chunk["data"])
-
-        # Handle file ingestion output
-        elif "files" in input_data:
-            for file_data in input_data["files"]:
-                if isinstance(file_data, dict) and "data" in file_data:
-                    data_to_clean.append(file_data["data"])
-
-        # Handle API/database output
-        elif any(key in input_data for key in ["api_response", "database_result"]):
-            for key in ["api_response", "database_result"]:
-                if key in input_data:
-                    item = input_data[key]
-                    if isinstance(item, dict) and "data" in item:
-                        data_to_clean.append(item["data"])
-
-        # Fallback: treat input as data to clean
-        else:
-            data_to_clean = [input_data]
-
-        return data_to_clean
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với cleaned data"""
+        if "cleaned_data" in step_result:
+            cleaned = step_result["cleaned_data"]
+            if isinstance(cleaned, dict) and "data" in cleaned:
+                cleaned_items = cleaned["data"]
+                if isinstance(cleaned_items, list):
+                    self.graph_state.set_cleaned_data(cleaned_items, self.step_name)
 
     def _generate_item_key(self, item: Dict[str, Any]) -> str:
         """Generate a unique key for duplicate detection"""
         if isinstance(item, dict):
-            # Use content or text as primary identifier
             content = item.get("content") or item.get("text") or str(item)
             return hash(
                 content.strip().lower() if isinstance(content, str) else str(content)
@@ -472,7 +779,6 @@ class DataCleanerExecutor(BaseStepExecutor):
             content = item.get("content") or item.get("text")
             if content:
                 return bool(str(content).strip())
-            # Check if dict has meaningful values
             return any(v for v in item.values() if v)
 
         return bool(str(item).strip())
@@ -485,9 +791,7 @@ class DataCleanerExecutor(BaseStepExecutor):
             for key in ["content", "text", "entity_text"]:
                 if key in item and isinstance(item[key], str):
                     original = item[key]
-                    # Normalize whitespace
                     normalized_text = re.sub(r"\s+", " ", original.strip())
-                    # Remove special characters (optional)
                     normalized_text = re.sub(
                         r"[^\w\s\u00C0-\u024F\u1E00-\u1EFF]", "", normalized_text
                     )
@@ -530,9 +834,17 @@ class DataCleanerExecutor(BaseStepExecutor):
 
 
 class DataValidatorExecutor(BaseStepExecutor):
-    """Executor for data validation"""
+    """Enhanced Data validator với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Data validation cần text data"""
+        text_data = self._get_best_text_data()
+        if not text_data:
+            logger.warning("No text data available for validation")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             validation_rules = self.config.get("validation_rules", {})
             schema_validation = validation_rules.get("schema_validation", True)
@@ -540,8 +852,8 @@ class DataValidatorExecutor(BaseStepExecutor):
             business_rules = validation_rules.get("business_rules", [])
             required_fields = validation_rules.get("required_fields", [])
 
-            # Extract data for validation
-            data_to_validate = self._extract_data_for_validation(input_data)
+            # Use best text data từ graph state
+            data_to_validate = self._get_best_text_data()
 
             validation_results = {
                 "is_valid": True,
@@ -556,7 +868,7 @@ class DataValidatorExecutor(BaseStepExecutor):
                 validation_results["quality_score"] = 1.0
                 return {
                     "validation_results": self._track_provenance(validation_results),
-                    "validated_data": input_data,
+                    "validated_data": data_to_validate,
                     "metadata": {
                         "execution_time": datetime.now(timezone.utc).isoformat(),
                         "step_type": "data_validator",
@@ -569,21 +881,18 @@ class DataValidatorExecutor(BaseStepExecutor):
             for item in data_to_validate:
                 item_valid = True
 
-                # Schema validation
                 if schema_validation:
                     schema_errors = self._validate_item_schema(item, required_fields)
                     if schema_errors:
                         validation_results["validation_errors"].extend(schema_errors)
                         item_valid = False
 
-                # Quality checks
                 if quality_checks:
                     quality_issues = self._check_item_quality(item)
                     if quality_issues:
                         validation_results["validation_errors"].extend(quality_issues)
                         item_valid = False
 
-                # Business rule validation
                 for rule in business_rules:
                     violations = self._check_business_rule(item, rule)
                     if violations:
@@ -609,7 +918,6 @@ class DataValidatorExecutor(BaseStepExecutor):
                 if item_valid:
                     valid_items += 1
 
-            # Calculate quality score
             validation_results["quality_score"] = (
                 valid_items / total_items if total_items > 0 else 1.0
             )
@@ -631,7 +939,7 @@ class DataValidatorExecutor(BaseStepExecutor):
 
             return {
                 "validation_results": self._track_provenance(validation_results),
-                "validated_data": input_data,
+                "validated_data": data_to_validate,
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "data_validator",
@@ -643,31 +951,14 @@ class DataValidatorExecutor(BaseStepExecutor):
         except Exception as e:
             raise PipelineExecutionError(f"Data validator execution failed: {e}")
 
-    def _extract_data_for_validation(
-        self, input_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Extract data for validation from various input formats"""
-        data_to_validate = []
-
-        # Handle cleaned data output
-        if "cleaned_data" in input_data:
-            cleaned_data = input_data["cleaned_data"]
-            if isinstance(cleaned_data, dict) and "data" in cleaned_data:
-                data_to_validate = cleaned_data["data"]
-            else:
-                data_to_validate = [cleaned_data]
-
-        # Handle chunks output
-        elif "chunks" in input_data:
-            for chunk in input_data["chunks"]:
-                if isinstance(chunk, dict) and "data" in chunk:
-                    data_to_validate.append(chunk["data"])
-
-        # Fallback
-        else:
-            data_to_validate = [input_data]
-
-        return data_to_validate
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với validation results"""
+        if "validation_results" in step_result:
+            validation_data = step_result["validation_results"]
+            if isinstance(validation_data, dict) and "data" in validation_data:
+                self.graph_state.set_validation_results(
+                    validation_data["data"], self.step_name
+                )
 
     def _validate_item_schema(
         self, item: Dict[str, Any], required_fields: List[str]
@@ -692,19 +983,16 @@ class DataValidatorExecutor(BaseStepExecutor):
         issues = []
 
         if isinstance(item, dict):
-            # Check for suspiciously short content
             for key in ["content", "text", "entity_text"]:
                 if key in item and isinstance(item[key], str):
                     if len(item[key].strip()) < 3:
                         issues.append(f"Suspiciously short {key}: '{item[key]}'")
 
-            # Check for placeholder values
             placeholder_values = ["TODO", "TBD", "N/A", "null", "undefined", ""]
             for key, value in item.items():
                 if str(value).strip() in placeholder_values:
                     issues.append(f"Placeholder value in {key}: '{value}'")
 
-            # Check for data type consistency
             if "confidence" in item:
                 try:
                     confidence = float(item["confidence"])
@@ -749,818 +1037,552 @@ class DataValidatorExecutor(BaseStepExecutor):
         return violations
 
 
-class KnowledgeMappingExecutor(BaseStepExecutor):
-    """Executor for structured knowledge extraction using existing services"""
+class KnowledgeExtractorExecutor(BaseStepExecutor):
+    """Enhanced Knowledge Extractor với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Knowledge extraction cần text data"""
+        text_data = self._get_best_text_data()
+        if not text_data:
+            logger.warning("No text data available for knowledge extraction")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            extraction_method = self.config.get("extraction_method", "ontogpt")
-            # entity_types = self.config.get("entity_types", [])
-            # relation_types = self.config.get("relation_types", [])
-            # domain = self.config.get("domain")
-            # use_validation = self.config.get("use_validation", True)
+            from app.tasks.kg_extraction import KgExtractionTask
 
-            # Initialize services
+            kg_extraction_task = KgExtractionTask()
 
-            all_entities = []
-            all_relationships = []
-            extraction_results = []
+            domain = self.config.get("domain")
+            user_id = self.config.get("user_id")
+            confidence_threshold = self.config.get("confidence_threshold", 0.7)
+            auto_save = self.config.get("auto_save", True)
+            custom_extractors = self.config.get("custom_extractors", [])
 
-            # Validate extraction if requested
-            validation_result = None
+            # Get text data từ graph state
+            text_data = self._get_best_text_data()
+            if not text_data:
+                logger.warning("No text data found for knowledge extraction")
+                return {
+                    "extraction_result": self._track_provenance(
+                        {
+                            "entities": [],
+                            "relationships": [],
+                            "extraction_id": None,
+                        }
+                    ),
+                    "entity_count": 0,
+                    "relationship_count": 0,
+                    "metadata": {
+                        "execution_time": datetime.now(timezone.utc).isoformat(),
+                        "step_type": "knowledge_extraction",
+                    },
+                }
+
+            # Process based on data type
+            if len(text_data) > 1 or any("chunk_id" in item for item in text_data):
+
+                logger.info(f"Extracting knowledge from {len(text_data)} text chunks")
+                # Process as chunks
+                result = await kg_extraction_task.extract_knowledge_from_chunks(
+                    text_chunks=text_data,
+                    domain=domain,
+                    user_id=UUID(user_id) if user_id else None,
+                    confidence_threshold=confidence_threshold,
+                    auto_save=auto_save,
+                    step_id=self.step_id,
+                    pipeline_id=self.pipeline_id,
+                )
+            else:
+                # Process as single text
+                text_content = text_data[0].get("text", "") or text_data[0].get(
+                    "content", ""
+                )
+
+                logger.info(
+                    f"Extracting knowledge from text content: {text_content[:100]}..."
+                )
+
+                if custom_extractors:
+                    result = await kg_extraction_task.extract_knowledge_with_custom_extractors(
+                        text_content=text_content,
+                        custom_extractors=custom_extractors,
+                        domain=domain,
+                        user_id=UUID(user_id) if user_id else None,
+                        confidence_threshold=confidence_threshold,
+                    )
+                else:
+                    result = await kg_extraction_task.extract_knowledge_from_text(
+                        text_content=text_content,
+                        domain=domain,
+                        user_id=UUID(user_id) if user_id else None,
+                        confidence_threshold=confidence_threshold,
+                        auto_save=auto_save,
+                        step_id=self.step_id,
+                        pipeline_id=self.pipeline_id,
+                        incremental_config=self.config.get("incremental_config"),
+                    )
+
+            entities = result.get("entities", [])
+            relationships = result.get("relationships", [])
+            extraction_id = result.get("extraction_id")
 
             return {
                 "extraction_result": self._track_provenance(
                     {
-                        "entities": all_entities,
-                        "relationships": all_relationships,
-                        "extraction_method": extraction_method,
-                        "individual_results": extraction_results,
-                        "validation": validation_result,
+                        "entities": entities,
+                        "relationships": relationships,
+                        "extraction_id": extraction_id,
+                        "statistics": result.get("statistics", {}),
                     }
                 ),
-                "entity_count": len(all_entities),
-                "relationship_count": len(all_relationships),
+                "entity_count": len(entities),
+                "relationship_count": len(relationships),
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
-                    "step_type": "knowledge_mapping",
-                    "extraction_method": extraction_method,
+                    "step_type": "knowledge_extraction",
+                    "domain": domain,
+                    "confidence_threshold": confidence_threshold,
                 },
             }
 
         except Exception as e:
-            raise PipelineExecutionError(f"Knowledge mapping execution failed: {e}")
+            raise PipelineExecutionError(f"Knowledge extraction execution failed: {e}")
+
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với extracted entities/relationships"""
+
+        if "extraction_result" in step_result:
+            extraction_data = step_result["extraction_result"]
+
+            if "data" in extraction_data:
+                data = extraction_data["data"]
+
+                # Add entities to graph state
+                entities = data.get("entities", [])
+                if entities:
+                    self.graph_state.add_entities(entities, self.step_name)
+
+                # Add relationships to graph state
+                relationships = data.get("relationships", [])
+                if relationships:
+                    self.graph_state.add_relationships(relationships, self.step_name)
 
 
 class OntologyEnrichmentExecutor(BaseStepExecutor):
-    """Executor for ontology enrichment using Knowledge Extraction Service"""
+    """Enhanced Ontology Enrichment với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Ontology enrichment cần entities từ knowledge extraction"""
+        entities = self._get_best_entities()
+        if not entities:
+            logger.warning("No entities available for ontology enrichment")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            # Initialize services
-            knowledge_service = KnowledgeExtractionService()
-            ontogpt_service = OntoGPTService()
+            from app.tasks.ontology_enrichment import OntologyEnrichmentTask
 
-            auto_apply_threshold = self.config.get("auto_apply_threshold", 0.8)
+            ontology_task = OntologyEnrichmentTask()
+
+            domain = self.config.get("domain")
             user_id = self.config.get("user_id")
-            enrichment_types = self.config.get(
-                "enrichment_types", ["classes", "properties"]
+            auto_apply_suggestions = self.config.get("auto_apply_suggestions", False)
+            confidence_threshold = self.config.get("confidence_threshold", 0.8)
+            use_existing_mappings = self.config.get("use_existing_mappings", True)
+            enable_ontology_extensions = self.config.get(
+                "enable_ontology_extensions", False
             )
 
-            # Extract entities and relationships from input
-            entities, relationships = self._extract_entities_and_relationships(
-                input_data
+            # Get entities and relationships từ graph state
+            entities = self._get_best_entities()
+            relationships = self._get_best_relationships()
+
+            if not entities and not relationships:
+                logger.warning(
+                    "No entities or relationships found for ontology enrichment"
+                )
+                return {
+                    "ontology_result": self._track_provenance(
+                        {
+                            "enriched_entities": [],
+                            "enriched_relationships": [],
+                            "entity_mapping_suggestions": [],
+                            "relationship_mapping_suggestions": [],
+                            "current_ontology": {},
+                            "updated_ontology": {},
+                        }
+                    ),
+                    "entity_count": 0,
+                    "relationship_count": 0,
+                    "mapping_suggestions_count": 0,
+                    "metadata": {
+                        "execution_time": datetime.now(timezone.utc).isoformat(),
+                        "step_type": "ontology_enrichment",
+                    },
+                }
+
+            # Perform ontology enrichment
+            enrichment_result = await ontology_task.enrich_with_ontology_mapping(
+                entities=entities,
+                relationships=relationships,
+                domain=domain,
+                user_id=user_id if user_id else None,
+                auto_apply_suggestions=auto_apply_suggestions,
+                confidence_threshold=confidence_threshold,
+                use_existing_mappings=use_existing_mappings,
             )
 
-            enrichment_results = {
-                "new_concepts_suggested": 0,
-                "concepts_added": 0,
-                "validation_score": 0.0,
-                "enrichment_details": {},
-            }
-
-            # If we have extraction result IDs, use them for enrichment
-            extraction_ids = self._extract_extraction_ids(input_data)
-
-            if extraction_ids:
-                # Use batch enrichment for multiple extractions
-                enrichment_result = (
-                    await knowledge_service.enrich_ontology_from_extractions(
-                        extraction_result_ids=extraction_ids,
-                        user_id=user_id,
-                        auto_apply_threshold=auto_apply_threshold,
-                    )
+            # Generate extension suggestions if enabled
+            extension_suggestions = []
+            if enable_ontology_extensions:
+                extension_result = await ontology_task.suggest_ontology_extensions(
+                    entities=entities,
+                    relationships=relationships,
+                    domain=domain,
+                    user_id=user_id if user_id else None,
+                )
+                extension_suggestions = extension_result.get(
+                    "extension_suggestions", []
                 )
 
-                if enrichment_result.get("success"):
-                    enrichment_results = enrichment_result.get(
-                        "summary", enrichment_results
-                    )
-                    enrichment_results["enrichment_details"] = enrichment_result
+            enriched_entities = enrichment_result.get("enriched_entities", [])
+            enriched_relationships = enrichment_result.get("enriched_relationships", [])
+            entity_mapping_suggestions = enrichment_result.get(
+                "entity_mapping_suggestions", []
+            )
+            relationship_mapping_suggestions = enrichment_result.get(
+                "relationship_mapping_suggestions", []
+            )
 
-            else:
-                # Use individual entity/relationship enrichment
-                if entities and "classes" in enrichment_types:
-                    # Suggest new classes based on entities
-                    new_classes = await self._suggest_entity_classes(entities)
-                    enrichment_results["suggested_classes"] = new_classes
-                    enrichment_results["new_concepts_suggested"] += len(new_classes)
-
-                if relationships and "properties" in enrichment_types:
-                    # Suggest new properties based on relationships
-                    new_properties = await self._suggest_relationship_properties(
-                        relationships
-                    )
-                    enrichment_results["suggested_properties"] = new_properties
-                    enrichment_results["new_concepts_suggested"] += len(new_properties)
-
-                # Auto-apply suggestions if threshold is met
-                applied_count = 0
-                if enrichment_results["new_concepts_suggested"] > 0:
-                    applied_count = await self._auto_apply_suggestions(
-                        enrichment_results, user_id, auto_apply_threshold
-                    )
-
-                enrichment_results["concepts_added"] = applied_count
-
-            # Validate enrichment results
-            if entities or relationships:
-                validation_result = (
-                    await ontogpt_service.validate_extraction_against_ontology(
-                        entities=entities, relationships=relationships
-                    )
-                )
-                enrichment_results["validation_score"] = validation_result.get(
-                    "overall_score", 0.0
-                )
+            total_suggestions = len(entity_mapping_suggestions) + len(
+                relationship_mapping_suggestions
+            )
 
             return {
-                "enrichment_result": self._track_provenance(enrichment_results),
-                "enriched_entities": entities,
-                "enriched_relationships": relationships,
+                "ontology_result": self._track_provenance(
+                    {
+                        "enriched_entities": enriched_entities,
+                        "enriched_relationships": enriched_relationships,
+                        "entity_mapping_suggestions": entity_mapping_suggestions,
+                        "relationship_mapping_suggestions": relationship_mapping_suggestions,
+                        "current_ontology": enrichment_result.get(
+                            "current_ontology", {}
+                        ),
+                        "updated_ontology": enrichment_result.get(
+                            "updated_ontology", {}
+                        ),
+                        "extension_suggestions": extension_suggestions,
+                        "mapping_record_id": enrichment_result.get("mapping_record_id"),
+                        "statistics": enrichment_result.get("statistics", {}),
+                    }
+                ),
+                "entity_count": len(enriched_entities),
+                "relationship_count": len(enriched_relationships),
+                "mapping_suggestions_count": total_suggestions,
+                "extension_suggestions_count": len(extension_suggestions),
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "ontology_enrichment",
-                    "auto_apply_threshold": auto_apply_threshold,
+                    "domain": domain,
+                    "auto_apply_suggestions": auto_apply_suggestions,
+                    "confidence_threshold": confidence_threshold,
+                    "ontology_extensions_enabled": enable_ontology_extensions,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"Ontology enrichment execution failed: {e}")
 
-    def _extract_entities_and_relationships(
-        self, input_data: Dict[str, Any]
-    ) -> Tuple[List[Dict], List[Dict]]:
-        """Extract entities and relationships from input data"""
-        entities = []
-        relationships = []
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với enriched entities/relationships"""
 
-        # Handle extraction result output
-        if "extraction_result" in input_data:
-            extraction_data = input_data["extraction_result"]
-            if "data" in extraction_data:
-                entities.extend(extraction_data["data"].get("entities", []))
-                relationships.extend(extraction_data["data"].get("relationships", []))
+        if "ontology_result" in step_result:
+            ontology_data = step_result["ontology_result"]
 
-        # Handle mapping result output
-        elif "mapping_result" in input_data:
-            mapping_data = input_data["mapping_result"]
-            if "data" in mapping_data:
-                entities.extend(mapping_data["data"].get("entities", []))
-                relationships.extend(mapping_data["data"].get("relationships", []))
+            if "data" in ontology_data:
+                data = ontology_data["data"]
 
-        return entities, relationships
+                # Update entities in graph state
+                enriched_entities = data.get("enriched_entities", [])
+                if enriched_entities:
+                    self.graph_state.add_entities(enriched_entities, self.step_name)
 
-    def _extract_extraction_ids(self, input_data: Dict[str, Any]) -> List[int]:
-        """Extract extraction result IDs from input data"""
-        extraction_ids = []
-
-        # Look for extraction IDs in various places
-        if "extraction_result" in input_data:
-            extraction_data = input_data["extraction_result"]
-            if "data" in extraction_data:
-                individual_results = extraction_data["data"].get(
-                    "individual_results", []
-                )
-                for result in individual_results:
-                    if result.get("extraction_id"):
-                        extraction_ids.append(result["extraction_id"])
-
-        return extraction_ids
-
-    async def _suggest_entity_classes(
-        self, entities: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Suggest new ontology classes based on entities"""
-        suggestions = []
-
-        # Group entities by type to find patterns
-        entity_types = {}
-        for entity in entities:
-            entity_type = entity.get("entity_type", "Unknown")
-            if entity_type not in entity_types:
-                entity_types[entity_type] = []
-            entity_types[entity_type].append(entity)
-
-        # Suggest classes for unmapped entity types
-        for entity_type, entity_list in entity_types.items():
-            unmapped_count = len(
-                [e for e in entity_list if not e.get("is_mapped", False)]
-            )
-            if (
-                unmapped_count > 2
-            ):  # Suggest if we have multiple unmapped entities of this type
-                suggestions.append(
-                    {
-                        "suggested_class": entity_type,
-                        "description": f"Class for {entity_type} entities",
-                        "supporting_entities": len(entity_list),
-                        "confidence": min(0.9, unmapped_count / len(entity_list)),
-                        "examples": [e.get("text", "") for e in entity_list[:3]],
-                    }
-                )
-
-        return suggestions
-
-    async def _suggest_relationship_properties(
-        self, relationships: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Suggest new ontology properties based on relationships"""
-        suggestions = []
-
-        # Group relationships by type
-        relationship_types = {}
-        for relationship in relationships:
-            rel_type = relationship.get("relationship_type", "Unknown")
-            if rel_type not in relationship_types:
-                relationship_types[rel_type] = []
-            relationship_types[rel_type].append(relationship)
-
-        # Suggest properties for unmapped relationship types
-        for rel_type, rel_list in relationship_types.items():
-            unmapped_count = len([r for r in rel_list if not r.get("is_mapped", False)])
-            if (
-                unmapped_count > 1
-            ):  # Suggest if we have multiple unmapped relationships of this type
-                suggestions.append(
-                    {
-                        "suggested_property": rel_type,
-                        "description": f"Property for {rel_type} relationships",
-                        "supporting_relationships": len(rel_list),
-                        "confidence": min(0.9, unmapped_count / len(rel_list)),
-                        "examples": [
-                            f"{r.get('source_entity', '')} -> {r.get('target_entity', '')}"
-                            for r in rel_list[:3]
-                        ],
-                    }
-                )
-
-        return suggestions
-
-    async def _auto_apply_suggestions(
-        self, enrichment_results: Dict[str, Any], user_id: str, threshold: float
-    ) -> int:
-        """Auto-apply suggestions that meet the confidence threshold"""
-        applied_count = 0
-
-        # Apply class suggestions
-        for suggestion in enrichment_results.get("suggested_classes", []):
-            if suggestion.get("confidence", 0) >= threshold:
-                # Here you would call the ontology service to actually add the class
-                # For now, we'll just count it as applied
-                applied_count += 1
-
-        # Apply property suggestions
-        for suggestion in enrichment_results.get("suggested_properties", []):
-            if suggestion.get("confidence", 0) >= threshold:
-                # Here you would call the ontology service to actually add the property
-                # For now, we'll just count it as applied
-                applied_count += 1
-
-        return applied_count
+                # Update relationships in graph state
+                enriched_relationships = data.get("enriched_relationships", [])
+                if enriched_relationships:
+                    self.graph_state.add_relationships(
+                        enriched_relationships, self.step_name
+                    )
 
 
 class EntityResolutionExecutor(BaseStepExecutor):
-    """Executor for entity resolution using existing logic"""
+    """Enhanced Entity Resolution với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Entity resolution cần entities"""
+        entities = self._get_best_entities()
+        if not entities:
+            logger.warning("No entities available for entity resolution")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            from app.tasks.entity_resolution import EntityResolutionTask
+
             resolution_strategy = self.config.get("resolution_strategy", "fuzzy_match")
             similarity_threshold = self.config.get("similarity_threshold", 0.8)
             clustering_method = self.config.get("clustering_method", "single_linkage")
+            auto_save = self.config.get("auto_save", True)
+            user_id = self.config.get("user_id")
 
-            # Extract entities from input
-            entities = self._extract_entities_from_input(input_data)
+            # Get entities từ graph state
+            entities = self._get_best_entities()
 
-            if not entities:
-                return {
-                    "resolution_result": self._track_provenance(
-                        {
-                            "resolved_entities": [],
-                            "entity_clusters": [],
-                            "resolution_stats": {
-                                "input_entities": 0,
-                                "resolved_entities": 0,
-                                "clusters_formed": 0,
-                                "resolution_strategy": resolution_strategy,
-                            },
-                        }
-                    ),
-                    "input_entity_count": 0,
-                    "resolved_entity_count": 0,
-                    "cluster_count": 0,
-                    "metadata": {
-                        "execution_time": datetime.now(timezone.utc).isoformat(),
-                        "step_type": "entity_resolution",
-                    },
-                }
-
-            # Perform entity resolution
-            resolved_entities, entity_clusters = await self._resolve_entities(
-                entities, resolution_strategy, similarity_threshold, clustering_method
-            )
-
-            result = self._track_provenance(
-                {
-                    "resolved_entities": resolved_entities,
-                    "entity_clusters": entity_clusters,
-                    "resolution_stats": {
-                        "input_entities": len(entities),
-                        "resolved_entities": len(resolved_entities),
-                        "clusters_formed": len(entity_clusters),
-                        "resolution_strategy": resolution_strategy,
-                        "similarity_threshold": similarity_threshold,
-                    },
-                }
+            # Create task and execute
+            task = EntityResolutionTask()
+            result = await task.resolve_entities(
+                entities=entities,
+                resolution_strategy=resolution_strategy,
+                similarity_threshold=similarity_threshold,
+                clustering_method=clustering_method,
+                auto_save=auto_save,
+                user_id=user_id,
             )
 
             return {
-                "resolution_result": result,
+                "resolution_result": self._track_provenance(result),
                 "input_entity_count": len(entities),
-                "resolved_entity_count": len(resolved_entities),
-                "cluster_count": len(entity_clusters),
+                "resolved_entity_count": len(result.get("resolved_entities", [])),
+                "cluster_count": len(result.get("entity_clusters", [])),
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "entity_resolution",
+                    "resolution_strategy": resolution_strategy,
+                    "similarity_threshold": similarity_threshold,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"Entity resolution execution failed: {e}")
 
-    def _extract_entities_from_input(
-        self, input_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Extract entities from various input formats"""
-        entities = []
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với resolved entities"""
 
-        # Handle extraction result output
-        if "extraction_result" in input_data:
-            extraction_data = input_data["extraction_result"]
-            if "data" in extraction_data:
-                entities.extend(extraction_data["data"].get("entities", []))
+        if "resolution_result" in step_result:
+            resolution_data = step_result["resolution_result"]
 
-        # Handle enrichment result output
-        elif "enrichment_result" in input_data:
-            entities.extend(input_data.get("enriched_entities", []))
+            if "data" in resolution_data:
+                data = resolution_data["data"]
 
-        return entities
-
-    async def _resolve_entities(
-        self,
-        entities: List[Dict[str, Any]],
-        strategy: str,
-        threshold: float,
-        clustering_method: str,
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Resolve entities using the specified strategy"""
-
-        if strategy == "fuzzy_match":
-            return await self._fuzzy_match_resolution(
-                entities, threshold, clustering_method
-            )
-        elif strategy == "exact_match":
-            return await self._exact_match_resolution(entities)
-        elif strategy == "semantic_similarity":
-            return await self._semantic_similarity_resolution(entities, threshold)
-        else:
-            # Default to fuzzy match
-            return await self._fuzzy_match_resolution(
-                entities, threshold, clustering_method
-            )
-
-    async def _fuzzy_match_resolution(
-        self, entities: List[Dict[str, Any]], threshold: float, clustering_method: str
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Resolve entities using fuzzy string matching"""
-        from difflib import SequenceMatcher
-
-        # Calculate similarity matrix
-        n = len(entities)
-        similarity_matrix = [[0.0 for _ in range(n)] for _ in range(n)]
-
-        for i in range(n):
-            for j in range(i + 1, n):
-                text1 = (
-                    entities[i].get("text", entities[i].get("entity_text", "")).lower()
-                )
-                text2 = (
-                    entities[j].get("text", entities[j].get("entity_text", "")).lower()
-                )
-
-                # Check if entities are of the same type
-                type1 = entities[i].get("entity_type", "")
-                type2 = entities[j].get("entity_type", "")
-
-                if type1 == type2:
-                    similarity = SequenceMatcher(None, text1, text2).ratio()
-                    similarity_matrix[i][j] = similarity
-                    similarity_matrix[j][i] = similarity
-
-        # Form clusters based on similarity threshold
-        clusters = []
-        assigned = set()
-
-        for i in range(n):
-            if i in assigned:
-                continue
-
-            cluster = [i]
-            assigned.add(i)
-
-            for j in range(i + 1, n):
-                if j not in assigned and similarity_matrix[i][j] >= threshold:
-                    cluster.append(j)
-                    assigned.add(j)
-
-            if len(cluster) > 1:
-                clusters.append(cluster)
-
-        # Create resolved entities and cluster information
-        resolved_entities = []
-        entity_clusters = []
-
-        # Process clusters
-        for cluster_indices in clusters:
-            cluster_entities = [entities[i] for i in cluster_indices]
-
-            # Select the entity with highest confidence as the canonical one
-            canonical_entity = max(
-                cluster_entities, key=lambda e: e.get("confidence", 0)
-            )
-            canonical_entity["cluster_id"] = len(entity_clusters)
-            canonical_entity["cluster_size"] = len(cluster_entities)
-
-            resolved_entities.append(canonical_entity)
-
-            entity_clusters.append(
-                {
-                    "cluster_id": len(entity_clusters),
-                    "canonical_entity": canonical_entity,
-                    "cluster_entities": cluster_entities,
-                    "cluster_size": len(cluster_entities),
-                    "avg_similarity": sum(
-                        [
-                            similarity_matrix[cluster_indices[i]][cluster_indices[j]]
-                            for i in range(len(cluster_indices))
-                            for j in range(i + 1, len(cluster_indices))
-                        ]
-                    )
-                    / max(1, len(cluster_indices) * (len(cluster_indices) - 1) // 2),
-                }
-            )
-
-        # Add unclustered entities
-        for i, entity in enumerate(entities):
-            if not any(i in cluster for cluster in clusters):
-                entity["cluster_id"] = None
-                entity["cluster_size"] = 1
-                resolved_entities.append(entity)
-
-        return resolved_entities, entity_clusters
-
-    async def _exact_match_resolution(
-        self, entities: List[Dict[str, Any]]
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Resolve entities using exact text matching"""
-        entity_map = {}
-        clusters = []
-
-        for entity in entities:
-            text = entity.get("text", entity.get("entity_text", "")).lower().strip()
-            entity_type = entity.get("entity_type", "")
-            key = f"{text}_{entity_type}"
-
-            if key in entity_map:
-                entity_map[key].append(entity)
-            else:
-                entity_map[key] = [entity]
-
-        resolved_entities = []
-        for key, entity_list in entity_map.items():
-            if len(entity_list) > 1:
-                # Create cluster
-                canonical_entity = max(
-                    entity_list, key=lambda e: e.get("confidence", 0)
-                )
-                canonical_entity["cluster_id"] = len(clusters)
-                canonical_entity["cluster_size"] = len(entity_list)
-
-                clusters.append(
-                    {
-                        "cluster_id": len(clusters),
-                        "canonical_entity": canonical_entity,
-                        "cluster_entities": entity_list,
-                        "cluster_size": len(entity_list),
-                        "match_type": "exact",
-                    }
-                )
-
-                resolved_entities.append(canonical_entity)
-            else:
-                # Single entity
-                entity_list[0]["cluster_id"] = None
-                entity_list[0]["cluster_size"] = 1
-                resolved_entities.append(entity_list[0])
-
-        return resolved_entities, clusters
-
-    async def _semantic_similarity_resolution(
-        self, entities: List[Dict[str, Any]], threshold: float
-    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-        """Resolve entities using semantic similarity (if embeddings are available)"""
-        try:
-            # Get embedding service
-            embedding_service = get_embedding_service()
-
-            # Get embeddings for all entities
-            entity_texts = [e.get("text", e.get("entity_text", "")) for e in entities]
-            embeddings = await embedding_service.get_embeddings(entity_texts)
-
-            # Calculate cosine similarity
-            import numpy as np
-            from sklearn.metrics.pairwise import cosine_similarity
-
-            similarity_matrix = cosine_similarity(embeddings)
-
-            # Form clusters based on similarity threshold
-            n = len(entities)
-            clusters = []
-            assigned = set()
-
-            for i in range(n):
-                if i in assigned:
-                    continue
-
-                cluster = [i]
-                assigned.add(i)
-
-                for j in range(i + 1, n):
-                    if (
-                        j not in assigned
-                        and similarity_matrix[i][j] >= threshold
-                        and entities[i].get("entity_type")
-                        == entities[j].get("entity_type")
-                    ):
-                        cluster.append(j)
-                        assigned.add(j)
-
-                if len(cluster) > 1:
-                    clusters.append(cluster)
-
-            # Create resolved entities and clusters (similar to fuzzy match logic)
-            resolved_entities = []
-            entity_clusters = []
-
-            for cluster_indices in clusters:
-                cluster_entities = [entities[i] for i in cluster_indices]
-                canonical_entity = max(
-                    cluster_entities, key=lambda e: e.get("confidence", 0)
-                )
-                canonical_entity["cluster_id"] = len(entity_clusters)
-                canonical_entity["cluster_size"] = len(cluster_entities)
-
-                resolved_entities.append(canonical_entity)
-                entity_clusters.append(
-                    {
-                        "cluster_id": len(entity_clusters),
-                        "canonical_entity": canonical_entity,
-                        "cluster_entities": cluster_entities,
-                        "cluster_size": len(cluster_entities),
-                        "avg_similarity": (
-                            np.mean(
-                                [
-                                    similarity_matrix[cluster_indices[i]][
-                                        cluster_indices[j]
-                                    ]
-                                    for i in range(len(cluster_indices))
-                                    for j in range(i + 1, len(cluster_indices))
-                                ]
-                            )
-                            if len(cluster_indices) > 1
-                            else 1.0
-                        ),
-                    }
-                )
-
-            # Add unclustered entities
-            for i, entity in enumerate(entities):
-                if not any(i in cluster for cluster in clusters):
-                    entity["cluster_id"] = None
-                    entity["cluster_size"] = 1
-                    resolved_entities.append(entity)
-
-            return resolved_entities, entity_clusters
-
-        except Exception as e:
-            logger.warning(
-                f"Semantic similarity resolution failed, falling back to fuzzy match: {e}"
-            )
-            return await self._fuzzy_match_resolution(
-                entities, threshold, "single_linkage"
-            )
+                # Update entities với resolved versions
+                resolved_entities = data.get("resolved_entities", [])
+                if resolved_entities:
+                    self.graph_state.add_entities(resolved_entities, self.step_name)
 
 
 class EntityFusionExecutor(BaseStepExecutor):
-    """Executor for entity fusion"""
+    """Enhanced Entity fusion với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """Entity fusion cần resolved entities"""
+        entities = self._get_best_entities()
+        if not entities:
+            logger.warning("No entities available for entity fusion")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
+            from app.tasks.entity_fusion import EntityFusionTask
+
             fusion_strategy = self.config.get("fusion_strategy", "most_recent")
             preserve_provenance = self.config.get("preserve_provenance", True)
             conflict_resolution = self.config.get(
                 "conflict_resolution", "highest_confidence"
             )
+            auto_save = self.config.get("auto_save", True)
+            user_id = self.config.get("user_id")
 
-            # Extract resolved entities from input
-            resolved_entities, entity_clusters = self._extract_resolution_data(
-                input_data
-            )
+            # Get entities từ graph state thay vì từ input
+            entities = self._get_best_entities()
 
-            # Perform entity fusion
-            fused_entities = await self._fuse_entities(
-                resolved_entities,
-                entity_clusters,
-                fusion_strategy,
-                preserve_provenance,
-                conflict_resolution,
+            # Create simple clusters from entities if not available
+            entity_clusters = [{"entities": entities, "cluster_id": "default"}]
+
+            # Create task and execute
+            task = EntityFusionTask()
+            result = await task.fuse_entities(
+                resolved_entities=entities,
+                entity_clusters=entity_clusters,
+                fusion_strategy=fusion_strategy,
+                preserve_provenance=preserve_provenance,
+                conflict_resolution=conflict_resolution,
+                auto_save=auto_save,
+                user_id=user_id,
             )
 
             return {
-                "fusion_result": self._track_provenance(
-                    {
-                        "fused_entities": fused_entities,
-                        "fusion_stats": {
-                            "input_entities": len(resolved_entities),
-                            "input_clusters": len(entity_clusters),
-                            "fused_entities": len(fused_entities),
-                            "fusion_strategy": fusion_strategy,
-                        },
-                    }
-                ),
+                "fusion_result": self._track_provenance(result),
+                "input_entity_count": len(entities),
+                "fused_entity_count": len(result.get("fused_entities", [])),
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "entity_fusion",
+                    "fusion_strategy": fusion_strategy,
+                    "conflict_resolution": conflict_resolution,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"Entity fusion execution failed: {e}")
 
-    def _extract_resolution_data(
-        self, input_data: Dict[str, Any]
-    ) -> Tuple[List[Dict], List[Dict]]:
-        """Extract resolved entities and clusters from input"""
-        resolved_entities = []
-        entity_clusters = []
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với fused entities"""
+        if "fusion_result" in step_result:
+            fusion_data = step_result["fusion_result"]
 
-        if "resolution_result" in input_data:
-            resolution_data = input_data["resolution_result"]
-            if "data" in resolution_data:
-                resolved_entities = resolution_data["data"].get("resolved_entities", [])
-                entity_clusters = resolution_data["data"].get("entity_clusters", [])
+            if "data" in fusion_data:
+                data = fusion_data["data"]
 
-        return resolved_entities, entity_clusters
+                # Update entities với fused versions
+                fused_entities = data.get("fused_entities", [])
+                if fused_entities:
+                    self.graph_state.add_entities(fused_entities, self.step_name)
 
-    async def _fuse_entities(
-        self,
-        resolved_entities: List[Dict[str, Any]],
-        entity_clusters: List[Dict[str, Any]],
-        fusion_strategy: str,
-        preserve_provenance: bool,
-        conflict_resolution: str,
-    ) -> List[Dict[str, Any]]:
-        """Fuse entities based on clusters and strategy"""
-        fused_entities = []
 
-        # Process clustered entities
-        for cluster in entity_clusters:
-            cluster_entities = cluster.get("cluster_entities", [])
-            if not cluster_entities:
-                continue
+class EntityEnrichmentExecutor(BaseStepExecutor):
+    """Enhanced Entity enrichment với graph state support"""
 
-            # Fuse entities in the cluster
-            fused_entity = await self._fuse_entity_cluster(
-                cluster_entities,
-                fusion_strategy,
-                preserve_provenance,
-                conflict_resolution,
-            )
+    def _check_prerequisites(self) -> bool:
+        """Entity enrichment cần entities"""
+        entities = self._get_best_entities()
+        if not entities:
+            logger.warning("No entities available for entity enrichment")
+            return False
+        return True
 
-            # Add cluster metadata
-            fused_entity["is_fused"] = True
-            fused_entity["source_entities_count"] = len(cluster_entities)
-            fused_entity["cluster_id"] = cluster.get("cluster_id")
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from app.tasks.entity_enrichment import EntityEnrichmentTask
 
-            fused_entities.append(fused_entity)
+            # Initialize EntityEnrichmentTask
+            enrichment_task = EntityEnrichmentTask()
 
-        # Add standalone entities (not in clusters)
-        for entity in resolved_entities:
-            if entity.get("cluster_id") is None:
-                entity["is_fused"] = False
-                entity["source_entities_count"] = 1
-                fused_entities.append(entity)
+            enrichment_sources = self.config.get("enrichment_sources", [])
+            enrichment_types = self.config.get("enrichment_types", ["embeddings"])
+            batch_size = self.config.get("batch_size", 100)
+            force_update = self.config.get("force_update", False)
 
-        return fused_entities
+            # Get entities từ graph state
+            entities = self._get_best_entities()
 
-    async def _fuse_entity_cluster(
-        self,
-        cluster_entities: List[Dict[str, Any]],
-        fusion_strategy: str,
-        preserve_provenance: bool,
-        conflict_resolution: str,
-    ) -> Dict[str, Any]:
-        """Fuse a cluster of entities into a single entity"""
-        if not cluster_entities:
-            return {}
+            enrichment_results = {}
+            enriched_entities = []  # Start with original entities
 
-        if len(cluster_entities) == 1:
-            return cluster_entities[0]
-
-        # Start with the base entity (highest confidence or most recent)
-        if fusion_strategy == "highest_confidence":
-            base_entity = max(cluster_entities, key=lambda e: e.get("confidence", 0))
-        elif fusion_strategy == "most_recent":
-            base_entity = max(
-                cluster_entities, key=lambda e: e.get("timestamp", "1970-01-01")
-            )
-        else:
-            base_entity = cluster_entities[0]
-
-        fused_entity = base_entity.copy()
-
-        # Merge properties from all entities
-        all_properties = {}
-        provenance_info = []
-
-        for entity in cluster_entities:
-            # Collect properties
-            entity_properties = entity.get("properties", {})
-            for key, value in entity_properties.items():
-                if key not in all_properties:
-                    all_properties[key] = []
-                all_properties[key].append(
-                    {
-                        "value": value,
-                        "source_entity": entity.get("id"),
-                        "confidence": entity.get("confidence", 0),
-                        "timestamp": entity.get("timestamp"),
-                    }
-                )
-
-            # Collect provenance
-            if preserve_provenance:
-                provenance_info.append(
-                    {
-                        "entity_id": entity.get("id"),
-                        "text": entity.get("text", entity.get("entity_text", "")),
-                        "confidence": entity.get("confidence", 0),
-                        "source": entity.get("source"),
-                        "provenance": entity.get("provenance", {}),
-                    }
-                )
-
-        # Resolve conflicts in properties
-        resolved_properties = {}
-        for key, value_list in all_properties.items():
-            if len(value_list) == 1:
-                resolved_properties[key] = value_list[0]["value"]
-            else:
-                # Apply conflict resolution strategy
-                if conflict_resolution == "highest_confidence":
-                    best_value = max(value_list, key=lambda v: v["confidence"])
-                    resolved_properties[key] = best_value["value"]
-                elif conflict_resolution == "most_recent":
-                    best_value = max(
-                        value_list, key=lambda v: v.get("timestamp", "1970-01-01")
+            # Add embeddings if requested
+            if "embeddings" in enrichment_types and entities:
+                entity_ids = [e["id"] for e in entities if e.get("id")]
+                embedding_result = (
+                    await enrichment_task.enrich_entities_with_embeddings(
+                        entity_ids=entity_ids,
+                        batch_size=batch_size,
+                        force_update=force_update,
                     )
-                    resolved_properties[key] = best_value["value"]
-                elif conflict_resolution == "merge_all":
-                    resolved_properties[key] = [v["value"] for v in value_list]
-                else:
-                    # Default to first value
-                    resolved_properties[key] = value_list[0]["value"]
+                )
 
-        # Update fused entity
-        fused_entity["properties"] = resolved_properties
+                if embedding_result["status"] == "failed":
+                    raise PipelineExecutionError(
+                        f"Embedding enrichment failed: {embedding_result['error']}"
+                    )
+                enrichment_results["embeddings"] = embedding_result
+                enriched_entities = embedding_result.get("enriched_entities", entities)
 
-        if preserve_provenance:
-            fused_entity["fusion_provenance"] = provenance_info
+            # Sync to Neo4j if requested
+            if "neo4j_sync" in enrichment_types and entities:
+                entity_ids = [e["id"] for e in entities if e.get("id")]
+                if entity_ids:
+                    neo4j_result = await enrichment_task.sync_entities_to_neo4j(
+                        entity_ids=entity_ids,
+                        batch_size=batch_size,
+                    )
+                    enrichment_results["neo4j_sync"] = neo4j_result
 
-        # Calculate combined confidence
-        confidences = [e.get("confidence", 0) for e in cluster_entities]
-        fused_entity["confidence"] = sum(confidences) / len(confidences)
+            # External data enrichment if requested
+            if "external_data" in enrichment_types and entities and enrichment_sources:
+                entity_ids = [e["id"] for e in entities if e.get("id")]
+                if entity_ids:
+                    external_result = (
+                        await enrichment_task.enrich_entities_with_external_data(
+                            entity_ids=entity_ids,
+                            enrichment_sources=enrichment_sources,
+                            batch_size=batch_size,
+                        )
+                    )
+                    enrichment_results["external_data"] = external_result
 
-        return fused_entity
+            # Conflict detection if requested
+            if "conflict_detection" in enrichment_types:
+                conflict_threshold = self.config.get("conflict_threshold", 0.75)
+                entity_types = self.config.get("entity_types_for_conflicts")
+
+                conflict_result = await enrichment_task.detect_entity_conflicts(
+                    threshold=conflict_threshold,
+                    batch_size=batch_size,
+                    entity_types=entity_types,
+                )
+                enrichment_results["conflict_detection"] = conflict_result
+
+            return {
+                "enrichment_result": self._track_provenance(
+                    {
+                        "enriched_entities": enriched_entities,
+                        "enrichment_stats": enrichment_results,
+                    }
+                ),
+                "entity_count": len(enriched_entities),
+                "metadata": {
+                    "execution_time": datetime.now(timezone.utc).isoformat(),
+                    "step_type": "entity_enrichment",
+                    "enrichment_types": enrichment_types,
+                    "enrichment_sources": enrichment_sources,
+                },
+            }
+
+        except Exception as e:
+            raise PipelineExecutionError(f"Entity enrichment execution failed: {e}")
+
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với enriched entities"""
+        if "enrichment_result" in step_result:
+            enrichment_data = step_result["enrichment_result"]
+
+            if "data" in enrichment_data:
+                data = enrichment_data["data"]
+
+                # Update entities với enriched versions
+                enriched_entities = data.get("enriched_entities", [])
+                if enriched_entities:
+                    self.graph_state.add_entities(enriched_entities, self.step_name)
 
 
 class KgCompletionExecutor(BaseStepExecutor):
-    """Executor for knowledge graph completion using Knowledge Extraction Service"""
+    """Enhanced KG completion với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _check_prerequisites(self) -> bool:
+        """KG completion cần entities"""
+        entities = self._get_best_entities()
+        if not entities:
+            logger.warning("No entities available for KG completion")
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
-            # Initialize services
-            knowledge_service = KnowledgeExtractionService()
+            from app.tasks.kg_completion import KnowledgeGraphCompletionTask
 
             completion_types = self.config.get(
                 "completion_types", ["missing_entities", "missing_relationships"]
@@ -1569,736 +1591,192 @@ class KgCompletionExecutor(BaseStepExecutor):
             confidence_threshold = self.config.get("confidence_threshold", 0.8)
             user_id = self.config.get("user_id")
 
-            # Extract extraction result ID if available
-            extraction_result_id = self._extract_extraction_result_id(input_data)
+            # Get entities and relationships từ graph state
+            entities = self._get_best_entities()
+            relationships = self._get_best_relationships()
 
-            if not extraction_result_id:
-                # Create a temporary extraction result for completion
-                extraction_result_id = await self._create_temporary_extraction_result(
-                    input_data
-                )
-
-            if extraction_result_id:
-                # Use the knowledge service for completion
-                completion_result = await knowledge_service.complete_knowledge_graph(
-                    extraction_result_id=extraction_result_id,
-                    user_id=user_id,
-                    auto_apply_suggestions=auto_apply_suggestions,
-                )
-
-                if completion_result.get("success"):
-                    return {
-                        "completion_result": self._track_provenance(completion_result),
-                        "metadata": {
-                            "execution_time": datetime.now(timezone.utc).isoformat(),
-                            "step_type": "kg_completion",
-                            "extraction_result_id": extraction_result_id,
-                        },
-                    }
-
-            # Fallback to manual completion suggestions
-            completion_suggestions = await self._generate_completion_suggestions(
-                input_data, completion_types, confidence_threshold
+            # Create task and execute
+            task = KnowledgeGraphCompletionTask()
+            result = await task.complete_knowledge_graph(
+                entities=entities,
+                relationships=relationships,
+                completion_types=completion_types,
+                auto_apply_suggestions=auto_apply_suggestions,
+                confidence_threshold=confidence_threshold,
+                user_id=user_id,
             )
 
             return {
-                "completion_result": self._track_provenance(
-                    {
-                        "suggestions": completion_suggestions,
-                        "auto_applied": False,
-                        "completion_method": "manual_suggestions",
-                    }
-                ),
+                "completion_result": self._track_provenance(result),
+                "input_entity_count": len(entities),
+                "input_relationship_count": len(relationships),
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "kg_completion",
+                    "completion_types": completion_types,
+                    "confidence_threshold": confidence_threshold,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"KG completion execution failed: {e}")
 
-    def _extract_extraction_result_id(
-        self, input_data: Dict[str, Any]
-    ) -> Optional[int]:
-        """Extract extraction result ID from input data"""
-        # Check various possible locations for extraction ID
-        if "fusion_result" in input_data:
-            fusion_data = input_data["fusion_result"]
-            if "data" in fusion_data:
-                return fusion_data["data"].get("extraction_result_id")
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state với completion suggestions"""
+        if "completion_result" in step_result:
+            completion_data = step_result["completion_result"]
 
-        if "enrichment_result" in input_data:
-            enrichment_data = input_data["enrichment_result"]
-            if "data" in enrichment_data:
-                return enrichment_data["data"].get("extraction_result_id")
+            if "data" in completion_data:
+                data = completion_data["data"]
 
-        # Look for individual extraction results
-        if "extraction_result" in input_data:
-            extraction_data = input_data["extraction_result"]
-            if "data" in extraction_data:
-                individual_results = extraction_data["data"].get(
-                    "individual_results", []
-                )
-                if individual_results and individual_results[0].get("extraction_id"):
-                    return individual_results[0]["extraction_id"]
+                # Add suggested entities if any
+                suggested_entities = data.get("suggested_entities", [])
+                if suggested_entities:
+                    self.graph_state.add_entities(suggested_entities, self.step_name)
 
-        return None
-
-    async def _create_temporary_extraction_result(
-        self, input_data: Dict[str, Any]
-    ) -> Optional[int]:
-        """Create a temporary extraction result for completion"""
-        try:
-            # This is a simplified version - in a real implementation,
-            # you would save the current entities and relationships to create
-            # a proper extraction result
-            return None  # For now, return None to use fallback method
-        except Exception as e:
-            logger.error(f"Error creating temporary extraction result: {e}")
-            return None
-
-    async def _generate_completion_suggestions(
-        self,
-        input_data: Dict[str, Any],
-        completion_types: List[str],
-        confidence_threshold: float,
-    ) -> Dict[str, Any]:
-        """Generate completion suggestions manually"""
-        suggestions = {
-            "missing_entities": [],
-            "missing_relationships": [],
-            "completion_stats": {},
-        }
-
-        # Extract current entities and relationships
-        entities, relationships = (
-            self._extract_entities_and_relationships_for_completion(input_data)
-        )
-
-        if "missing_entities" in completion_types:
-            missing_entities = await self._suggest_missing_entities(
-                entities, relationships
-            )
-            suggestions["missing_entities"] = missing_entities
-
-        if "missing_relationships" in completion_types:
-            missing_relationships = await self._suggest_missing_relationships(
-                entities, relationships
-            )
-            suggestions["missing_relationships"] = missing_relationships
-
-        suggestions["completion_stats"] = {
-            "current_entities": len(entities),
-            "current_relationships": len(relationships),
-            "suggested_entities": len(suggestions["missing_entities"]),
-            "suggested_relationships": len(suggestions["missing_relationships"]),
-        }
-
-        return suggestions
-
-    def _extract_entities_and_relationships_for_completion(
-        self, input_data: Dict[str, Any]
-    ) -> Tuple[List[Dict], List[Dict]]:
-        """Extract entities and relationships for completion"""
-        entities = []
-        relationships = []
-
-        # Handle fusion result output
-        if "fusion_result" in input_data:
-            fusion_data = input_data["fusion_result"]
-            if "data" in fusion_data:
-                entities.extend(fusion_data["data"].get("fused_entities", []))
-
-        # Handle enrichment result output
-        elif "enrichment_result" in input_data:
-            entities.extend(input_data.get("enriched_entities", []))
-            relationships.extend(input_data.get("enriched_relationships", []))
-
-        # Handle extraction result output
-        elif "extraction_result" in input_data:
-            extraction_data = input_data["extraction_result"]
-            if "data" in extraction_data:
-                entities.extend(extraction_data["data"].get("entities", []))
-                relationships.extend(extraction_data["data"].get("relationships", []))
-
-        return entities, relationships
-
-    async def _suggest_missing_entities(
-        self, entities: List[Dict[str, Any]], relationships: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Suggest missing entities based on relationships"""
-        suggestions = []
-
-        # Find entities mentioned in relationships but not in entity list
-        entity_texts = set(
-            [e.get("text", e.get("entity_text", "")).lower() for e in entities]
-        )
-
-        for relationship in relationships:
-            source_entity = relationship.get("source_entity", "").lower()
-            target_entity = relationship.get("target_entity", "").lower()
-
-            if source_entity and source_entity not in entity_texts:
-                suggestions.append(
-                    {
-                        "suggested_text": relationship.get("source_entity"),
-                        "suggested_type": "Unknown",
-                        "reason": f"Referenced in relationship as source",
-                        "supporting_relationship": relationship.get(
-                            "relationship_type"
-                        ),
-                        "confidence": 0.7,
-                        "priority": "medium",
-                    }
-                )
-                entity_texts.add(source_entity)
-
-            if target_entity and target_entity not in entity_texts:
-                suggestions.append(
-                    {
-                        "suggested_text": relationship.get("target_entity"),
-                        "suggested_type": "Unknown",
-                        "reason": f"Referenced in relationship as target",
-                        "supporting_relationship": relationship.get(
-                            "relationship_type"
-                        ),
-                        "confidence": 0.7,
-                        "priority": "medium",
-                    }
-                )
-                entity_texts.add(target_entity)
-
-        return suggestions
-
-    async def _suggest_missing_relationships(
-        self, entities: List[Dict[str, Any]], relationships: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Suggest missing relationships based on entity patterns"""
-        suggestions = []
-
-        # Group entities by type
-        entities_by_type = {}
-        for entity in entities:
-            entity_type = entity.get("entity_type", "Unknown")
-            if entity_type not in entities_by_type:
-                entities_by_type[entity_type] = []
-            entities_by_type[entity_type].append(entity)
-
-        # Common relationship patterns in banking domain
-        relationship_patterns = [
-            {
-                "source_type": "Person",
-                "target_type": "Bank",
-                "relationship": "is_customer_of",
-            },
-            {
-                "source_type": "Person",
-                "target_type": "Account",
-                "relationship": "owns_account",
-            },
-            {
-                "source_type": "Bank",
-                "target_type": "Product",
-                "relationship": "offers_product",
-            },
-            {
-                "source_type": "Person",
-                "target_type": "Product",
-                "relationship": "uses_product",
-            },
-        ]
-
-        # Suggest relationships based on patterns
-        for pattern in relationship_patterns:
-            source_entities = entities_by_type.get(pattern["source_type"], [])
-            target_entities = entities_by_type.get(pattern["target_type"], [])
-
-            for source_entity in source_entities:
-                for target_entity in target_entities:
-                    # Check if this relationship already exists
-                    existing = any(
-                        r.get("source_entity", "").lower()
-                        == source_entity.get("text", "").lower()
-                        and r.get("target_entity", "").lower()
-                        == target_entity.get("text", "").lower()
-                        and r.get("relationship_type") == pattern["relationship"]
-                        for r in relationships
+                # Add suggested relationships if any
+                suggested_relationships = data.get("suggested_relationships", [])
+                if suggested_relationships:
+                    self.graph_state.add_relationships(
+                        suggested_relationships, self.step_name
                     )
-
-                    if not existing:
-                        suggestions.append(
-                            {
-                                "source_entity": source_entity.get(
-                                    "text", source_entity.get("entity_text", "")
-                                ),
-                                "target_entity": target_entity.get(
-                                    "text", target_entity.get("entity_text", "")
-                                ),
-                                "suggested_type": pattern["relationship"],
-                                "reason": f"Common pattern in {pattern['source_type']}-{pattern['target_type']} relationships",
-                                "confidence": 0.6,
-                                "priority": "low",
-                            }
-                        )
-
-        return suggestions
 
 
 class QualityMonitoringExecutor(BaseStepExecutor):
-    """Executor for quality monitoring using Knowledge Extraction Service"""
+    """Enhanced Quality monitoring với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            # Initialize services
-            knowledge_service = KnowledgeExtractionService()
-
-            metrics = self.config.get(
-                "metrics", ["completeness", "consistency", "accuracy"]
+    def _check_prerequisites(self) -> bool:
+        """Quality monitoring cần entities hoặc relationships"""
+        entities = self._get_best_entities()
+        relationships = self._get_best_relationships()
+        if not entities and not relationships:
+            logger.warning(
+                "No entities or relationships available for quality monitoring"
             )
+            return False
+        return True
+
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from app.tasks.quality_monitoring import QualityMonitoringTask
+
             quality_threshold = self.config.get("quality_threshold", 0.8)
             generate_recommendations = self.config.get("generate_recommendations", True)
 
-            # Extract extraction result IDs for analysis
-            extraction_ids = self._extract_extraction_ids_for_monitoring(input_data)
+            # Get entities and relationships từ graph state
+            entities = self._get_best_entities()
+            relationships = self._get_best_relationships()
 
-            if extraction_ids:
-                # Use knowledge service for quality analysis
-                quality_analysis = await knowledge_service.analyze_extraction_quality(
-                    extraction_ids
-                )
-
-                if quality_analysis.get("success", True):
-                    overall_quality_score = self._calculate_overall_quality_score(
-                        quality_analysis
-                    )
-
-                    return {
-                        "quality_result": self._track_provenance(
-                            {
-                                "quality_analysis": quality_analysis,
-                                "overall_score": overall_quality_score,
-                                "passed_threshold": overall_quality_score
-                                >= quality_threshold,
-                                "extraction_ids_analyzed": extraction_ids,
-                            }
-                        ),
-                        "metadata": {
-                            "execution_time": datetime.now(timezone.utc).isoformat(),
-                            "step_type": "quality_monitoring",
-                            "metrics_evaluated": metrics,
-                        },
-                    }
-
-            # Fallback to manual quality monitoring
-            quality_results = await self._perform_manual_quality_monitoring(
-                input_data, metrics, quality_threshold
+            # Create task and execute
+            task = QualityMonitoringTask()
+            result = await task.monitor_quality(
+                entities=entities,
+                relationships=relationships,
+                step_id=self.step_id,
+                pipeline_run_id=self.pipeline_id,
+                quality_threshold=quality_threshold,
+                generate_recommendations=generate_recommendations,
             )
 
-            overall_quality_score = quality_results.get("overall_score", 0.0)
-
             return {
-                "quality_result": self._track_provenance(
-                    {
-                        "quality_metrics": quality_results,
-                        "overall_score": overall_quality_score,
-                        "passed_threshold": overall_quality_score >= quality_threshold,
-                    }
-                ),
+                "quality_result": self._track_provenance(result),
+                "monitored_entity_count": len(entities),
+                "monitored_relationship_count": len(relationships),
                 "metadata": {
                     "execution_time": datetime.now(timezone.utc).isoformat(),
                     "step_type": "quality_monitoring",
+                    "quality_threshold": quality_threshold,
                 },
             }
 
         except Exception as e:
             raise PipelineExecutionError(f"Quality monitoring execution failed: {e}")
 
-    def _extract_extraction_ids_for_monitoring(
-        self, input_data: Dict[str, Any]
-    ) -> List[int]:
-        """Extract extraction result IDs for quality monitoring"""
-        extraction_ids = []
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state metadata với quality results"""
+        if "quality_result" in step_result:
+            quality_data = step_result["quality_result"]
+            if "data" in quality_data:
+                # Store quality results in metadata
+                self.graph_state.metadata["quality_monitoring"] = quality_data["data"]
 
-        # Look through various input data formats
-        if "completion_result" in input_data:
-            completion_data = input_data["completion_result"]
-            if "data" in completion_data:
-                extraction_id = completion_data["data"].get("extraction_result_id")
-                if extraction_id:
-                    extraction_ids.append(extraction_id)
 
-        # Check other possible locations
-        for key in ["fusion_result", "enrichment_result", "extraction_result"]:
-            if key in input_data:
-                data = input_data[key]
-                if "data" in data:
-                    # Look for individual results
-                    individual_results = data["data"].get("individual_results", [])
-                    for result in individual_results:
-                        if result.get("extraction_id"):
-                            extraction_ids.append(result["extraction_id"])
+class KgWriterExecutor(BaseStepExecutor):
+    """Enhanced KG writer với graph state support"""
 
-        return extraction_ids
-
-    def _calculate_overall_quality_score(
-        self, quality_analysis: Dict[str, Any]
-    ) -> float:
-        """Calculate overall quality score from analysis results"""
-        if "summary" in quality_analysis:
-            summary = quality_analysis["summary"]
-            mapping_coverage = summary.get("mapping_coverage", {})
-
-            entity_mapping_percent = (
-                mapping_coverage.get("entities_mapped_percent", 0) / 100
-            )
-            relationship_mapping_percent = (
-                mapping_coverage.get("relationships_mapped_percent", 0) / 100
-            )
-
-            # Calculate confidence scores
-            confidence_analysis = quality_analysis.get("confidence_analysis", {})
-            entity_confidence = confidence_analysis.get("entity_confidence", {}).get(
-                "mean", 0
-            )
-            relationship_confidence = confidence_analysis.get(
-                "relationship_confidence", {}
-            ).get("mean", 0)
-
-            # Weighted average
-            overall_score = (
-                entity_mapping_percent * 0.3
-                + relationship_mapping_percent * 0.3
-                + entity_confidence * 0.2
-                + relationship_confidence * 0.2
-            )
-
-            return overall_score
-
-        return 0.0
-
-    async def _perform_manual_quality_monitoring(
-        self, input_data: Dict[str, Any], metrics: List[str], threshold: float
-    ) -> Dict[str, Any]:
-        """Perform manual quality monitoring when extraction IDs are not available"""
-        quality_results = {
-            "completeness_score": 0.0,
-            "consistency_score": 0.0,
-            "accuracy_score": 0.0,
-            "overall_score": 0.0,
-            "metric_details": {},
-        }
-
-        # Extract entities and relationships
-        entities, relationships = self._extract_entities_and_relationships_for_quality(
-            input_data
-        )
-
-        # Completeness analysis
-        if "completeness" in metrics:
-            completeness_score = await self._analyze_completeness(
-                entities, relationships
-            )
-            quality_results["completeness_score"] = completeness_score
-            quality_results["metric_details"]["completeness"] = {
-                "score": completeness_score,
-                "total_entities": len(entities),
-                "total_relationships": len(relationships),
-                "mapped_entities": len(
-                    [e for e in entities if e.get("is_mapped", False)]
-                ),
-                "mapped_relationships": len(
-                    [r for r in relationships if r.get("is_mapped", False)]
-                ),
-            }
-
-        # Consistency analysis
-        if "consistency" in metrics:
-            consistency_score = await self._analyze_consistency(entities, relationships)
-            quality_results["consistency_score"] = consistency_score
-            quality_results["metric_details"]["consistency"] = {
-                "score": consistency_score,
-                "entity_type_consistency": self._check_entity_type_consistency(
-                    entities
-                ),
-                "relationship_type_consistency": self._check_relationship_type_consistency(
-                    relationships
-                ),
-            }
-
-        # Accuracy analysis
-        if "accuracy" in metrics:
-            accuracy_score = await self._analyze_accuracy(entities, relationships)
-            quality_results["accuracy_score"] = accuracy_score
-            quality_results["metric_details"]["accuracy"] = {
-                "score": accuracy_score,
-                "avg_entity_confidence": sum([e.get("confidence", 0) for e in entities])
-                / max(1, len(entities)),
-                "avg_relationship_confidence": sum(
-                    [r.get("confidence", 0) for r in relationships]
-                )
-                / max(1, len(relationships)),
-            }
-
-        # Calculate overall score
-        scores = [
-            quality_results[f"{metric}_score"]
-            for metric in metrics
-            if f"{metric}_score" in quality_results
-        ]
-        quality_results["overall_score"] = sum(scores) / max(1, len(scores))
-
-        return quality_results
-
-    def _extract_entities_and_relationships_for_quality(
-        self, input_data: Dict[str, Any]
-    ) -> Tuple[List[Dict], List[Dict]]:
-        """Extract entities and relationships for quality analysis"""
-        entities = []
-        relationships = []
-
-        # Handle various input formats
-        if "completion_result" in input_data:
-            # Extract from completion suggestions
-            completion_data = input_data["completion_result"]
-            if "data" in completion_data:
-                suggestions = completion_data["data"].get("suggestions", {})
-                entities.extend(suggestions.get("missing_entities", []))
-                relationships.extend(suggestions.get("missing_relationships", []))
-
-        elif "fusion_result" in input_data:
-            fusion_data = input_data["fusion_result"]
-            if "data" in fusion_data:
-                entities.extend(fusion_data["data"].get("fused_entities", []))
-
-        elif "extraction_result" in input_data:
-            extraction_data = input_data["extraction_result"]
-            if "data" in extraction_data:
-                entities.extend(extraction_data["data"].get("entities", []))
-                relationships.extend(extraction_data["data"].get("relationships", []))
-
-        return entities, relationships
-
-    async def _analyze_completeness(
-        self, entities: List[Dict], relationships: List[Dict]
-    ) -> float:
-        """Analyze completeness of extracted knowledge"""
+    def _check_prerequisites(self) -> bool:
+        """KG writer cần entities hoặc relationships"""
+        entities = self._get_best_entities()
+        relationships = self._get_best_relationships()
         if not entities and not relationships:
-            return 0.0
+            logger.warning("No entities or relationships available for KG writing")
+            return False
+        return True
 
-        # Calculate mapping coverage
-        mapped_entities = len([e for e in entities if e.get("is_mapped", False)])
-        mapped_relationships = len(
-            [r for r in relationships if r.get("is_mapped", False)]
-        )
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        try:
+            from app.tasks.kg_writer import KnowledgeGraphWriterTask
 
-        total_items = len(entities) + len(relationships)
-        mapped_items = mapped_entities + mapped_relationships
+            graph_format = self.config.get("graph_format", "neo4j")
+            batch_size = self.config.get("batch_size", 1000)
+            validate_before_write = self.config.get("validate_before_write", True)
+            user_id = self.config.get("user_id")
 
-        mapping_coverage = mapped_items / total_items if total_items > 0 else 0.0
+            # Get entities and relationships từ graph state
+            entities = self._get_best_entities()
+            relationships = self._get_best_relationships()
 
-        # Calculate field completeness
-        required_entity_fields = ["text", "entity_type", "confidence"]
-        required_relationship_fields = [
-            "source_entity",
-            "target_entity",
-            "relationship_type",
-            "confidence",
-        ]
-
-        entity_completeness = 0.0
-        if entities:
-            entity_field_scores = []
-            for field in required_entity_fields:
-                filled_count = len([e for e in entities if e.get(field)])
-                entity_field_scores.append(filled_count / len(entities))
-            entity_completeness = sum(entity_field_scores) / len(entity_field_scores)
-
-        relationship_completeness = 0.0
-        if relationships:
-            relationship_field_scores = []
-            for field in required_relationship_fields:
-                filled_count = len([r for r in relationships if r.get(field)])
-                relationship_field_scores.append(filled_count / len(relationships))
-            relationship_completeness = sum(relationship_field_scores) / len(
-                relationship_field_scores
+            # Create task and execute
+            task = KnowledgeGraphWriterTask()
+            result = await task.write_knowledge_graph(
+                entities=entities,
+                relationships=relationships,
+                graph_format=graph_format,
+                batch_size=batch_size,
+                validate_before_write=validate_before_write,
+                user_id=user_id,
             )
 
-        # Weighted average
-        if entities and relationships:
-            completeness_score = (
-                mapping_coverage * 0.4
-                + entity_completeness * 0.3
-                + relationship_completeness * 0.3
-            )
-        elif entities:
-            completeness_score = mapping_coverage * 0.5 + entity_completeness * 0.5
-        elif relationships:
-            completeness_score = (
-                mapping_coverage * 0.5 + relationship_completeness * 0.5
-            )
-        else:
-            completeness_score = 0.0
+            return {
+                "write_result": self._track_provenance(result),
+                "written_entity_count": len(entities),
+                "written_relationship_count": len(relationships),
+                "metadata": {
+                    "execution_time": datetime.now(timezone.utc).isoformat(),
+                    "step_type": "kg_writer",
+                    "graph_format": graph_format,
+                    "batch_size": batch_size,
+                },
+            }
 
-        return completeness_score
+        except Exception as e:
+            raise PipelineExecutionError(f"KG writer execution failed: {e}")
 
-    async def _analyze_consistency(
-        self, entities: List[Dict], relationships: List[Dict]
-    ) -> float:
-        """Analyze consistency of extracted knowledge"""
-        consistency_scores = []
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state metadata với write results"""
+        if "write_result" in step_result:
+            write_data = step_result["write_result"]
+            if "data" in write_data:
+                # Store write results in metadata
+                self.graph_state.metadata["kg_writer"] = write_data["data"]
 
-        # Entity type consistency
-        entity_type_consistency = self._check_entity_type_consistency(entities)
-        consistency_scores.append(entity_type_consistency)
+                write_result = write_data["data"]["write_result"]
+                saved_entities = write_result.get("saved_entities", [])
+                logger.info(f"SAVED: {saved_entities}")
+                saved_relationships = write_result.get("saved_relationships", [])
 
-        # Relationship type consistency
-        relationship_type_consistency = self._check_relationship_type_consistency(
-            relationships
-        )
-        consistency_scores.append(relationship_type_consistency)
-
-        # Confidence range consistency
-        confidence_consistency = self._check_confidence_consistency(
-            entities + relationships
-        )
-        consistency_scores.append(confidence_consistency)
-
-        return (
-            sum(consistency_scores) / len(consistency_scores)
-            if consistency_scores
-            else 0.0
-        )
-
-    def _check_entity_type_consistency(self, entities: List[Dict]) -> float:
-        """Check consistency of entity types"""
-        if not entities:
-            return 1.0
-
-        # Check for consistent entity type naming
-        entity_types = [e.get("entity_type", "").lower() for e in entities]
-        unique_types = set(entity_types)
-
-        # Penalize if we have too many singleton types (might indicate inconsistency)
-        type_counts = {t: entity_types.count(t) for t in unique_types}
-        singletons = len([t for t, count in type_counts.items() if count == 1])
-
-        consistency_score = (
-            1.0 - (singletons / len(unique_types)) if unique_types else 1.0
-        )
-        return max(0.0, consistency_score)
-
-    def _check_relationship_type_consistency(self, relationships: List[Dict]) -> float:
-        """Check consistency of relationship types"""
-        if not relationships:
-            return 1.0
-
-        # Similar logic to entity type consistency
-        relationship_types = [
-            r.get("relationship_type", "").lower() for r in relationships
-        ]
-        unique_types = set(relationship_types)
-
-        type_counts = {t: relationship_types.count(t) for t in unique_types}
-        singletons = len([t for t, count in type_counts.items() if count == 1])
-
-        consistency_score = (
-            1.0 - (singletons / len(unique_types)) if unique_types else 1.0
-        )
-        return max(0.0, consistency_score)
-
-    def _check_confidence_consistency(self, items: List[Dict]) -> float:
-        """Check confidence score consistency"""
-        if not items:
-            return 1.0
-
-        confidences = [
-            item.get("confidence", 0) for item in items if "confidence" in item
-        ]
-        if not confidences:
-            return 0.5  # Neutral score if no confidence scores
-
-        # Check if confidences are in valid range [0, 1]
-        valid_confidences = [c for c in confidences if 0 <= c <= 1]
-        validity_score = len(valid_confidences) / len(confidences)
-
-        # Check for reasonable distribution (not all the same)
-        if len(set(confidences)) == 1:
-            distribution_score = 0.7  # Slightly penalize uniform confidence
-        else:
-            distribution_score = 1.0
-
-        return (validity_score + distribution_score) / 2
-
-    async def _analyze_accuracy(
-        self, entities: List[Dict], relationships: List[Dict]
-    ) -> float:
-        """Analyze accuracy of extracted knowledge"""
-        accuracy_scores = []
-
-        # Confidence-based accuracy
-        all_items = entities + relationships
-        if all_items:
-            confidences = [
-                item.get("confidence", 0) for item in all_items if "confidence" in item
-            ]
-            if confidences:
-                avg_confidence = sum(confidences) / len(confidences)
-                accuracy_scores.append(avg_confidence)
-
-        # Mapping accuracy (mapped items are likely more accurate)
-        if all_items:
-            mapped_items = len(
-                [item for item in all_items if item.get("is_mapped", False)]
-            )
-            mapping_accuracy = mapped_items / len(all_items)
-            accuracy_scores.append(mapping_accuracy)
-
-        # Text quality accuracy (basic heuristics)
-        text_quality_score = self._assess_text_quality(entities)
-        accuracy_scores.append(text_quality_score)
-
-        return sum(accuracy_scores) / len(accuracy_scores) if accuracy_scores else 0.0
-
-    def _assess_text_quality(self, entities: List[Dict]) -> float:
-        """Assess text quality of entities"""
-        if not entities:
-            return 1.0
-
-        quality_scores = []
-        for entity in entities:
-            text = entity.get("text", entity.get("entity_text", ""))
-            if not text:
-                quality_scores.append(0.0)
-                continue
-
-            score = 1.0
-
-            # Penalize very short text
-            if len(text.strip()) < 3:
-                score -= 0.3
-
-            # Penalize text with excessive punctuation or special characters
-            special_char_ratio = len(
-                [c for c in text if not c.isalnum() and not c.isspace()]
-            ) / len(text)
-            if special_char_ratio > 0.3:
-                score -= 0.2
-
-            # Penalize text that looks like placeholder
-            placeholder_indicators = ["todo", "tbd", "xxx", "null", "undefined"]
-            if any(indicator in text.lower() for indicator in placeholder_indicators):
-                score -= 0.5
-
-            quality_scores.append(max(0.0, score))
-
-        return sum(quality_scores) / len(quality_scores)
+                if saved_entities:
+                    self.graph_state.add_entities(saved_entities, self.step_name)
+                if saved_relationships:
+                    self.graph_state.add_relationships(
+                        saved_relationships, self.step_name
+                    )
 
 
 class CustomPythonExecutor(BaseStepExecutor):
-    """Executor for custom Python code execution"""
+    """Enhanced Custom Python executor với graph state support"""
 
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _execute_step_logic(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             code = self.config.get("code", "")
             input_mapping = self.config.get("input_mapping", {})
@@ -2311,7 +1789,7 @@ class CustomPythonExecutor(BaseStepExecutor):
                     "No code provided for custom Python execution"
                 )
 
-            # Prepare execution environment
+            # Prepare execution environment with graph state
             execution_env = self._prepare_execution_environment(
                 input_data, input_mapping
             )
@@ -2343,12 +1821,37 @@ class CustomPythonExecutor(BaseStepExecutor):
         except Exception as e:
             raise PipelineExecutionError(f"Custom Python execution failed: {e}")
 
+    def _update_graph_state_from_results(self, step_result: Dict[str, Any]):
+        """Update graph state từ custom Python results"""
+        if "custom_result" in step_result:
+            custom_data = step_result["custom_result"]
+            if "data" in custom_data:
+                mapped_output = custom_data["data"].get("mapped_output")
+
+                # Check if output contains entities or relationships
+                if isinstance(mapped_output, dict):
+                    if "entities" in mapped_output:
+                        entities = mapped_output["entities"]
+                        if isinstance(entities, list):
+                            self.graph_state.add_entities(entities, self.step_name)
+
+                    if "relationships" in mapped_output:
+                        relationships = mapped_output["relationships"]
+                        if isinstance(relationships, list):
+                            self.graph_state.add_relationships(
+                                relationships, self.step_name
+                            )
+
     def _prepare_execution_environment(
         self, input_data: Dict[str, Any], input_mapping: Dict[str, str]
     ) -> Dict[str, Any]:
-        """Prepare the execution environment with input data"""
+        """Prepare the execution environment with input data và graph state"""
         env = {
             "input_data": input_data,
+            "graph_state": self.graph_state,
+            "entities": self._get_best_entities(),
+            "relationships": self._get_best_relationships(),
+            "text_data": self._get_best_text_data(),
             "datetime": datetime,
             "json": json,
             "re": re,
@@ -2494,217 +1997,6 @@ class CustomPythonExecutor(BaseStepExecutor):
         return mapped_output
 
 
-class KnowledgeExtractorExecutor(BaseStepExecutor):
-    """Executor for unstructured knowledge mapping using LLMs"""
-
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            # Use existing knowledge extraction workflow
-            workflow = KnowledgeExtractionService()
-
-            logger.info(
-                "input_data for knowledge extraction: "
-                    f"{json.dumps(input_data, indent=2)[:500]}..."
-            )
-
-            # Extract text data from input
-            text_data = self._extract_text_from_input(input_data)
-
-            all_entities = []
-            all_relationships = []
-
-            for text_item in text_data:
-                text_content = text_item.get("text", "")
-                result = await workflow.extract_knowledge_pipeline(
-                    text=text_content,
-                    domain=self.config.get("domain"),
-                    extraction_options={
-                        "confidence_threshold": self.config.get(
-                            "confidence_threshold", 0.7
-                        ),
-                    },
-                )
-
-                logger.info(
-                        f"Knowledge extraction result: {result}"
-                                        )
-
-                if result.get("success"):
-                    all_entities.extend(result.get("entities", []))
-                    all_relationships.extend(result.get("relationships", []))
-
-            return {
-                "extracting_result": self._track_provenance(
-                    {
-                        "entities": all_entities,
-                        "relationships": all_relationships,
-                    }
-                ),
-                "entity_count": len(all_entities),
-                "relationship_count": len(all_relationships),
-                "metadata": {
-                    "execution_time": datetime.now(timezone.utc).isoformat(),
-                    "step_type": "knowledge_mapping",
-                },
-            }
-
-        except Exception as e:
-            raise PipelineExecutionError(f"Knowledge mapping execution failed: {e}")
-
-    def _extract_text_from_input(
-        self, input_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Extract text content from various input formats"""
-        # Reuse logic from KnowledgeExtractorExecutor
-        return [chunk["data"]["content"] for chunk in input_data["chunks"]]
-
-
-class EntityEnrichmentExecutor(BaseStepExecutor):
-    """Executor for entity enrichment"""
-
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            enrichment_sources = self.config.get("enrichment_sources", [])
-            enrichment_types = self.config.get("enrichment_types", ["attributes"])
-
-            # Extract entities from input
-            entities = self._extract_entities_from_input(input_data)
-
-            # Use existing enrichment functions
-            enrichment_results = {}
-
-            # Add embeddings if requested
-            if "embeddings" in enrichment_types and entities:
-                entity_ids = [UUID(e["id"]) for e in entities if e.get("id")]
-                if entity_ids:
-                    embedding_result = await enrich_entities_with_embeddings(
-                        entity_ids=entity_ids,
-                        batch_size=self.config.get("batch_size", 100),
-                    )
-                    enrichment_results["embeddings"] = embedding_result
-
-            # TODO: Implement other enrichment types
-            # - External API enrichment
-            # - Knowledge base lookups
-            # - Relationship enrichment
-
-            enriched_entities = entities  # Placeholder - would be actually enriched
-
-            return {
-                "enrichment_result": self._track_provenance(
-                    {
-                        "enriched_entities": enriched_entities,
-                        "enrichment_stats": enrichment_results,
-                    }
-                ),
-                "metadata": {
-                    "execution_time": datetime.now(timezone.utc).isoformat(),
-                    "step_type": "entity_enrichment",
-                },
-            }
-
-        except Exception as e:
-            raise PipelineExecutionError(f"Entity enrichment execution failed: {e}")
-
-    def _extract_entities_from_input(
-        self, input_data: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
-        """Extract entities from various input formats"""
-        entities = []
-
-        # Handle fusion result output
-        if "fusion_result" in input_data:
-            fusion_data = input_data["fusion_result"]
-            if "data" in fusion_data:
-                entities.extend(fusion_data["data"].get("fused_entities", []))
-
-        # Handle resolution result output
-        elif "resolution_result" in input_data:
-            resolution_data = input_data["resolution_result"]
-            if "data" in resolution_data:
-                entities.extend(resolution_data["data"].get("resolved_entities", []))
-
-        return entities
-
-
-class KgWriterExecutor(BaseStepExecutor):
-    """Executor for knowledge graph writing"""
-
-    async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            graph_format = self.config.get("graph_format", "rdf")
-            batch_size = self.config.get("batch_size", 1000)
-            validate_before_write = self.config.get("validate_before_write", True)
-
-            # Extract entities and relationships from input
-            entities, relationships = self._extract_graph_data_from_input(input_data)
-
-            # Use existing sync functions for Neo4j
-            write_results = {}
-
-            if entities:
-                entity_ids = [UUID(e["id"]) for e in entities if e.get("id")]
-                if entity_ids:
-                    neo4j_result = await sync_entities_to_neo4j(
-                        entity_ids=entity_ids, batch_size=batch_size
-                    )
-                    write_results["entities"] = neo4j_result
-
-            if relationships:
-                relationship_ids = [UUID(r["id"]) for r in relationships if r.get("id")]
-                if relationship_ids:
-                    neo4j_result = await sync_relationships_to_neo4j(
-                        relationship_ids=relationship_ids, batch_size=batch_size
-                    )
-                    write_results["relationships"] = neo4j_result
-
-            return {
-                "write_result": self._track_provenance(
-                    {
-                        "write_stats": write_results,
-                        "graph_format": graph_format,
-                    }
-                ),
-                "entity_count": len(entities),
-                "relationship_count": len(relationships),
-                "metadata": {
-                    "execution_time": datetime.now(timezone.utc).isoformat(),
-                    "step_type": "kg_writer",
-                },
-            }
-
-        except Exception as e:
-            raise PipelineExecutionError(f"KG writer execution failed: {e}")
-
-    def _extract_graph_data_from_input(
-        self, input_data: Dict[str, Any]
-    ) -> Tuple[List[Dict], List[Dict]]:
-        """Extract entities and relationships from input data"""
-        entities = []
-        relationships = []
-
-        # Handle enrichment result output
-        if "enrichment_result" in input_data:
-            enrichment_data = input_data["enrichment_result"]
-            if "data" in enrichment_data:
-                entities.extend(enrichment_data["data"].get("enriched_entities", []))
-
-        # Handle fusion result output
-        elif "fusion_result" in input_data:
-            fusion_data = input_data["fusion_result"]
-            if "data" in fusion_data:
-                entities.extend(fusion_data["data"].get("fused_entities", []))
-
-        # Handle mapping result output
-        elif "mapping_result" in input_data:
-            mapping_data = input_data["mapping_result"]
-            if "data" in mapping_data:
-                entities.extend(mapping_data["data"].get("entities", []))
-                relationships.extend(mapping_data["data"].get("relationships", []))
-
-        return entities, relationships
-
-
 # Updated step executor registry
 STEP_EXECUTORS = {
     PipelineStepType.FILE_INGESTION: FileIngestionExecutor,
@@ -2714,7 +2006,6 @@ STEP_EXECUTORS = {
     PipelineStepType.DATA_CLEANER: DataCleanerExecutor,
     PipelineStepType.DATA_VALIDATOR: DataValidatorExecutor,
     PipelineStepType.KNOWLEDGE_EXTRACTOR: KnowledgeExtractorExecutor,
-    PipelineStepType.KNOWLEDGE_MAPPING: KnowledgeMappingExecutor,
     PipelineStepType.ONTOLOGY_ENRICHMENT: OntologyEnrichmentExecutor,
     PipelineStepType.ENTITY_RESOLUTION: EntityResolutionExecutor,
     PipelineStepType.ENTITY_FUSION: EntityFusionExecutor,
@@ -2730,10 +2021,12 @@ def get_step_executor(
     step_type: PipelineStepType,
     step_config: Dict[str, Any],
     step_metadata: Dict[str, Any],
+    graph_state: Optional[GraphState] = None,
 ):
-    """Get executor instance for a step type"""
+    """Get enhanced executor instance với graph state support"""
     executor_class = STEP_EXECUTORS.get(step_type)
     if not executor_class:
         raise ValueError(f"No executor found for step type: {step_type}")
 
-    return executor_class(step_config, step_metadata)
+    # Return enhanced executor với graph state
+    return executor_class(step_config, step_metadata, graph_state)

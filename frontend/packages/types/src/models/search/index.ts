@@ -1,10 +1,3 @@
-export enum SearchType {
-  EXACT = "exact",
-  FUZZY = "fuzzy",
-  SEMANTIC = "semantic",
-  HYBRID = "hybrid",
-}
-
 export interface SearchFilter {
   field: string;
   operator: string; // eq, gt, lt, gte, lte, contains, in
@@ -98,3 +91,75 @@ export interface GraphSearchResult {
   execution_time_ms: number;
 }
 
+
+export enum SearchType {
+  EXACT = "exact",
+  FUZZY = "fuzzy",
+  SEMANTIC = "semantic",
+  HYBRID = "hybrid",
+  AI_POWERED = "ai_powered"
+}
+
+// AI Search Request/Response Types
+export interface AISearchRequest {
+  query: string;
+  entity_types?: string[];
+  max_candidates?: number;
+  similarity_threshold?: number;
+  top_k_entities?: number;
+  subgraph_radius?: number;
+  max_subgraph_nodes?: number;
+  damping_factor?: number;
+  max_iterations?: number;
+  generate_answer?: boolean;
+  llm_model?: string;
+}
+
+export interface EntityRankResult {
+  entity_id: string;
+  entity_text: string;
+  entity_type: string;
+  similarity_score: number;
+  personrank_score: number;
+  final_score: number;
+  properties: Record<string, any>;
+}
+
+export interface SubgraphContext {
+  nodes: Array<{
+    id: string;
+    text: string;
+    type: string;
+    properties: Record<string, any>;
+    is_top_entity: boolean;
+  }>;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+    type: string;
+    properties: Record<string, any>;
+  }>;
+  node_count: number;
+  edge_count: number;
+}
+
+export interface AISearchResponse {
+  query: string;
+  answer: string;
+  entities: EntityRankResult[];
+  subgraph_context?: SubgraphContext;
+  execution_time_ms: number;
+  confidence_score: number;
+  total_candidates: number;
+}
+
+export interface SearchSuggestionRequest {
+  partial_query: string;
+  limit?: number;
+}
+
+export interface SearchSuggestionResponse {
+  suggestions: string[];
+  query: string;
+}

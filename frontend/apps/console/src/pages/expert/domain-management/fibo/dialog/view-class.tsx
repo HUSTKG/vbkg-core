@@ -1,18 +1,18 @@
 import { Badge, Dialog } from "@/components";
 
-interface ViewFiboClassDialogProps {
+interface ViewOntologyClassDialogProps {
   isViewClassModalOpen: boolean;
   setIsViewClassModalOpen: (open: boolean) => void;
   selectedClass: any; // Replace with actual type
   getClassById: (id: number) => any; // Replace with actual type
 }
 
-export default function ViewFiboClassDialog({
+export default function ViewOntologyClassDialog({
   isViewClassModalOpen,
   setIsViewClassModalOpen,
   selectedClass,
   getClassById,
-}: ViewFiboClassDialogProps) {
+}: ViewOntologyClassDialogProps) {
   return (
     <Dialog
       title="View FIBO Class"

@@ -57,7 +57,7 @@ class ConflictBase(BaseModel):
     conflicting_attributes: Optional[Dict[str, Any]] = None
     context_data: Optional[Dict[str, Any]] = None
 
-    @field_validator('confidence_score')
+    @field_validator("confidence_score")
     def validate_confidence_score(cls, v):
         if isinstance(v, str):
             return float(v)
@@ -66,133 +66,109 @@ class ConflictBase(BaseModel):
 
 # Specific Conflict Models
 
+
 class DuplicateEntityConflict(ConflictBase):
     """Model for duplicate entity conflicts with detailed similarity metrics"""
-    
+
     conflict_type: ConflictType = ConflictType.DUPLICATE_ENTITY
     similarity_scores: Dict[str, float] = Field(
-        ..., 
-        description="Individual similarity scores for different metrics"
+        ..., description="Individual similarity scores for different metrics"
     )
     weighted_score: float = Field(
-        ..., 
-        ge=0.0, 
-        le=1.0,
-        description="Final weighted similarity score"
+        ..., ge=0.0, le=1.0, description="Final weighted similarity score"
     )
     weight_configuration: Dict[str, float] = Field(
-        ...,
-        description="Weights used for calculation"
+        ..., description="Weights used for calculation"
     )
     matching_attributes: List[str] = Field(
         default_factory=list,
-        description="List of attributes that match between entities"
+        description="List of attributes that match between entities",
     )
     differing_attributes: List[Dict[str, Any]] = Field(
         default_factory=list,
-        description="List of attributes that differ with their values"
+        description="List of attributes that differ with their values",
     )
     source_documents: Dict[str, str] = Field(
-        default_factory=dict,
-        description="Source document IDs for both entities"
+        default_factory=dict, description="Source document IDs for both entities"
     )
 
 
 class ContradictoryRelationshipConflict(ConflictBase):
     """Model for contradictory relationship conflicts"""
-    
+
     conflict_type: ConflictType = ConflictType.CONTRADICTORY_RELATIONSHIP
     relationship_types: List[str] = Field(
-        ...,
-        description="The contradictory relationship types"
+        ..., description="The contradictory relationship types"
     )
     contradiction_pattern: str = Field(
-        ...,
-        description="Type of contradiction (direct, temporal, logical)"
+        ..., description="Type of contradiction (direct, temporal, logical)"
     )
     temporal_overlap: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Details about temporal overlap if applicable"
+        None, description="Details about temporal overlap if applicable"
     )
     affected_entities: Dict[str, str] = Field(
-        ...,
-        description="IDs and names of entities involved"
+        ..., description="IDs and names of entities involved"
     )
 
 
 class AttributeMismatchConflict(ConflictBase):
     """Model for attribute mismatch conflicts"""
-    
+
     conflict_type: ConflictType = ConflictType.ATTRIBUTE_MISMATCH
     mismatched_attribute: str = Field(
-        ...,
-        description="The specific attribute that doesn't match"
+        ..., description="The specific attribute that doesn't match"
     )
-    attribute_values: Dict[str, Any] = Field(
-        ...,
-        description="Values from each entity"
-    )
+    attribute_values: Dict[str, Any] = Field(..., description="Values from each entity")
     value_similarity: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Similarity between the mismatched values"
+        ..., ge=0.0, le=1.0, description="Similarity between the mismatched values"
     )
     is_critical_attribute: bool = Field(
-        ...,
-        description="Whether this is a critical attribute"
+        ..., description="Whether this is a critical attribute"
     )
     suggested_value: Optional[Any] = Field(
-        None,
-        description="AI-suggested resolution value"
+        None, description="AI-suggested resolution value"
     )
 
 
 class TemporalConflict(ConflictBase):
     """Model for temporal conflicts"""
-    
+
     conflict_type: ConflictType = ConflictType.TEMPORAL_CONFLICT
     temporal_issue: str = Field(
         ...,
-        description="Type of temporal issue (overlap, impossible_sequence, missing_dates)"
+        description="Type of temporal issue (overlap, impossible_sequence, missing_dates)",
     )
     event_timeline: List[Dict[str, Any]] = Field(
-        ...,
-        description="Chronological list of conflicting events"
+        ..., description="Chronological list of conflicting events"
     )
     date_conflicts: List[Dict[str, Any]] = Field(
-        ...,
-        description="Specific date conflicts with details"
+        ..., description="Specific date conflicts with details"
     )
     suggested_timeline: Optional[List[Dict[str, Any]]] = Field(
-        None,
-        description="AI-suggested corrected timeline"
+        None, description="AI-suggested corrected timeline"
     )
 
 
 class SourceConflict(ConflictBase):
     """Model for source-based conflicts"""
-    
+
     conflict_type: ConflictType = ConflictType.SOURCE_CONFLICT
     source_info: Dict[str, Dict[str, Any]] = Field(
-        ...,
-        description="Information about each conflicting source"
+        ..., description="Information about each conflicting source"
     )
     conflicting_data: List[Dict[str, Any]] = Field(
-        ...,
-        description="List of specific data points that conflict"
+        ..., description="List of specific data points that conflict"
     )
     source_reliability_scores: Dict[str, float] = Field(
-        default_factory=dict,
-        description="Reliability scores for each source"
+        default_factory=dict, description="Reliability scores for each source"
     )
     recommended_source: Optional[str] = Field(
-        None,
-        description="Recommended source based on reliability"
+        None, description="Recommended source based on reliability"
     )
 
 
 # Conflict Creation Models with validation
+
 
 class ConflictCreate(ConflictBase):
     detected_by: str  # "system", "user", "expert"
@@ -226,13 +202,14 @@ class SourceConflictCreate(SourceConflict):
 
 # Resolution Models
 
+
 class ConflictResolution(BaseModel):
     resolution_method: ResolutionMethod
     resolution_data: Dict[str, Any]
     reasoning: str
     confidence_score: Optional[Union[str, float]] = None
     resolved_by: str  # user_id or "ai_system"
-    resolution_timestamp: datetime
+    resolution_timestamp: str 
     validation_required: bool = False
 
 
@@ -245,9 +222,10 @@ class ConflictResolutionRequest(BaseModel):
 
 # Conflict Resolution Strategies
 
+
 class ResolutionStrategy(BaseModel):
     """Base class for resolution strategies"""
-    
+
     strategy_type: str
     applicable_conflict_types: List[ConflictType]
     confidence_threshold: float = Field(0.7, ge=0.0, le=1.0)
@@ -256,12 +234,11 @@ class ResolutionStrategy(BaseModel):
 
 class MergeStrategy(ResolutionStrategy):
     """Strategy for merging duplicate entities"""
-    
+
     strategy_type: str = "merge"
     applicable_conflict_types: List[ConflictType] = [ConflictType.DUPLICATE_ENTITY]
     merge_rules: Dict[str, str] = Field(
-        default_factory=dict,
-        description="Rules for merging specific attributes"
+        default_factory=dict, description="Rules for merging specific attributes"
     )
     preserve_relationships: bool = True
     create_alias: bool = True
@@ -269,7 +246,7 @@ class MergeStrategy(ResolutionStrategy):
 
 class TemporalOrderingStrategy(ResolutionStrategy):
     """Strategy for resolving temporal conflicts"""
-    
+
     strategy_type: str = "temporal_ordering"
     applicable_conflict_types: List[ConflictType] = [ConflictType.TEMPORAL_CONFLICT]
     prefer_recent_dates: bool = True
@@ -279,18 +256,18 @@ class TemporalOrderingStrategy(ResolutionStrategy):
 
 class SourcePrioritizationStrategy(ResolutionStrategy):
     """Strategy for resolving source conflicts"""
-    
+
     strategy_type: str = "source_prioritization"
     applicable_conflict_types: List[ConflictType] = [ConflictType.SOURCE_CONFLICT]
     source_priority_order: List[str] = Field(
-        default_factory=list,
-        description="Ordered list of source IDs by priority"
+        default_factory=list, description="Ordered list of source IDs by priority"
     )
     consider_recency: bool = True
     consider_confidence: bool = True
 
 
 # Conflict Management Models
+
 
 class Conflict(ConflictBase):
     id: str
@@ -303,14 +280,10 @@ class Conflict(ConflictBase):
     escalation_reason: Optional[str] = None
     auto_resolution_suggestions: Optional[List[Dict[str, Any]]] = None
     related_conflicts: Optional[List[str]] = Field(
-        default_factory=list,
-        description="IDs of related conflicts"
+        default_factory=list, description="IDs of related conflicts"
     )
     impact_score: Optional[float] = Field(
-        None,
-        ge=0.0,
-        le=1.0,
-        description="Estimated impact on knowledge graph quality"
+        None, ge=0.0, le=1.0, description="Estimated impact on knowledge graph quality"
     )
 
     class Config:
@@ -327,7 +300,7 @@ class ConflictUpdate(BaseModel):
 
 class ConflictBatch(BaseModel):
     """Model for batch conflict operations"""
-    
+
     conflict_ids: List[str]
     action: str = Field(..., description="batch_resolve, batch_assign, batch_reject")
     action_data: Dict[str, Any]
@@ -335,6 +308,7 @@ class ConflictBatch(BaseModel):
 
 
 # Quality Assessment Models
+
 
 class QualityDimension(str, Enum):
     COMPLETENESS = "completeness"
@@ -357,12 +331,12 @@ class QualityAssessment(BaseModel):
     improvement_suggestions: Optional[List[str]] = None
     related_conflicts: Optional[List[str]] = Field(
         default_factory=list,
-        description="IDs of conflicts affecting this quality dimension"
+        description="IDs of conflicts affecting this quality dimension",
     )
 
 
 class QualityReport(BaseModel):
-    report_date: str 
+    report_date: str
     overall_score: float
     dimension_scores: Dict[QualityDimension, float]
     total_entities: int
@@ -373,12 +347,12 @@ class QualityReport(BaseModel):
     conflicts_by_severity: Dict[ConflictSeverity, int]
     improvement_recommendations: List[str]
     trend_analysis: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Comparison with previous reports"
+        None, description="Comparison with previous reports"
     )
 
 
 # Knowledge Graph Edit Models
+
 
 class KGEditAction(str, Enum):
     CREATE_ENTITY = "create_entity"
@@ -399,8 +373,7 @@ class KGEdit(BaseModel):
     reason: str
     validate_before_apply: bool = True
     conflict_id: Optional[str] = Field(
-        None,
-        description="ID of conflict this edit resolves"
+        None, description="ID of conflict this edit resolves"
     )
 
 
@@ -410,16 +383,16 @@ class KGEditResult(BaseModel):
     validation_errors: Optional[List[str]] = None
     rollback_info: Optional[Dict[str, Any]] = None
     resolved_conflicts: Optional[List[str]] = Field(
-        default_factory=list,
-        description="IDs of conflicts resolved by this edit"
+        default_factory=list, description="IDs of conflicts resolved by this edit"
     )
 
 
 # Conflict Analysis Models
 
+
 class ConflictAnalysis(BaseModel):
     """Analysis of conflicts in the knowledge graph"""
-    
+
     analysis_date: datetime
     total_conflicts: int
     conflicts_by_type: Dict[ConflictType, int]

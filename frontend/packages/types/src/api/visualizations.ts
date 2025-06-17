@@ -1,3 +1,4 @@
+import { VisualizationData } from "../../dist";
 import { ApiResponse, PaginatedResponse } from "../models";
 import {
   DefaultVisualizationRequest,
@@ -45,10 +46,10 @@ export interface IDeleteVisualizationRequest {
 }
 export interface IDeleteVisualizationResponse extends ApiResponse<unknown> {}
 
-export interface IGetVisualizationDataRequest extends Record<string, string> {
+export interface IGetVisualizationDataRequest {
   id: string;
 }
-export interface IGetVisualizationDataResponse extends ApiResponse<unknown> {}
+export interface IGetVisualizationDataResponse extends ApiResponse<VisualizationData> {}
 
 export interface ICreateDefaultVisualizationRequest
   extends DefaultVisualizationRequest {}

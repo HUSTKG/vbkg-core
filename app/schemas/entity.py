@@ -1,7 +1,21 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class EntityProperties(BaseModel):
+    """Model for entity properties."""
+
+    entity_text: str
+    entity_type: str
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    is_vietnamese: Optional[bool] = None
+    start_position: Optional[int] = None
+    end_position: Optional[int] = None
+    extraction_method: Optional[str] = None
+    is_mapped: Optional[bool] = False
+    source_document_id: Optional[str] = None
 
 
 class EntityBase(BaseModel):
@@ -26,6 +40,7 @@ class EntityCreate(EntityBase):
     is_verified: Optional[bool] = False
     verification_notes: Optional[str] = None
 
+
 class EntityResponse(BaseModel):
     id: str
     entity_text: str
@@ -36,6 +51,7 @@ class EntityResponse(BaseModel):
     relationship_count: int
     created_at: str
     updated_at: Optional[str] = None
+
 
 class EntityUpdate(BaseModel):
     """Model for updating an existing entity."""

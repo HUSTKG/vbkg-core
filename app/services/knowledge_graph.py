@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from postgrest.types import CountMethod
 
+from app.core import supabase
 from app.core.supabase import get_supabase
 from app.nlp.embeddings import get_text_embedding
 from app.schemas.conflict_resolution import KGEdit, KGEditAction, KGEditResult
@@ -456,32 +457,16 @@ class KnowledgeGraphService:
         """Get subgraph around an entity"""
 
         async with self.neo4j_driver.session() as session:
-            rel_filter = ""
-            if relationship_types:
-                rel_types = "|".join(relationship_types)
-                rel_filter = f":`{rel_types}`"
-
-            query = f"""
-            MATCH (center {{entity_id: $entity_id}})
-            MATCH path = (center)-[r{rel_filter}*1..{radius}]-(connected)
-            WITH DISTINCT connected, center
-            ORDER BY connected.confidence DESC
-            LIMIT {max_nodes}
-
-            WITH collect(connected) as connected_nodes, center
-            MATCH (n1)-[rel{rel_filter}]-(n2)
-            WHERE (n1 = center OR n1 IN connected_nodes) 
-              AND (n2 = center OR n2 IN connected_nodes)
-
-            RETURN 
-                connected_nodes + [center] as nodes,
-                collect(DISTINCT rel) as relationships
+            # Step 1: Lấy center entity
+            center_query = """
+            MATCH (center:Entity {entity_id: $entity_id})
+            RETURN center
             """
-
-            result = await session.run(query, {"entity_id": entity_id})
-            record = await result.single()
-
-            if not record:
+            
+            center_result = await session.run(center_query, {"entity_id": entity_id})
+            center_record = await center_result.single()
+            
+            if not center_record:
                 return {
                     "nodes": [],
                     "edges": [],
@@ -490,32 +475,95 @@ class KnowledgeGraphService:
                     "node_count": 0,
                     "edge_count": 0,
                 }
-
+            
+            center_node = center_record["center"]
+            
+            # Step 2: Lấy connected nodes trong radius
+            if relationship_types:
+                # Filter theo relationship types
+                rel_types_str = "', '".join(relationship_types)
+                nodes_query = f"""
+                MATCH (center:Entity {{entity_id: $entity_id}})
+                MATCH path = (center)-[r*1..{radius}]-(connected:Entity)
+                WHERE ALL(rel in relationships(path) WHERE type(rel) IN ['{rel_types_str}'])
+                WITH DISTINCT connected, length(path) as distance
+                ORDER BY distance ASC, connected.confidence DESC
+                LIMIT {max_nodes - 1}
+                RETURN collect(connected) as connected_nodes
+                """
+            else:
+                # Không filter relationship types
+                nodes_query = f"""
+                MATCH (center:Entity {{entity_id: $entity_id}})
+                MATCH path = (center)-[*1..{radius}]-(connected:Entity)
+                WITH DISTINCT connected, length(path) as distance
+                ORDER BY distance ASC, connected.confidence DESC
+                LIMIT {max_nodes - 1}
+                RETURN collect(connected) as connected_nodes
+                """
+            
+            nodes_result = await session.run(nodes_query, {"entity_id": entity_id})
+            nodes_record = await nodes_result.single()
+            
+            connected_nodes = nodes_record["connected_nodes"] if nodes_record else []
+            all_nodes = [center_node] + connected_nodes
+            
+            # Step 3: Lấy relationships giữa các nodes với thông tin đầy đủ về source và target
+            entity_ids = [node["entity_id"] for node in all_nodes]
+            
+            if relationship_types:
+                rel_types_str = "', '".join(relationship_types)
+                rels_query = f"""
+                MATCH (source:Entity)-[r]-(target:Entity)
+                WHERE source.entity_id IN $entity_ids 
+                  AND target.entity_id IN $entity_ids
+                  AND type(r) IN ['{rel_types_str}']
+                RETURN DISTINCT r, source, target
+                """
+            else:
+                rels_query = """
+                MATCH (source:Entity)-[r]-(target:Entity)
+                WHERE source.entity_id IN $entity_ids 
+                  AND target.entity_id IN $entity_ids
+                RETURN DISTINCT r, source, target
+                """
+            
+            rels_result = await session.run(rels_query, {"entity_ids": entity_ids})
+            
             # Format nodes
             nodes = []
-            for node in record["nodes"]:
+            for node in all_nodes:
                 nodes.append(
                     {
                         "id": node["entity_id"],
                         "neo4j_id": node.id,
-                        "label": node.get("text", ""),
+                        "label": node.get("entity_text", ""),
                         "type": node.get("entity_type", ""),
                         "properties": node.get("properties", {}),
+                        "confidence": float(node.get("confidence", 0.0)),
+                        "is_vietnamese": node.get("is_vietnamese", False),
                         "is_center": node["entity_id"] == entity_id,
                     }
                 )
 
-            # Format edges
+            # Format edges với thông tin source và target đầy đủ
             edges = []
-            for rel in record["relationships"]:
+            async for record in rels_result:
+                rel = record["r"]
+                source_node = record["source"]
+                target_node = record["target"]
+                
                 edges.append(
                     {
-                        "id": rel["relationship_id"],
+                        "id": rel.get("relationship_id", f"rel_{rel.id}"),
                         "neo4j_id": rel.id,
-                        "source": rel.start_node["entity_id"],
-                        "target": rel.end_node["entity_id"],
+                        "source": source_node["entity_id"],
+                        "target": target_node["entity_id"],
                         "type": rel.type,
                         "properties": rel.get("properties", {}),
+                        "confidence": float(rel.get("confidence", 0.0)),
+                        "source_entity_text": source_node.get("entity_text", ""),
+                        "target_entity_text": target_node.get("entity_text", ""),
                     }
                 )
 
@@ -1176,3 +1224,433 @@ class KnowledgeGraphService:
         }
 
         await supabase.table("kg_edit_logs").insert(log_entry).execute()
+    async def get_completion_suggestions(
+        self,
+        suggestion_type: Optional[str] = None,
+        status_filter: Optional[str] = None,
+        priority: Optional[str] = None,
+        min_confidence: Optional[float] = None,
+        max_confidence: Optional[float] = None,
+        source: Optional[str] = None,
+        limit: int = 50,
+        skip: int = 0,
+    ) -> Dict[str, Any]:
+        """Get completion suggestions with filters"""
+        try:
+            supabase = await get_supabase()
+            # Build query
+            query = supabase.from_("kg_completion_suggestions").select("*")
+            
+            # Apply filters
+            if suggestion_type:
+                query = query.eq("suggestion_type", suggestion_type)
+            if status_filter:
+                query = query.eq("status", status_filter)
+            if priority:
+                query = query.eq("priority", priority)
+            if min_confidence is not None:
+                query = query.gte("confidence", min_confidence)
+            if max_confidence is not None:
+                query = query.lte("confidence", max_confidence)
+            if source:
+                query = query.eq("source", source)
+            
+            # Get total count
+            count_result = await query.execute()
+            total = len(count_result.data) if count_result.data else 0
+            
+            # Apply pagination and ordering
+            result = await query.order("created_at", desc=True).range(skip, skip + limit - 1).execute()
+            
+            suggestions = result.data if result.data else []
+
+            return {
+                "suggestions": suggestions,
+                "total": total,
+                "limit": limit,
+                "skip": skip
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting completion suggestions: {e}")
+            raise
+
+    async def get_completion_suggestion(self, suggestion_id: str) -> Optional[Dict[str, Any]]:
+        """Get a specific completion suggestion by ID"""
+        try:
+            supabase = await get_supabase()
+            result = await supabase.from_("kg_completion_suggestions").select("*").eq("id", suggestion_id).execute()
+            
+            if result.data:
+                return result.data[0]
+            return None
+
+        except Exception as e:
+            logger.error(f"Error getting completion suggestion {suggestion_id}: {e}")
+            raise
+
+    async def delete_completion_suggestion(self, suggestion_id: str) -> bool:
+        """Delete a completion suggestion"""
+        try:
+            supabase = await get_supabase()
+            result = await supabase.from_("kg_completion_suggestions").delete().eq("id", suggestion_id).execute()
+            return bool(result.data)
+
+        except Exception as e:
+            logger.error(f"Error deleting completion suggestion {suggestion_id}: {e}")
+            raise
+
+    async def get_completion_stats(self) -> Dict[str, Any]:
+        """Get knowledge graph completion statistics"""
+        try:
+            supabase = await get_supabase()
+            result = await supabase.rpc("get_kg_completion_stats").execute()
+            
+            if result.data:
+                return result.data[0]
+            else:
+                # Return empty stats if no data
+                return {
+                    "total_suggestions": 0,
+                    "pending_suggestions": 0,
+                    "accepted_suggestions": 0,
+                    "rejected_suggestions": 0,
+                    "applied_suggestions": 0,
+                    "entity_suggestions": 0,
+                    "relationship_suggestions": 0,
+                    "avg_confidence": 0.0,
+                    "high_priority_pending": 0
+                }
+
+        except Exception as e:
+            logger.error(f"Error getting completion stats: {e}")
+            raise
+
+    async def save_completion_suggestions(
+        self,
+        suggestions: Dict[str, Any],
+        user_id: Optional[str]
+    ) -> List[Dict[str, Any]]:
+        """Save completion suggestions to database"""
+        try:
+            from app.core.supabase import get_supabase
+            supabase = await get_supabase()
+            saved_suggestions = []
+            
+            # Save entity suggestions
+            for entity_suggestion in suggestions.get("missing_entities", []):
+                suggestion_data = {
+                    "suggestion_type": "entity",
+                    "suggested_entity_text": entity_suggestion["suggested_text"],
+                    "suggested_entity_type": entity_suggestion["suggested_type"],
+                    "reason": entity_suggestion["reason"],
+                    "confidence": entity_suggestion["confidence"],
+                    "priority": entity_suggestion["priority"],
+                    "source": entity_suggestion["source"],
+                    "context_data": entity_suggestion.get("context_data"),
+                    "created_by": user_id,
+                    "status": "pending"
+                }
+                
+                result = await supabase.from_("kg_completion_suggestions").insert(suggestion_data).execute()
+                if result.data:
+                    saved_suggestions.append(result.data[0])
+            
+            # Save relationship suggestions
+            for rel_suggestion in suggestions.get("missing_relationships", []):
+                # Find entity IDs by text
+                source_entity_id = await self._find_entity_by_text(rel_suggestion["source_entity"])
+                target_entity_id = await self._find_entity_by_text(rel_suggestion["target_entity"])
+                
+                if source_entity_id and target_entity_id:
+                    suggestion_data = {
+                        "suggestion_type": "relationship",
+                        "source_entity_id": source_entity_id,
+                        "target_entity_id": target_entity_id,
+                        "source_entity_text": rel_suggestion["source_entity"],
+                        "target_entity_text": rel_suggestion["target_entity"],
+                        "suggested_relationship_type": rel_suggestion["suggested_type"],
+                        "reason": rel_suggestion["reason"],
+                        "confidence": rel_suggestion["confidence"],
+                        "priority": rel_suggestion.get("priority", "medium"),
+                        "source": "pattern_based",
+                        "context_data": {
+                            "source_entity_type": rel_suggestion.get("source_entity_type"),
+                            "target_entity_type": rel_suggestion.get("target_entity_type")
+                        },
+                        "created_by": user_id,
+                        "status": "pending"
+                    }
+                    
+                    result = await supabase.from_("kg_completion_suggestions").insert(suggestion_data).execute()
+                    if result.data:
+                        saved_suggestions.append(result.data[0])
+            
+            return saved_suggestions
+            
+        except Exception as e:
+            logger.error(f"Error saving suggestions to database: {e}")
+            raise
+
+    async def apply_completion_suggestions(
+        self,
+        suggestion_ids: List[str],
+        user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Apply specific suggestions by ID"""
+        try:
+            from app.core.supabase import get_supabase
+            supabase = await get_supabase()
+            # Get suggestions
+            result = await supabase.from_("kg_completion_suggestions").select("*").in_("id", suggestion_ids).execute()
+            suggestions = result.data if result.data else []
+            
+            applied_entities = []
+            applied_relationships = []
+            errors = []
+            processed_suggestions = []
+            
+            for suggestion in suggestions:
+                try:
+                    if suggestion["suggestion_type"] == "entity":
+                        entity_id = await self._create_entity_from_suggestion(suggestion, user_id)
+                        if entity_id:
+                            applied_entities.append(entity_id)
+                            await self._mark_suggestion_applied(suggestion["id"], entity_id=entity_id, user_id=user_id)
+                            processed_suggestions.append(suggestion["id"])
+                    
+                    elif suggestion["suggestion_type"] == "relationship":
+                        relationship_id = await self._create_relationship_from_suggestion(suggestion, user_id)
+                        if relationship_id:
+                            applied_relationships.append(relationship_id)
+                            await self._mark_suggestion_applied(suggestion["id"], relationship_id=relationship_id, user_id=user_id)
+                            processed_suggestions.append(suggestion["id"])
+                
+                except Exception as e:
+                    errors.append(f"Error applying suggestion {suggestion['id']}: {str(e)}")
+            
+            return {
+                "processed_suggestions": processed_suggestions,
+                "applied_entities": applied_entities,
+                "applied_relationships": applied_relationships,
+                "errors": errors,
+                "success": len(errors) == 0,
+                "message": f"Applied {len(processed_suggestions)} suggestions successfully"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error applying suggestions: {e}")
+            raise
+
+    async def update_suggestion_status(
+        self,
+        suggestion_ids: List[str],
+        action: str,
+        user_id: Optional[str] = None,
+        review_notes: Optional[str] = None,
+        rejection_reason: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Update suggestion status (accept, reject)"""
+        try:
+            from app.core.supabase import get_supabase
+            supabase = await get_supabase()
+            update_data = {
+                "status": action,
+                "reviewed_by": user_id,
+                "reviewed_at": datetime.utcnow().isoformat()
+            }
+            
+            if review_notes:
+                update_data["review_notes"] = review_notes
+            if rejection_reason and action == "rejected":
+                update_data["rejection_reason"] = rejection_reason
+            
+            result = await supabase.from_("kg_completion_suggestions").update(update_data).in_("id", suggestion_ids).execute()
+            
+            return {
+                "processed_suggestions": suggestion_ids,
+                "success": True,
+                "message": f"Updated {len(suggestion_ids)} suggestions to {action}"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error updating suggestion status: {e}")
+            raise
+
+    async def apply_high_confidence_suggestions(
+        self,
+        suggestions: List[Dict[str, Any]],
+        confidence_threshold: float,
+        user_id: Optional[str]
+    ) -> Dict[str, Any]:
+        """Apply suggestions that meet confidence threshold"""
+        try:
+            high_confidence_ids = [
+                suggestion["id"] for suggestion in suggestions 
+                if suggestion.get("confidence", 0) >= confidence_threshold
+            ]
+            
+            if not high_confidence_ids:
+                return {
+                    "applied_suggestions": [],
+                    "applied_entities": [],
+                    "applied_relationships": [],
+                    "errors": []
+                }
+            
+            return await self.apply_completion_suggestions(high_confidence_ids, user_id)
+            
+        except Exception as e:
+            logger.error(f"Error applying high confidence suggestions: {e}")
+            raise
+
+    # =============================================
+    # PRIVATE HELPER METHODS
+    # =============================================
+
+    async def _create_entity_from_suggestion(self, suggestion: Dict[str, Any], user_id: Optional[str]) -> Optional[str]:
+        """Create entity from suggestion"""
+        try:
+            from app.core.supabase import get_supabase
+            supabase = await get_supabase()
+            entity_data = {
+                "entity_text": suggestion["suggested_entity_text"],
+                "entity_type": suggestion["suggested_entity_type"],
+                "confidence": suggestion.get("confidence"),
+                "extraction_confidence": suggestion.get("confidence"),
+                "is_verified": False,
+                "validation_status": "auto_suggested",
+                "created_by": user_id,
+                "properties": {
+                    "auto_suggested": True,
+                    "reason": suggestion.get("reason"),
+                    "source": suggestion.get("source"),
+                    "priority": suggestion.get("priority"),
+                },
+            }
+
+            result = await supabase.from_("kg_entities").insert(entity_data).execute()
+            if result.data:
+                return result.data[0]["id"]
+            return None
+
+        except Exception as e:
+            logger.error(f"Error creating entity from suggestion: {e}")
+            return None
+
+    async def _create_relationship_from_suggestion(self, suggestion: Dict[str, Any], user_id: Optional[str]) -> Optional[str]:
+        """Create relationship from suggestion"""
+
+        from app.core.supabase import get_supabase
+        supabase = await get_supabase()
+        try:
+            relationship_data = {
+                "source_entity_id": suggestion["source_entity_id"],
+                "target_entity_id": suggestion["target_entity_id"],
+                "confidence": suggestion.get("confidence"),
+                "extraction_confidence": suggestion.get("confidence"),
+                "is_verified": False,
+                "validation_status": "auto_suggested",
+                "created_by": user_id,
+                "properties": {
+                    "auto_suggested": True,
+                    "reason": suggestion.get("reason"),
+                    "relationship_type": suggestion.get("suggested_relationship_type"),
+                    "source_entity_text": suggestion.get("source_entity_text"),
+                    "target_entity_text": suggestion.get("target_entity_text"),
+                },
+            }
+
+            result = await supabase.from_("kg_relationships").insert(relationship_data).execute()
+            if result.data:
+                return result.data[0]["id"]
+            return None
+
+        except Exception as e:
+            logger.error(f"Error creating relationship from suggestion: {e}")
+            return None
+
+    async def _mark_suggestion_applied(
+        self, 
+        suggestion_id: str, 
+        entity_id: Optional[str] = None, 
+        relationship_id: Optional[str] = None, 
+        user_id: Optional[str] = None
+    ):
+        """Mark suggestion as applied"""
+        try:
+            from app.core.supabase import get_supabase
+            supabase = await get_supabase()
+            update_data = {
+                "status": "applied",
+                "applied_at": datetime.utcnow().isoformat(),
+                "applied_by": user_id
+            }
+            
+            if entity_id:
+                update_data["applied_entity_id"] = entity_id
+            if relationship_id:
+                update_data["applied_relationship_id"] = relationship_id
+            
+            await supabase.from_("kg_completion_suggestions").update(update_data).eq("id", suggestion_id).execute()
+            
+        except Exception as e:
+            logger.error(f"Error marking suggestion as applied: {e}")
+
+    async def _find_entity_by_text(self, entity_text: str) -> Optional[str]:
+        """Find entity ID by text with Vietnamese-aware matching"""
+        try:
+            from app.core.supabase import get_supabase
+            supabase = await get_supabase()
+            # First try exact match
+            response = (
+                await supabase.from_("kg_entities")
+                .select("id")
+                .eq("entity_text", entity_text)
+                .limit(1)
+                .execute()
+            )
+
+            if response.data:
+                return response.data[0]["id"]
+
+            # Try normalized matching
+            normalized_text = self._normalize_vietnamese_text(entity_text)
+            response = (
+                await supabase.from_("kg_entities").select("id, entity_text").execute()
+            )
+
+            if response.data:
+                for entity in response.data:
+                    entity_normalized = self._normalize_vietnamese_text(
+                        entity["entity_text"]
+                    )
+                    if entity_normalized == normalized_text:
+                        return entity["id"]
+
+            return None
+
+        except Exception as e:
+            logger.warning(f"Error finding entity by text {entity_text}: {e}")
+            return None
+
+    def _normalize_vietnamese_text(self, text: str) -> str:
+        """Normalize Vietnamese text for comparison"""
+        import re
+
+        text = text.lower().strip()
+
+        # Remove extra whitespace
+        text = re.sub(r"\s+", " ", text)
+
+        # Remove common Vietnamese prefixes/suffixes
+        text = re.sub(r"^(ông|bà|anh|chị|em|cô|chú|bác)\s+", "", text)
+        text = re.sub(r"\s+(ạ|à|ơi|nhé)$", "", text)
+
+        # Normalize banking terms
+        text = text.replace("tk", "tài khoản")
+        text = text.replace("nh", "ngân hàng")
+
+        return text
+
+

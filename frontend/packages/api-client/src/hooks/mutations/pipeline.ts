@@ -84,6 +84,7 @@ export const useCancelPipelineRun = (
 		ICancelPipelineRunRequest
 	>,
 ) => {
+	const queryClient = useQueryClient();
 	return useMutation<
 		ICancelPipelineRunResponse,
 		Error,
@@ -91,5 +92,11 @@ export const useCancelPipelineRun = (
 	>({
 		mutationFn: PipelineService.cancelPipelineRun,
 		...options,
+		onSuccess: (data, variables, context) => {
+			queryClient.invalidateQueries({
+				queryKey: ["pipelineRuns", { pipeline_id: variables.pipeline_id }],
+			});
+			options.onSuccess?.(data, variables, context);
+		},
 	});
 };

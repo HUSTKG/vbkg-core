@@ -25,7 +25,7 @@ class QualityManagementService:
 
     async def generate_quality_report(
         self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
-    ) -> QualityReport:
+    ) -> Dict[str, Any]:
         """Generate comprehensive quality report"""
 
         if not end_date:
@@ -95,16 +95,16 @@ class QualityManagementService:
             dimension_scores
         )
 
-        return QualityReport(
-            report_date=end_date.isoformat(),
-            overall_score=overall_score,
-            dimension_scores=dimension_scores,
-            total_entities=total_entities,
-            total_relationships=total_relationships,
-            issues_detected=conflicts_pending,
-            conflicts_pending=conflicts_pending,
-            improvement_recommendations=recommendations,
-        )
+        return {
+            "report_date": end_date.isoformat(),
+            "overall_score": overall_score,
+            "dimension_scores": dimension_scores,
+            "total_entities": total_entities,
+            "total_relationships": total_relationships,
+            "issues_detected": conflicts_pending,
+            "conflicts_pending": conflicts_pending,
+            "improvement_recommendations": recommendations,
+        }
 
     async def _assess_completeness(self) -> float:
         """Assess data completeness"""
@@ -403,11 +403,11 @@ class QualityManagementService:
                 {
                     "step": "quality_assessment",
                     "status": "completed",
-                    "overall_score": quality_report.overall_score,
+                    "overall_score": quality_report["overall_score"],
                 }
             )
 
-            results["quality_report"] = quality_report.model_dump()
+            results["quality_report"] = quality_report
 
         except Exception as e:
             logger.error(f"Quality assessment failed: {e}")
@@ -445,7 +445,7 @@ class QualityManagementService:
         for conflict in conflicts_response.data:
             try:
                 result = await self.conflict_resolver.resolve_conflict_automatically(
-                    UUID(conflict["id"]), use_ai=True, confidence_threshold=0.8
+                    conflict["id"], use_ai=True, confidence_threshold=0.8
                 )
 
                 if result.get("success"):
@@ -472,7 +472,7 @@ class QualityManagementService:
         trending_metrics = await self._get_trending_metrics()
 
         return {
-            "quality_report": quality_report.model_dump(),
+            "quality_report": quality_report,
             "conflict_statistics": conflict_stats,
             "recent_activity": recent_activity,
             "trending_metrics": trending_metrics,

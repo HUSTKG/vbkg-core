@@ -66,6 +66,7 @@ import {
 	usePipelineSteps,
 	usePipelineStepRuns,
 	useRunPipeline,
+	useCancelPipelineRun,
 } from "@vbkg/api-client";
 
 const RunStatusBadge = ({ status }: { status?: PipelineRunStatus }) => {
@@ -121,7 +122,7 @@ const RunStatusBadge = ({ status }: { status?: PipelineRunStatus }) => {
 				</Badge>
 			);
 		default:
-			return <Badge variant="outline">Unknown</Badge>;
+			return <Badge variant="outline">Không xác định</Badge>;
 	}
 };
 
@@ -370,8 +371,10 @@ const PipelineStepCard = ({
 				<Accordion type="single" collapsible className="w-full">
 					<AccordionItem value="config">
 						<AccordionTrigger className="text-sm py-2">
-							<Settings className="w-4 h-4 mr-1" />
-							Configuration
+							<div className="flex items-center">
+								<Settings className="w-4 h-4 mr-1" />
+								Configuration
+							</div>
 						</AccordionTrigger>
 						<AccordionContent>
 							<JsonViewer data={step.config} />
@@ -380,8 +383,10 @@ const PipelineStepCard = ({
 					{step.incremental_config && (
 						<AccordionItem value="incremental">
 							<AccordionTrigger className="text-sm py-2">
-								<RefreshCw className="w-4 h-4 mr-1" />
-								Incremental Configuration
+								<div className="flex items-center">
+									<RefreshCw className="w-4 h-4 mr-1" />
+									Incremental Configuration
+								</div>
 							</AccordionTrigger>
 							<AccordionContent>
 								<JsonViewer data={step.incremental_config} />
@@ -411,10 +416,12 @@ const StepRunCard = ({
 }: { stepRun: PipelineStepRun; step?: PipelineStep }) => {
 	const duration =
 		stepRun.start_time && stepRun.end_time
-			? Math.floor(
-					(new Date(stepRun.end_time).getTime() -
-						new Date(stepRun.start_time).getTime()) /
-						1000,
+			? Number(
+					Number(
+						(new Date(stepRun.end_time).getTime() -
+							new Date(stepRun.start_time).getTime()) /
+							1000,
+					).toFixed(2),
 				)
 			: undefined;
 
@@ -592,7 +599,7 @@ const RunDetailDialog = ({
 					</div>
 					<div>
 						<h3 className="text-sm font-medium">Duration</h3>
-						<p>{formatDuration(run.duration || 0)}</p>
+						<p>{formatDuration(run?.duration || 0)}</p>
 					</div>
 					<div>
 						<h3 className="text-sm font-medium">Start Time</h3>
@@ -752,6 +759,16 @@ export default function PipelineDetailsPage() {
 		},
 	});
 
+	const { mutate: cancelPipelineRun } = useCancelPipelineRun({
+		onSuccess: () => {
+			toast.success("Hủy pipeline thành công!");
+		},
+		onError: (error) => {
+			console.error("Failed to cancel pipeline:", error);
+			toast.error("Lỗi khi hủy pipeline. Vui lòng thử lại sau.");
+		},
+	});
+
 	const handleBackToList = () => {
 		navigate("/admin/data/pipelines");
 	};
@@ -865,7 +882,7 @@ export default function PipelineDetailsPage() {
 		<div className="container mx-auto py-6 space-y-6">
 			<div className="flex items-center mb-4">
 				<Button size="sm" onClick={handleBackToList} variant={"outline"}>
-					<ArrowLeft className="mr-2 h-4 w-4" /> Back to Pipelines
+					<ArrowLeft className="mr-2 h-4 w-4" /> Quay lại danh sách
 				</Button>
 			</div>
 
@@ -895,16 +912,16 @@ export default function PipelineDetailsPage() {
 
 			<Tabs defaultValue="overview" className="space-y-4">
 				<TabsList>
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="steps">Pipeline Steps</TabsTrigger>
-					<TabsTrigger value="runs">Run History</TabsTrigger>
+					<TabsTrigger value="overview">Tổng quan</TabsTrigger>
+					<TabsTrigger value="steps">Các bước</TabsTrigger>
+					<TabsTrigger value="runs">Lịch sử</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="overview">
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 						<Card>
 							<CardHeader>
-								<CardTitle>Pipeline Information</CardTitle>
+								<CardTitle> Thông tin Pipeline</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<dl className="space-y-4">
@@ -916,7 +933,7 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
-											Type
+											Loại
 										</dt>
 										<dd>
 											<TypeBadge type={pipeline.pipeline_type} />
@@ -924,7 +941,7 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
-											Schedule
+											Lịch
 										</dt>
 										<dd className="text-sm font-mono">
 											{pipeline.schedule || "Not scheduled"}
@@ -932,7 +949,7 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
-											Total Steps
+											Tổng số bước
 										</dt>
 										<dd className="text-sm">
 											{steps?.length || pipeline.steps?.length || 0}
@@ -940,7 +957,7 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
-											Created By
+											Tạo bởi
 										</dt>
 										<dd className="text-sm">
 											{pipeline.created_by || "System"}
@@ -948,7 +965,7 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
-											Created
+											Thời gian tạo
 										</dt>
 										<dd className="text-sm">
 											{pipeline.created_at
@@ -958,7 +975,7 @@ export default function PipelineDetailsPage() {
 									</div>
 									<div>
 										<dt className="text-sm font-medium text-muted-foreground">
-											Last Updated
+											Cập nhật lúc
 										</dt>
 										<dd className="text-sm">
 											{pipeline.updated_at
@@ -972,9 +989,9 @@ export default function PipelineDetailsPage() {
 
 						<Card>
 							<CardHeader>
-								<CardTitle>Recent Runs</CardTitle>
+								<CardTitle>Gần Đây</CardTitle>
 								<CardDescription>
-									Latest {runs?.slice(0, 5).length || 0} pipeline executions
+									{runs?.slice(0, 5).length || 0} lần thực thi gần nhất
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
@@ -1005,14 +1022,31 @@ export default function PipelineDetailsPage() {
 															? new Date(run.start_time).toLocaleString()
 															: ""}
 													</div>
-													<Button
-														size="sm"
-														className="text-xs mt-1"
-														variant="outline"
-														onClick={() => handleViewRun(run)}
-													>
-														Chi tiết
-													</Button>
+													<div className="flex items-center justify-end gap-3">
+														<Button
+															size="sm"
+															className="text-xs mt-1"
+															variant="outline"
+															onClick={() => handleViewRun(run)}
+														>
+															Chi tiết
+														</Button>
+														{run.status === "running" && (
+															<Button
+																size="sm"
+																className="text-xs mt-1"
+																variant="destructive"
+																onClick={() =>
+																	cancelPipelineRun({
+																		id: run.id,
+																		pipeline_id: run.pipeline_id,
+																	})
+																}
+															>
+																Hủy
+															</Button>
+														)}
+													</div>
 												</div>
 											</div>
 										))}
@@ -1026,10 +1060,10 @@ export default function PipelineDetailsPage() {
 				<TabsContent value="steps">
 					<Card>
 						<CardHeader>
-							<CardTitle>Steps ({steps?.length || 0})</CardTitle>
+							<CardTitle>Các bước ({steps?.length || 0})</CardTitle>
 							<CardDescription>
-								The sequence of operations in this pipeline, showing
-								dependencies, error handling, and configuration.
+								Các bước trong pipeline này, bao gồm tên, loại, trạng thái và
+								cấu hình chi tiết.
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
@@ -1047,7 +1081,7 @@ export default function PipelineDetailsPage() {
 								) : (
 									<div className="text-center py-6">
 										<p className="text-muted-foreground">
-											No steps configured for this pipeline.
+											Không có bước nào trong pipeline này.
 										</p>
 									</div>
 								)}
@@ -1059,10 +1093,10 @@ export default function PipelineDetailsPage() {
 				<TabsContent value="runs" id="runs-tab">
 					<Card>
 						<CardHeader>
-							<CardTitle>Run History ({runs?.length || 0})</CardTitle>
+							<CardTitle>Lịch sử ({runs?.length || 0})</CardTitle>
 							<CardDescription>
-								Previous executions of this pipeline with detailed step-by-step
-								results.
+								Lịch sử các lần chạy pipeline, bao gồm trạng thái, thời gian bắt
+								đầu và kết thúc, cùng với thông tin lỗi nếu có.
 							</CardDescription>
 						</CardHeader>
 						<CardContent>

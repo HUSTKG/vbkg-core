@@ -1,0 +1,21 @@
+TIÊU ĐỀ: Tài sản số đang dần trở thành một phần tất yếu trong hệ thống tài chính hiện đại
+
+URL: https://sbv.gov.vn/vi/w/sbv625818
+
+------------------ NỘI DUNG ------------------
+
+Chia sẻ tại Hội thảo “Tài sản bảo đảm ngân hàng - Những vấn đề quan tâm hiện nay” do Thời báo Ngân hàng tổ chức ngày 28/4/2025 tại Hà Nội, ông Giacomo Merello - Chủ tịch Hội đồng thúc đẩy Kinh doanh Tài sản Kỹ thuật số Antigua & Barbuda đã có những chia sẻ về tài sản số.
+Tiến sĩ Giacomo Merello
+Ông Giacomo Merello
+cho biết, Blockchain đang mở ra một kỷ nguyên mới cho tài sản bảo đảm. Được định nghĩa là mạng lưới máy tính phi tập trung lưu trữ giao dịch trên một sổ cái chung, Blockchain đã tạo nên các tài sản số như Bitcoin, Ethereum và Stablecoin. Theo ông Giacomo Merello, các loại tài sản này ngày càng được sử dụng trực tiếp làm tài sản thế chấp, với các ngân hàng như Bitcoin Suisse đã triển khai dịch vụ cho vay dựa trên tiền mã hóa.
+Trong đó, Stablecoin (ví dụ USDT, USDC) nổi bật với giá trị ổn định khi neo 1:1 với tiền pháp định, giúp phục vụ thanh toán và tài chính phi tập trung (DeFi). Ngược lại, tiền mã hóa như BTC, ETH lại có tính biến động cao, chủ yếu dùng làm kho lưu trữ giá trị. Hiện tại, stablecoin đang chịu sự giám sát chặt chẽ dưới các quy định như MiCA ở châu Âu, trong khi Singapore đã công nhận hợp pháp Stablecoin như một loại tài sản.
+Tuy nhiên, việc sử dụng tài sản số làm tài sản bảo đảm đang đối mặt với nhiều thách thức pháp lý. Các luật thế chấp truyền thống chưa cập nhật khái niệm tài sản số, dẫn tới sự dè dặt từ phía ngân hàng. Bên cạnh đó, giao dịch Blockchain không thể đảo ngược và rủi ro từ lỗi hợp đồng thông minh hoặc sự thiếu nhất quán trong luật pháp quốc tế cũng làm phức tạp thêm việc bảo vệ quyền lợi các bên liên quan.
+Dù vậy, một số quốc gia đã tiên phong trong lĩnh vực này. Thụy Sĩ, vào tháng
+0
+2/2023, trở thành nước đầu tiên chấp nhận trái phiếu số Blockchain làm tài sản repo cho Ngân hàng Trung ương. Đến tháng 02/2025, Sàn giao dịch SIX cũng ra mắt dịch vụ tài sản bảo đảm kỹ thuật số, cho phép thế chấp tiền mã hóa cùng với chứng khoán truyền thống. Ngoài ra, các ngân hàng như Bitcoin Suisse đã phát triển dịch vụ cho vay dựa trên tiền mã hóa với cơ chế lưu trữ an toàn.
+Tương tự, Malta là một trong những quốc gia đầu tiên thiết lập khung pháp lý cho tài sản số từ năm 2018, thúc đẩy token hóa trái phiếu và khoản vay. Quốc gia này cũng nhanh chóng nội luật hóa các quy định EU mới như MiCA, đồng thời nghiên cứu cấp phép cho ngân hàng tiền mã hóa.
+Singapore cũng thể hiện vai trò dẫn đầu khu vực với khung cấp phép rõ ràng dưới Đạo luật Dịch vụ Thanh toán (2019), yêu cầu các nhà cung cấp dịch vụ tài sản số phải tuân thủ nghiêm ngặt các quy định về chống rửa tiền và tài trợ khủng bố. Tòa án Singapore đã công nhận tài sản số là tài sản hợp pháp, mở đường cho việc sử dụng chúng trong giao dịch bảo đảm.
+Ngoài ra, Antigua & Barbuda và Vương quốc Anh cũng đã có những bước tiến mạnh mẽ trong việc công nhận tài sản số. Đặc biệt, Anh đã ban hành luật chính thức công nhận tiền mã hóa và NFT là tài sản cá nhân, tạo tiền lệ cho xu thế toàn cầu.
+Đối với Việt Nam, ông Giacomo Merello chia sẻ, đây là thời điểm quan trọng. Với hơn 17 triệu người dùng tài sản số và giá trị thị trường trên 100 tỷ USD, Việt Nam đứng thứ 5 thế giới về mức độ quan tâm đến crypto. Việt Nam có cơ hội lớn để học hỏi kinh nghiệm quốc tế, xây dựng hành lang pháp lý rõ ràng, đồng thời chú trọng kiểm soát rủi ro tài chính và phòng chống rửa tiền.
+Tài sản Blockchain và tài sản số đang dần trở thành một phần tất yếu trong hệ thống tài chính hiện đại. Nếu tận dụng đúng cách, đây sẽ là động lực chiến lược để các ngân hàng và nhà hoạch định chính sách nắm bắt xu thế tài chính toàn cầu trong tương lai./.
+HM

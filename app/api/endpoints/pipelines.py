@@ -3,7 +3,7 @@ from typing import Annotated, Any, Dict, List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi import status as HttpStatus
 
-from app.api.deps import PermissionChecker
+from app.api.deps import PermissionChecker, validate_rate_limits
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.pipeline import (Pipeline, PipelineCreate,
                                   PipelineCreateFromTemplate, PipelineRun,
@@ -14,7 +14,9 @@ from app.schemas.user import User
 from app.services.pipeline import PipelineService
 from app.services.pipeline_step import PipelineStepService
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(validate_rate_limits)],  # Add rate limiting
+        )
 
 check_read_permission = PermissionChecker("pipeline:read")
 check_write_permission = PermissionChecker("pipeline:write")

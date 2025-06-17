@@ -1,0 +1,185 @@
+TIÊU ĐỀ: Khai thác dữ liệu, nâng cao hiệu quả điều hành hoạt động ngân hàng
+
+URL: https://sbv.gov.vn/vi/w/sbv624904
+
+------------------ NỘI DUNG ------------------
+
+Sáng 8/4/2025, tại Hà Nội, Ngân hàng Nhà nước Việt Nam (NHNN) tổ chức Hội nghị “Khởi động dự án đánh giá hiện trạng cơ sở dữ liệu dùng chung chuyên ngành ngân hàng”. Phó Thống đốc Phạm Thanh Hà tham dự và chủ trì hội nghị.
+Phó Thống đốc Phạm Thanh Hà phát biểu chỉ đạo tại hội nghị - Ảnh: H. Giáp
+X
+ây dựng hệ thống cơ sở dữ liệu dùng chung ngành
+Ngân hàng
+hiện đại
+Phát
+biểu khai mạc
+h
+ội nghị, Phó Thống đốc Phạm Thanh Hà cho biết,
+việc xây dựng một hệ thống cơ sở dữ liệu dùng chung
+-
+hiện đại, đồng bộ, có khả năng kết nối, tích hợp và chia sẻ hiệu quả
+-
+không chỉ là yêu cầu cấp thiết, mà còn là điều kiện tiên quyết để nâng cao năng lực phân tích, dự báo, điều hành và đảm bảo an toàn hoạt động của toàn hệ thống của TCTD.
+Với định hướng đó,
+NHNN
+đã ban hành Quyết định số 2655/QĐ-NHNN, giao Vụ Dự báo, Thống kê và Ổn định tiền tệ
+-
+tài chính chủ trì xây dựng Đề án “Cơ sở dữ liệu chuyên ngành dùng chung” của ngành Ngân hàng. Đề án hướng tới mục tiêu thiết kế và triển khai một hệ thống dữ liệu tích hợp, có khả năng quản trị toàn trình
+-
+từ thu thập, xử lý, phân tích đến chia sẻ
+-
+trên nền tảng công nghệ hiện đại, ứng dụng kiến trúc dữ liệu lớn (Big Data)
+. Đ
+ồng thời bảo đảm khả năng mở rộng, linh hoạt và kết nối liên thông với các Bộ, ngành, cũng như Cơ sở dữ liệu quốc gia trong khuôn khổ Chính phủ số.
+Bên cạnh yếu tố kỹ thuật, Đề án cũng đặt ra yêu cầu hoàn thiện về thể chế, hành lang pháp lý, quy trình phối hợp và nâng cao năng lực vận hành
+-
+nhằm bảo đảm hệ thống dữ liệu được quản lý an toàn, bảo mật, minh bạch và phục vụ hiệu quả cho công tác điều hành vĩ mô, quản lý vi mô và cung cấp dịch vụ công trong lĩnh vực tài chính
+-
+ngân hàng.
+Theo
+Phó Thống đốc, t
+rong khuôn khổ Đề án, Dự án “Đánh giá hiện trạng cơ sở dữ liệu chuyên ngành”, do Ngân hàng Thế giới
+(WB)
+và
+Cục
+Kinh tế liên bang Thuỵ Sỹ (
+SECO)
+tài trợ, với sự tham gia tư vấn của
+c
+ông ty KPMG, là một bước khởi đầu và có ý nghĩa quan trọng. Dự án sẽ giúp rà soát, đánh giá toàn diện hiện trạng hệ thống cơ sở dữ liệu của NHNN, làm rõ các khoảng trống, điểm nghẽn và cơ hội phát triển
+. T
+ừ đó
+,
+đề xuất các định hướng và giải pháp phù hợp với thông lệ quốc tế, nhưng vẫn sát với thực tiễn hoạt động quản lý tại Việt Nam.
+Phó
+Thống đốc kỳ vọng,
+thông qua Dự án này,
+NHNN
+sẽ tiếp cận được các phương pháp quản trị dữ liệu tiên tiến, học hỏi kinh nghiệm quốc tế, từ đó xây dựng nền tảng nghiệp vụ, kỹ thuật – thể chế cần thiết cho việc hình thành hệ thống cơ sở dữ liệu dùng chung. Đây sẽ là đầu vào quan trọng cho việc hoàn thiện và triển khai Đề án
+cơ
+sở dữ liệu
+chuyên ngành dùng chung của NHNN trong thời gian tới.
+Tại
+h
+ội nghị, đại diện lãnh đạo Vụ
+Dự báo, Thống kê và Ổn định tiền tệ – tài chính cho
+biết,
+nhằm nâng cao chất lượng, kế thừa kinh nghiệm và tiêu chuẩn quốc tế trong việc thiết kế
+cơ
+sở dữ liệu
+nói chung và
+cơ
+sở dữ liệu
+cho NHTW nói riêng, Vụ đã phối hợp với Vụ Hợp tác quốc tế tích cực tìm kiếm các nguồn tài trợ quốc tế. Với sự hỗ trợ của
+WB
+và
+SECO
+,
+đề xuất hỗ trợ kỹ thuật cho Dự án trên đã được chấp thuận. Đến nay,
+WB
+đã lựa chọn được đơn vị tư vấn là
+c
+ông ty KPMG
+-
+tổ chức có uy tín và nhiều kinh nghiệm triển khai các dự án dữ liệu lớn trong lĩnh vực tài chính
+-
+ngân hàng tại nhiều quốc gia.
+Ô
+ng Nguyễn Phi Lân, Vụ trưởng
+Vụ Dự báo, Thống kê và Ổn định tiền tệ
+-
+tài chính
+phát biểu tại hội nghị
+Dự án hỗ trợ kỹ thuật sẽ thực hiện các hoạt động chính bao gồm: Nghiên cứu kinh nghiệm quốc tế; khảo sát, đánh giá thực trạng tại các đơn vị trong và ngoài NHNN; tổ chức tọa đàm chuyên đề để làm rõ nhu cầu và thách thức
+. Đ
+ồng thời đề xuất mô hình kiến trúc dữ liệu phù hợp với đặc thù ngành Ngân hàng Việt Nam.
+Kết quả của Dự án sẽ giúp NHNN có được cái nhìn tổng thể, khách quan về hiện trạng hệ thống dữ liệu hiện nay, làm rõ những điểm mạnh, tồn tại và khoảng trống, từ đó xác định nhu cầu khai thác, chia sẻ dữ liệu trong tương lai và đề xuất lộ trình xây dựng hệ thống
+cơ
+sở dữ liệu
+dùng chung một cách bài bản, đồng bộ và khả thi.
+Theo
+đó, đ
+ây là đầu vào quan trọng
+và
+cơ sở nghiệp vụ
+,
+thực tiễn để Vụ tiếp tục xây dựng Đề án
+cơ
+sở dữ liệu
+chuyên ngành ngân hàng dùng chung ở giai đoạn tiếp theo.
+Đại
+diện các bên
+WB
+,
+KPMG
+cũng trình bày về d
+ự án hỗ trợ kỹ thuật và
+kế hoạch triển khai
+.
+P
+hối hợp đồng bộ với tinh thần trách nhiệm cao
+Phát
+biểu kết luận
+h
+ội nghị, Phó Thống đốc Phạm
+Thanh Hà cho rằng
+, để đảm bảo Dự án đạt được tiến độ, chất lượng và mục tiêu đề ra,
+đề nghị Vụ Dự báo, Thống kê và Ổn định tiền tệ – tài chính là đầu mối triển khai Dự án. Vụ có trách nhiệm xây dựng kế hoạch chi tiết, phối hợp chặt chẽ với đơn vị tư vấn và các đơn vị liên quan triển khai thực hiện các nội dung đầy đủ, bám sát tiến độ đề ra, theo dõi chặt chẽ và kịp thời báo cáo Lãnh đạo NHNN các vấn đề phát sinh cần xử lý.
+Phó
+Thống đốc cũng
+đề nghị các đơn vị chức năng thuộc NHNN nghiêm túc phối hợp triển khai, cử cán bộ đầu mối đủ năng lực, chủ động cung cấp thông tin, dữ liệu, tham gia đầy đủ và hiệu quả vào các hoạt động của Dự án. Đây là một nhiệm vụ trọng tâm năm 2025, cần được ưu tiên nguồn lực.
+Về
+phía
+các
+TCTD
+và chi nhánh ngân hàng nước ngoài
+, cần
+phối hợp cung cấp thông tin một cách khách quan, cử đầu mối làm việc hiệu quả với đơn vị tư vấn và tích cực tham gia các hoạt động khảo sát, hội thảo – để đảm bảo các kết quả đánh giá phản ánh đúng thực tiễn toàn ngành.
+Phó
+Thống đốc giao
+Văn phòng NHNN phối hợp với Vụ Dự báo, Thống kê và Ổn định tiền tệ – tài chính xây dựng kế hoạch truyền thông phù hợp về Đề án, qua đó lan tỏa nhận thức, nâng cao sự đồng thuận và thúc đẩy sự tham gia tích cực của các đơn vị trong và ngoài ngành trong quá trình xây dựng và triển khai hệ thống cơ sở dữ liệu dùng chung.
+Toàn cảnh hội nghị
+Về
+phía các
+Bộ, ngành
+, cần
+tích cực phối hợp triển khai, cử đầu mối phù hợp, chủ động cung cấp thông tin, dữ liệu, tham gia đầy đủ và hiệu quả vào các hoạt động của Dự án.
+WB và SECO
+cần
+tiếp tục đồng hành hỗ trợ kỹ thuật, cử chuyên gia đóng góp ý kiến chuyên môn, phối hợp chặt chẽ với đơn vị đầu mối để bảo đảm các khuyến nghị mang tính khả thi, gắn với thông lệ quốc tế và phù hợp với bối cảnh Việt Nam. Đồng thời,
+Phó
+Thống đốc
+đề nghị WB xem xét tiếp tục hỗ trợ cho NHNN trong giai đoạn tiếp theo, khi bước vào xây dựng Đề án chi tiết và triển khai hiện thực hóa hệ thống cơ sở dữ liệu dùng chung.
+Công ty tư vấn KPMG sớm hoàn thiện kế hoạch triển khai dự án chi tiết, phối hợp hiệu quả với các đơn vị trong ngành, bảo đảm đánh giá toàn diện, khách quan, sát thực tế.
+Ngoài
+ra
+, cần chủ động cập nhật tiến độ, linh hoạt điều chỉnh phương pháp triển khai khi cần thiết để đáp ứng yêu cầu thực tiễn.
+“
+Dự án lần này là một nhiệm vụ có tính chiến lược và nền tảng, nhưng để đạt kết quả thực chất, cần có sự cam kết, phối hợp đồng bộ và tinh thần trách nhiệm cao của tất cả các bên liên quan.
+NHNN
+sẽ theo dõi sát tiến độ, chất lượng triển khai và có chỉ đạo kịp thời nhằm tháo gỡ khó khăn, vướng mắc trong quá trình thực hiện
+”, Phó Thống đốc nhấn mạnh.
+Tiếp
+thu ý kiến chỉ đạo của Phó Thống đốc, ông Nguyễn Phi Lân, Vụ trưởng
+Vụ Dự báo, Thống kê và Ổn định tiền tệ – tài chính cho
+biết sẽ
+phối hợp chặt chẽ với
+c
+ông ty tư vấn KPMG, các đơn vị trong và ngoài hệ thống NHNN, cũng như các tổ chức quốc tế để thực hiện Dự án một cách bài bản, chuyên nghiệp và đúng mục tiêu đã đề ra.
+Đồng thời,
+lãnh đạo Vụ
+Dự báo, Thống kê và Ổn định tiền tệ – tài chính cũng
+tin tưởng rằng kết quả của Dự án sẽ cung cấp
+góc
+nhìn
+toàn diện về hiện trạng dữ liệu ngành
+N
+gân hàng, chỉ rõ các điểm mạnh, hạn chế, khoảng trống
+. T
+ừ đó
+,
+đề xuất lộ trình và các điều kiện cần thiết để xây dựng thành công hệ thống
+cơ
+sở dữ liệu
+dùng chung chuyên ngành cho
+NHNN.
+Quỳnh Trang

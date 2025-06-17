@@ -39,8 +39,12 @@ async def upload_file(
                 detail="Invalid metadata JSON format",
             )
 
+    content = await file.read()
+
     response = await upload_service.upload_file(
-        file=file,
+        file=content,
+        file_name=file.filename,
+        file_type=file.content_type,
         datasource_id=datasource_id,
         user_id=current_user["id"],
         metadata=metadata_dict,

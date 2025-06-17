@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class VisualizationType(str, Enum):
@@ -30,7 +30,7 @@ class EdgeDisplayConfig(BaseModel):
     default_color: str = "#aaa"
     width_field: Optional[str] = None
     width_range: Optional[List[int]] = Field(default=[1, 5])
-    label_field: Optional[str] = "type"
+    label_field: str = "type"
     style_field: Optional[str] = None
     style_mapping: Optional[Dict[str, str]] = None
 
@@ -45,14 +45,13 @@ class GraphLayoutType(str, Enum):
 
 
 class GraphLayoutConfig(BaseModel):
-    type: GraphLayoutType = GraphLayoutType.FORCE
     params: Dict[str, Any] = Field(default_factory=dict)
 
 
 class GraphVisualizationConfig(BaseModel):
     node_config: NodeDisplayConfig = Field(default_factory=NodeDisplayConfig)
     edge_config: EdgeDisplayConfig = Field(default_factory=EdgeDisplayConfig)
-    layout: GraphLayoutConfig = Field(default_factory=GraphLayoutConfig)
+    layout: Dict[str, Any] = Field(default_factory=lambda: {"type": "force", "params": {}})
     show_labels: bool = True
     show_tooltips: bool = True
     zoom_enabled: bool = True
@@ -60,23 +59,37 @@ class GraphVisualizationConfig(BaseModel):
     clustering_enabled: bool = False
     physics_enabled: bool = True
     interactive: bool = True
-    max_nodes: int = Field(500, ge=1, le=2000)
-    height: int = Field(600, ge=300, le=2000)
+    max_nodes: int = Field(default=500, ge=1, le=2000)
+    height: int = Field(default=600, ge=300, le=2000)
     width: Optional[int] = None
 
 
 class TreeVisualizationConfig(BaseModel):
     node_config: NodeDisplayConfig = Field(default_factory=NodeDisplayConfig)
     edge_config: EdgeDisplayConfig = Field(default_factory=EdgeDisplayConfig)
-    orientation: str = "vertical"  # vertical, horizontal
-    alignment: str = "center"  # center, left, right
+    orientation: str = Field(default="vertical")
+    alignment: str = Field(default="center")
     node_separation: int = 150
     level_separation: int = 200
     show_labels: bool = True
     show_tooltips: bool = True
     interactive: bool = True
-    height: int = Field(600, ge=300, le=2000)
+    height: int = Field(default=600, ge=300, le=2000)
     width: Optional[int] = None
+
+    @field_validator("orientation")
+    @classmethod
+    def validate_orientation(cls, v):
+        if v not in ["vertical", "horizontal"]:
+            raise ValueError("orientation must be 'vertical' or 'horizontal'")
+        return v
+
+    @field_validator("alignment")
+    @classmethod
+    def validate_alignment(cls, v):
+        if v not in ["center", "left", "right"]:
+            raise ValueError("alignment must be 'center', 'left', or 'right'")
+        return v
 
 
 class TableColumn(BaseModel):
@@ -89,9 +102,9 @@ class TableColumn(BaseModel):
 
 
 class TableVisualizationConfig(BaseModel):
-    columns: List[TableColumn]
+    columns: List[TableColumn] = Field(default_factory=list)
     pagination: bool = True
-    page_size: int = Field(10, ge=1, le=100)
+    page_size: int = Field(default=10, ge=1, le=100)
     sortable: bool = True
     filterable: bool = True
     height: Optional[int] = None
@@ -117,51 +130,37 @@ class ChartAxes(BaseModel):
 
 
 class ChartVisualizationConfig(BaseModel):
-    type: ChartType
+    chart_type: ChartType = ChartType.BAR
     axes: ChartAxes
-    color_scheme: Optional[List[str]] = None
+    color_scheme: Optional[str] = None
     title: Optional[str] = None
     legend: bool = True
     grid: bool = True
     stacked: bool = False
     normalized: bool = False
     annotations: Optional[List[Dict[str, Any]]] = None
-    height: int = Field(400, ge=200, le=1000)
+    height: int = Field(default=400, ge=200, le=1000)
     width: Optional[int] = None
 
 
-class VisualizationConfig(BaseModel):
-    type: VisualizationType
-    config: Union[
-        GraphVisualizationConfig,
-        TreeVisualizationConfig,
-        TableVisualizationConfig,
-        ChartVisualizationConfig,
-    ] = Field(...)
+class GenericVisualizationConfig(BaseModel):
+    """Generic config for custom visualization types"""
+    custom_config: Dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("config")
-    def validate_config(cls, v, values):
-        if "type" not in values:
-            raise ValueError("Visualization type is required")
 
-        if values["type"] == VisualizationType.GRAPH:
-            if not isinstance(v, GraphVisualizationConfig):
-                return GraphVisualizationConfig(**v)
-        elif values["type"] == VisualizationType.TREE:
-            if not isinstance(v, TreeVisualizationConfig):
-                return TreeVisualizationConfig(**v)
-        elif values["type"] == VisualizationType.TABLE:
-            if not isinstance(v, TableVisualizationConfig):
-                return TableVisualizationConfig(**v)
-        elif values["type"] == VisualizationType.CHART:
-            if not isinstance(v, ChartVisualizationConfig):
-                return ChartVisualizationConfig(**v)
-
-        return v
+# Union type for all visualization configurations
+VisualizationConfig = Union[
+    GraphVisualizationConfig,
+    TreeVisualizationConfig,
+    TableVisualizationConfig,
+    ChartVisualizationConfig,
+    GenericVisualizationConfig,
+]
 
 
 class VisualizationBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
+    visualization_type: VisualizationType = VisualizationType.GRAPH
     description: Optional[str] = None
     query_id: Optional[str] = None
     cypher_query: Optional[str] = None
@@ -170,17 +169,37 @@ class VisualizationBase(BaseModel):
     is_public: bool = False
     config: VisualizationConfig
 
-    @field_validator("query_id", "cypher_query", "entity_id", "entity_type")
-    def validate_data_source(cls, v, values):
-        # Ensure at least one data source is provided
-        if not any(
-            key in values and values[key] is not None
-            for key in ["query_id", "cypher_query", "entity_id"]
-        ):
-            if v is None:
-                raise ValueError(
-                    "At least one of query_id, cypher_query, or entity_id must be provided"
-                )
+    @model_validator(mode="after")
+    def validate_data_source(self):
+        """Ensure at least one data source is provided"""
+        if not any([self.query_id, self.cypher_query, self.entity_id]):
+            raise ValueError(
+                "At least one of query_id, cypher_query, or entity_id must be provided"
+            )
+        return self
+
+    @field_validator("config", mode="before")
+    @classmethod
+    def parse_config(cls, v, info):
+        """Parse config based on visualization_type"""
+        if v is None:
+            return v
+        
+        # Get visualization_type from the model data
+        visualization_type = info.data.get("visualization_type")
+        
+        if isinstance(v, dict):
+            # Create appropriate config based on visualization_type
+            if visualization_type == VisualizationType.GRAPH:
+                return GraphVisualizationConfig(**v)
+            elif visualization_type == VisualizationType.TREE:
+                return TreeVisualizationConfig(**v)
+            elif visualization_type == VisualizationType.TABLE:
+                return TableVisualizationConfig(**v)
+            elif visualization_type == VisualizationType.CHART:
+                return ChartVisualizationConfig(**v)
+            else:
+                return GenericVisualizationConfig(custom_config=v)
         return v
 
 
@@ -190,6 +209,7 @@ class VisualizationCreate(VisualizationBase):
 
 class VisualizationUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    visualization_type: Optional[VisualizationType] = None
     description: Optional[str] = None
     query_id: Optional[str] = None
     cypher_query: Optional[str] = None
@@ -197,6 +217,30 @@ class VisualizationUpdate(BaseModel):
     entity_type: Optional[str] = None
     is_public: Optional[bool] = None
     config: Optional[VisualizationConfig] = None
+
+    @field_validator("config", mode="before")
+    @classmethod
+    def parse_config(cls, v, info):
+        """Parse config based on visualization_type"""
+        if v is None:
+            return v
+        
+        # Get visualization_type from the model data
+        visualization_type = info.data.get("visualization_type")
+        
+        if isinstance(v, dict):
+            # Create appropriate config based on visualization_type
+            if visualization_type == VisualizationType.GRAPH:
+                return GraphVisualizationConfig(**v)
+            elif visualization_type == VisualizationType.TREE:
+                return TreeVisualizationConfig(**v)
+            elif visualization_type == VisualizationType.TABLE:
+                return TableVisualizationConfig(**v)
+            elif visualization_type == VisualizationType.CHART:
+                return ChartVisualizationConfig(**v)
+            else:
+                return GenericVisualizationConfig(custom_config=v)
+        return v
 
 
 class Visualization(VisualizationBase):

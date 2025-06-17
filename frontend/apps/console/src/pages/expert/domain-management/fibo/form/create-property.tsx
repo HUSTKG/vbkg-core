@@ -1,24 +1,24 @@
-import { useCreateFiboProperty } from "@vbkg/api-client";
-import { CreateFiboPropertySchema } from "@vbkg/schemas";
-import { FIBOClass } from "@vbkg/types";
+import { useCreateOntologyProperty } from "@vbkg/api-client";
+import { CreateOntologyPropertySchema } from "@vbkg/schemas";
+import { OntologyClass } from "@vbkg/types";
 import { AppForm, FieldConfig } from "@/components";
 import { z } from "zod";
 
-interface FormCreateFiboPropertyProps {
-  fiboClasses: FIBOClass[];
+interface FormCreateOntologyPropertyProps {
+  ontologyClasses: OntologyClass[];
 }
 
-export default function FormCreateFiboProperty({
-  fiboClasses,
-}: FormCreateFiboPropertyProps) {
+export default function FormCreateOntologyProperty({
+  ontologyClasses,
+}: FormCreateOntologyPropertyProps) {
   const getPropertyFormFields = (): FieldConfig[] => [
     {
       name: "uri",
       label: "URI",
       type: "text",
-      placeholder: "https://spec.edmcouncil.org/fibo/ontology/...",
+      placeholder: "https://spec.edmcouncil.org/ontology/ontology/...",
       required: true,
-      description: "URI duy nhất của FIBO property",
+      description: "URI duy nhất của Ontology property",
     },
     {
       name: "label",
@@ -50,7 +50,7 @@ export default function FormCreateFiboProperty({
       name: "domain_class_uri",
       label: "Domain Class",
       type: "select",
-      options: fiboClasses.map((c) => ({
+      options: ontologyClasses.map((c) => ({
         label: `${c.label || c.uri} (${c.domain || "No domain"})`,
         value: c.uri,
       })),
@@ -60,7 +60,7 @@ export default function FormCreateFiboProperty({
       name: "range_class_uri",
       label: "Range Class",
       type: "select",
-      options: fiboClasses.map((c) => ({
+      options: ontologyClasses.map((c) => ({
         label: `${c.label || c.uri} (${c.domain || "No domain"})`,
         value: c.uri,
       })),
@@ -71,17 +71,17 @@ export default function FormCreateFiboProperty({
       label: "Custom Property",
       type: "switch",
       defaultValue: false,
-      description: "Đây có phải là custom property không thuộc FIBO chuẩn",
+      description: "Đây có phải là custom property không thuộc Ontology chuẩn",
     },
   ];
 
-  const { mutate: createFiboProperty, isPending: loading } =
-    useCreateFiboProperty({});
+  const { mutate: createOntologyProperty, isPending: loading } =
+    useCreateOntologyProperty({});
 
   const handleCreateProperty = async (
-    data: z.infer<typeof CreateFiboPropertySchema>,
+    data: z.infer<typeof CreateOntologyPropertySchema>,
   ) => {
-    createFiboProperty({
+    createOntologyProperty({
       ...data,
     });
   };
@@ -89,7 +89,7 @@ export default function FormCreateFiboProperty({
   return (
     <AppForm
       fields={getPropertyFormFields()}
-      schema={CreateFiboPropertySchema}
+      schema={CreateOntologyPropertySchema}
       onSubmit={handleCreateProperty}
       submitButtonText="Create Property"
       isLoading={loading}

@@ -1,0 +1,305 @@
+TIÊU ĐỀ: Ảnh hưởng sự thay đổi lãi suất của một ngân hàng trung ương đối với các nền kinh tế khác
+
+URL: https://sbv.gov.vn/vi/w/sbv625635
+
+------------------ NỘI DUNG ------------------
+
+Các quyết định của ngân hàng trung ương (NHTW) một nước có thể ảnh hưởng đáng kể đến lãi suất ở các nền kinh tế khác. Ngoài Hệ thống Dự trữ Liên bang Mỹ (Fed), được coi là “nhà tạo lập thị trường toàn cầu”, chính sách tiền tệ của các NHTW có ảnh hưởng rõ rệt đến các quốc gia khác, bao gồm cả Mỹ, một nghiên cứu cho thấy.
+Ảnh minh họa (Nguồn Internet)
+Ảnh hưởng qua lại của các NHTW
+Sự thay đổi
+lãi suất
+của một
+NHTW
+có thể ảnh hưởng đến chính sách tiền tệ của các quốc gia khác, buộc các
+NHTW
+của họ phải điều chỉnh
+lãi suất
+để
+ứng phó
+. Hiệu ứng này được gọi là
+hiệu ứng
+lan tỏa
+hay hiệu ứng tràn
+(
+Spillover effects
+) - khi các sự kiện trong một nền kinh tế hoặc một thị trường ảnh hưởng đến các nền kinh tế hoặc thị trường khác.
+Thông thường, khi nhắc đến tác động lan tỏa của
+chính sách
+NHTW trong các nghiên cứu, người ta thường đề cập đế
+n Fed
+. Các quyết định của Fed không chỉ ảnh hưởng đến nền kinh tế Mỹ mà còn tác động đến các nền kinh tế khác và thậm chí đến toàn bộ chu kỳ tài chính toàn cầu.
+Do tác động lan tỏa của Fed, các quốc gia khác có thể
+phải đối mặt với những trở ngại trong việc
+hoạch định
+chính sách tiền tệ của riêng mình, bao gồm các quốc gia có chính sách tiền tệ độc lập, lạm phát mục tiêu và thị trường tài chính tương đối lớn
+(Rey, 2016)
+.
+Một nghiên cứu của Christopher Cotton thuộc Ngân hàng Dự trữ Liên bang Boston đã phân tích tác động lan tỏa của 20 NHTW ở các nước có thu nhập trung bình và cao cho thấy
+,
+không phải chỉ có chính sách của Fed gây
+“tác động phụ”
+đối với các nền kinh tế khác
+mà c
+hính sách tiền tệ của họ
+có
+ảnh hưởng đến lãi suất thị trường nợ trung và dài hạn ở các quốc gia có đặc điểm tương tự. Ảnh hưởng này không rộng bằng ảnh hưởng của Fed,
+nhưng vẫn gây ảnh hưởng đáng kể do
+quyết định của họ ảnh hưởng đến cả thị trường mới nổi và giá của nhiều loại tài sản
+(Cotton, 2023).
+Điều này có nghĩa là
+,
+chính sách của
+một
+NHTW
+có thể bị ảnh hưởng bởi chính sách củ
+a
+NHTW
+ở các quốc gia khác. Đồng thời, ngay cả Fed cũng có thể chịu ảnh hưởng trực tiếp từ quyết định củ
+a những
+NHTW khác chứ không chỉ đơn thuần là tác động phản hồi từ chính sách của mình.
+Đây là nghiên cứu đầu tiên đánh giá tác độ
+ng lan tỏa
+từ quyết định của NHTW
+ở
+nhiều quốc gia đối với lãi suất trung và dài hạn của các nền kinh tế khác, đồng thời
+,
+cho thấy ảnh hưởng này không chỉ bắt nguồn từ chính sách của Fed.
+Các nghiên cứu khác khi xem xét tác động lan tỏa từ các
+NHTW
+của những nền kinh tế lớn đã kết luận rằng những ảnh hưởng này không đáng kể, đặc biệt là khi so sánh với tác động của Fed
+(Francesca và cộng sự, 2020)
+.
+Các
+NHTW
+có
+tầm
+ảnh hưởng
+Để xác định tác động chính sách của một
+NHTW
+đối với các nền kinh tế khác, Cotton đánh giá mức độ thay đổi lãi suất của
+NHTW
+ảnh hưởng đến lãi suất thị trường ở một quốc gia khác
+trong vòng một giờ trước và sau khi quyết định lãi suất được công bố (
+để
+loại trừ các yếu tố khác) và trong vòng một tuần (để kiểm tra xem các hiệu ứng được phát hiện có phải là tạm thời hay không). Tổng cộng mẫu
+nghiên cứu
+bao gồm gần 4.000
+thông cáo báo chí
+về các quyết định và khoảng
+1.000
+biên bản
+họp của 20
+NHTW
+từ năm 1996
+-
+2022
+cho thấy, có đến
+14
+NHTW
+có
+những quyết định
+tác động đáng kể đến các nền kinh tế phát triển khác thông qua lãi suất thị trường nợ dài hạ
+n
+là
+:
+NHTW
+Úc, Canada, Cộ
+ng hòa Séc, K
+hu vực đồng
+E
+uro, Nhật Bản, Mexico, Na Uy, New Zealand, Ba Lan, Romania, Hàn Quốc, Thụy Điển, Thụy Sĩ và Vương quốc Anh.
+Ví dụ, việc tăng lãi suất trái phiếu chính phủ kỳ hạn 10 năm của các quố
+c gia K
+hu vực đồng
+E
+uro thêm 1 điểm cơ bản
+(basic point -
+bp
+s)
+theo quyết định của
+NHTW
+châu Âu
+(ECB)
+sẽ dẫn đến việc tăng lãi suất trái phiếu chính phủ kỳ hạn 10 năm bình quân
+ở
+các nền kinh tế phát triển khác thêm 0,6
+bps
+và kết quả này thậm chí còn cao hơn Fed (0,5
+bps
+). Mức tăng tương tự ở Thụy Sĩ dẫn đến
+tỉ
+lệ tăng ở các nước phát triển khác thêm 0,23 b
+ps;
+ở Canada và Vương quốc Anh - 0,19 b
+ps;
+ở Thụy Điển - 0,17 b
+ps;
+ở Úc - 0,14 b
+ps…
+Các NHTW có ảnh hưởng đáng kể, dù ở mức độ nhỏ hơn đến lãi suất trung hạn (kỳ hạn
+2
+năm) của các nền kinh tế tương đương. Trong đó, tác động của Fed mạnh hơn đáng kể, chiếm tới 40% tổng ảnh hưởng. Lãi suất ngắn hạn phản ứng đáng kể chỉ với các quyết định của Fed. Nhìn chung, xét trên tất cả các kỳ hạn của trái phiếu (từ ngắn đến dài hạn), tác động từ Mỹ chiếm gần 60% tổng ảnh hưởng
+,
+tức là hơn một nửa đối với lãi suất trên thị trường nợ của các nước phát triển.
+Đối với
+lãi suất
+các
+nước đang phát triển
+, chính sách của Fed
+gây
+ảnh hưởng đáng kể. Cụ thể, nếu Fed
+tăng
+lãi suất trái phiếu kỳ hạn
+2 năm và
+10 năm ở Mỹ t
+hêm
+1
+bps
+, thì lãi suất tương ứng tại các nước đang phát triển tăng trung bình 0,45 và 0,41
+bps.
+Các quyết định từ các
+NHTW
+còn lại trong mẫu
+nghiên cứu không tạo ra ảnh hưởng đáng kể đối với thị trường
+các nước đang phát triển
+.
+Theo Cotton, trái với quan điểm phổ biế
+n, những
+quyết định của NHTW ở các nước phát triển khác có thể có ảnh hưởng đáng kể đến lãi suất ở Mỹ và
+Khu vực đồng Euro
+. Điều này không chỉ xả
+y ra do “
+hiệu ứng phản hồ
+i”
+từ chính sách của Fed và ECB (tức là, khi quyết định của Fed tác động đến thị trường của một quốc gia khác, và sau đó, những thay đổi trên thị trường đó lại ảnh hưởng ngược trở lại Mỹ). Chẳng hạn, nếu quyết định lãi suất từ các NHTW Úc, Canada, Thụy Sĩ,
+Khu vực đồng Euro
+, Vương quốc Anh hoặc Thụy Điển khiến lãi suất trái phiếu kỳ hạn 10 năm tại các quốc gia này tăng 1 b
+ps
+, thì lãi suất 10 năm tại Mỹ cũng tăng theo. Trong đó, tác động từ
+Khu vực đồng Euro
+là 0,74 b
+ps
+, còn từ các quốc gia khác dao động trong khoả
+ng 0,1 -
+0,2 bps.
+Khu vực đồng Euro
+cũng chịu tác động tương tự từ quyết định của các
+NHTW
+khác. Cụ thể, khi lãi suất tại Mỹ tăng 1
+bps
+, lãi suất trái phiếu tại
+Khu vực đồng Euro
+tăng 0,4
+bps.
+Nếu Canada, Thụy Sĩ, Cộng hòa Séc, Vương quốc Anh và Thụy Điển tăng lãi suất thêm 1
+bps
+, lãi suất trong
+Khu vực đồng Euro
+sẽ tăng từ 0,1 đến 0,3
+bps.
+Chính sách của các NHTW không chỉ ảnh hưởng đến thị trường trái phiếu chính phủ
+,
+mà còn tác động đến thị trường nợ doanh nghiệp. Tám quốc gia/khu vực có tác động mạnh nhất đến thị trường tài chính toàn cầu bao gồm: Úc, Canada, Thụy Sĩ, Cộng hòa Séc,
+Khu vực đồng Euro
+, Vương quốc Anh, Thụy Điển và Mỹ. Khi lãi suất tại các nước này tăng 1 b
+ps
+, lãi suất trái phiếu doanh nghiệp của các công ty Mỹ có xếp hạng tín dụng AAA cũng tăng ít nhất 0,1 b
+ps
+và trong hầu hết các trường hợp, mức tăng rõ rệt hơn. Tác động này cũng tương tự đối với các loại trái phiếu doanh nghiệp khác, không chỉ giới hạn ở nhóm có xếp hạng tín dụng cao nhất.
+Điều này cho thấy chính sách tiền tệ của một số quốc gia (không chỉ
+của
+Fed
+) có ảnh hưởng đáng kể đến lãi suất vay của cả chính phủ và doanh nghiệp ở các nước khác.
+Cơ chế ảnh hưởng
+Cotton cho rằng
+,
+nguyên nhân khiến các NHTW tạ
+o ra “
+hiệu ứng lan tỏ
+a”
+đối với nền kinh tế khác có thể khác nhau tùy thuộc vào từng NHTW. Ảnh hưởng của Fed có thể liên quan đến sự thay đổi trong nhận định của các thành viên thị trường về lộ trình lãi suất không chỉ ở Mỹ, mà còn ở các quốc gia khác (những nước sau đó, sẽ điều chỉnh chính sách theo Fed):
+Đ
+iều này giải thích tại sao quyết định của Fed tác động đến giá các loại tài sản khác nhau. Mức độ ảnh hưởng của các NHTW khác chủ yếu thể hiện ở sự thay đổi trong phầ
+n “
+dài hạ
+n”
+của đường cong lợi suất, tức là,
+đối với
+các trái phiếu dài hạ
+n: N
+ếu thị trường cho rằng việc thay đổi lãi suất của NHTW đó chỉ gây ra hiệu ứng tạm thời, thì nó sẽ không ảnh hưởng đáng kể đến lãi suất ở các nước khác.
+Trong khi đó, đối với tất cả các quốc gia, yếu tố chính quyết đị
+nh “
+khả
+năng”
+của NHTW trong việc tạo ra hiệu ứng lan tỏa đáng kể là GDP của nướ
+c đó. N
+ghiên cứu của Cotton chỉ ra rằng
+,
+chỉ có NHTW của các nước có GDP bình quân đầu người từ trung bình đến cao mới có ảnh hưởng này, và cường độ ảnh hưởng càng mạnh khi nền kinh tế càng lớn.
+Quy mô ảnh hưởng của F
+ed
+cũng phụ thuộc vào mối quan hệ kinh tế và văn hóa giữa Mỹ và quố
+c gia khác. T
+rong khi đối với các NHTW khác, yếu tố văn hóa đóng vai trò chủ yếu. Ông đánh giá mối liên hệ kinh tế dựa trên chỉ số xuất khẩu, còn mối liên hệ văn hóa dựa trên sự tương đồng về tôn giáo giữa các quốc gia. Những nước có đặc điểm văn hóa đặc biệt giống nhau cũng có phản ứng mạnh mẽ hơn trước các động thái của NHTW
+các nước đó
+- điều này đúng với các cặ
+p “Úc - New Zealand” và “
+Na Uy - Thụy Điể
+n”
+. Do các nhà đầu tư tìm kiếm các tài sản có đặc điểm tương đồng, nên ảnh hưởng từ quyết định của NHTW các nước phát triển
+,
+trước hết,
+lan tỏa đến các quốc gia phát triển khác, đặc biệt là những nước có mối liên hệ văn hóa chặt chẽ với nền kinh tế mà NHTW đó đưa ra quyết định về lãi suất
+.
+Một số kết luận
+Nghiên cứu cho thấy rằng chính sách tiền tệ của các NHTW có tác động lan tỏa mạnh mẽ ra ngoài phạm vi quốc gia của họ, không chỉ ảnh hưởng đến thị trường nội địa
+,
+mà còn tác động đến lãi suất, thị trường trái phiếu và tài sản tài chính của các nước khác.
+Thứ nhất
+, Fed có ảnh hưởng lớn nhất, tác động không chỉ đến thị trường nợ, mà còn đến chứng khoán toàn cầu và giá hàng hóa như vàng, bạc.
+Thứ hai
+, các NHTW khác (như ECB,
+NHTW
+Thụy Sĩ, Anh, Canada...) cũng có tác động đáng kể, nhưng chủ yếu đến lãi suất dài hạn và các nền kinh tế phát triển khác.
+Thứ ba
+, quy mô nền kinh tế và mối quan hệ văn hóa
+-
+kinh tế giữa các nước đóng vai trò quan trọng trong việc xác định mức độ ảnh hưởng của chính sách tiền tệ.
+Thứ tư
+, những quốc gia có quan hệ văn hóa chặt chẽ (như Úc
+-
+New Zealand, Na Uy
+-
+Thụy Điển) phản ứng mạnh mẽ hơn với quyết định lãi suất của nhau.
+Nhìn chung, nghiên cứu khẳng định rằng
+,
+chính sách tiền tệ không chỉ là vấn đề nội bộ của từng quốc gia
+,
+mà còn có tác động toàn cầu, đặc biệt trong bối cảnh hội nhập tài chính sâu rộng.
+Tài liệu tham khảo
+:
+1 Cotton Christopher D. (2023).
+To What Degree and through Which Channels Do Central Banks Other than the Federal Reserve Cause Spillovers
+? Federal Reserve Bank of Boston Research Department Working Papers No. 23-3. https://doi.org/10.29412/res.wp.2023.03
+2.
+Rey, H.
+(2016)
+.
+International Channels of Transmission of Monetary Policy and the
+Mundellian Trilemma. IMF
+Econ. Rev
+. 64, pages
+6
+-
+35.
+https://www.imf.org/external/np/res/seminars/2014/arc/pdf/Rey.pdf.
+3. Francesca Brusa, Pavel Salvor (2020). One Central Bank to Rule Them All.
+Review of Finance, Volume 24, Issue 2
+, pages
+263
+-
+304.
+https://dx.doi.org/10.2139/ssrn.2658953
+Nhật Trung

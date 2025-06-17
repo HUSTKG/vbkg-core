@@ -7,6 +7,7 @@ from postgrest.types import CountMethod
 from app.core.config import settings
 from app.core.supabase import get_supabase
 from app.schemas.datasource import DataSourceCreate, DataSourceUpdate
+from app.schemas.user import ResourceType, UserAction
 from app.services.user import UserService
 
 
@@ -28,6 +29,7 @@ class DataSourceService:
 
             # Set default trust score if not provided
             if "trust_score" not in data:
+                print(self._calculate_default_trust_score(data))
                 data["trust_score"] = self._calculate_default_trust_score(data)
 
             # Handle sensitive credentials - encrypt if needed
@@ -54,11 +56,10 @@ class DataSourceService:
 
             await self.user_service._log_user_activity(
                 user_id=user_id,
-                action="create_datasource",
-                resource_type="datasource",
+                action=UserAction.DATASOURCE_CREATE.value,
+                resource_type=ResourceType.DATASOURCE.value,
                 resource_id=response.data[0]["id"],
                 details={
-                    "datasource_id": response.data[0]["id"],
                     "name": response.data[0]["name"],
                     "trust_score": response.data[0]["trust_score"],
                 },
@@ -162,6 +163,19 @@ class DataSourceService:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Data source not found",
                 )
+
+            # Log the trust score update
+            await self.user_service._log_user_activity(
+                user_id=response.data[0]["created_by"],
+                action=UserAction.DATASOURCE_UPDATE.value,
+                resource_type=ResourceType.DATASOURCE.value,
+                resource_id=datasource_id,
+                details={
+                    "old_trust_score": response.data[0].get("trust_score"),
+                    "new_trust_score": new_trust_score,
+                    "reason": reason,
+                },
+            )
 
             return {
                 "success": True,
@@ -305,6 +319,18 @@ class DataSourceService:
                     detail="Failed to update data source",
                 )
 
+            # Log the update activity
+            await self.user_service._log_user_activity(
+                user_id=response.data[0]["created_by"],
+                action=UserAction.DATASOURCE_UPDATE.value,
+                resource_type=ResourceType.DATASOURCE.value,
+                resource_id=datasource_id,
+                details={
+                    "name": response.data[0]["name"],
+                    "trust_score": response.data[0]["trust_score"],
+                },
+            )
+
             return response.data[0]
         except HTTPException:
             raise
@@ -325,6 +351,15 @@ class DataSourceService:
             await supabase.from_("data_sources").delete().eq(
                 "id", datasource_id
             ).execute()
+
+            # Log the delete activity
+            await self.user_service._log_user_activity(
+                user_id=datasource_id,  # Assuming the user ID is stored in the datasource
+                action=UserAction.DATASOURCE_DELETE.value,
+                resource_type=ResourceType.DATASOURCE.value,
+                resource_id=datasource_id,
+                details={"datasource_id": datasource_id},
+            )
 
             return {"success": True, "message": "Data source deleted"}
         except HTTPException:

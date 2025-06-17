@@ -1,0 +1,272 @@
+TIÊU ĐỀ: Triển khai thí điểm Mobile-Money: Để không ai bị bỏ lại phía sau trong tiếp cận dịch vụ tài chính
+
+URL: https://sbv.gov.vn/vi/w/sbv440209
+
+------------------ NỘI DUNG ------------------
+
+Với gần 125 triệu thuê bao di động, khoảng 30% người trưởng thành chưa có tài khoản ngân hàng, cơ hội cho việc phát triển dịch vụ Mobile Money (dùng tài khoản viễn thông thanh toán cho các hàng hóa, dịch vụ có giá trị nhỏ) tại Việt Nam là rất lớn. Việc phát triển Mobile Money sẽ cung cấp cho nhóm khách hàng không có tài khoản ngân hàng, đối tượng người dân vùng nông thôn, vùng sâu vùng xa, biên giới, hải đảo một kênh giao dịch, phương tiện thanh toán không dùng tiền mặt (TTKDTM) nhanh chóng và thuận tiện; từ đó, góp phần làm tăng tỷ lệ TTKDTM và thúc đẩy tài chính toàn diện theo chủ trương của Chính phủ.
+Phó Thống đốc NHNN Nguyễn Kim Anh
+Ngày 09/3/2021, Thủ tướng Chính phủ đã ký Quyết định 316/QĐ-TTg về việc phê duyệt triển khai thí điểm dùng tài khoản viễn thông thanh toán cho các hàng hóa, dịch vụ có giá trị nhỏ (Quyết định 316).
+Theo quy định, thời gian thực hiện thí điểm dịch vụ Mobile
+-
+Money là 2 năm kể từ thời điểm doanh nghiệp đầu tiên thực hiện thí điểm được chấp thuận triển khai thí điểm dịch vụ này. Kết quả thí điểm triển khai dịch vụ Mobile
+-
+Money sẽ là cơ sở thực tiễn để cơ quan quản lý có thẩm quyền xem xét, xây dựng và ban hành các quy định pháp lý chính thức cho hoạt động cung ứng dịch vụ tại Việt Nam.
+Để
+có thể
+hiểu thêm về dịch vụ Mobile
+-
+Money, cách thức triển khai và các giải pháp đảm bảo triển khai
+thí điểm
+dịch vụ này
+được
+thành công
+, phóng viên đã có cuộc trao đổi với Phó Thống đốc Ngân hàng Nhà nước
+(NHNN)
+Nguyễn Kim Anh.
+Thưa ông,
+ông có thể nói rõ hơn về
+những lợi ích khi triển khai thí điểm
+dùng tài khoản viễn thông thanh toán cho các hàng hóa, dịch vụ có giá trị nhỏ (Mobile
+-
+Money)
+?
+Về cơ bản, Mobile Money hướng đến
+đối tượng khách hàng là
+người dân miền núi, vùng sâu vùng xa, các vùng nông thôn, chưa có
+tài khoản
+ngân hàng cũng như điều kiện sử dụng các dịch vụ thanh toán hiện đại.
+Do đó,
+Mobile-Money nếu được quản lý tốt sẽ có những ảnh hưởng tích cực đến nền kinh tế và các đối tượng tham gia.
+Cụ thể:
+Đ
+ối với nền kinh tế
+:
+thị trường
+có thêm các nhà cung cấp dịch vụ
+thanh toán TTKDTM,
+tăng cường việc tiếp cận và sử dụng các dịch vụ tài chính, đặc biệt tại khu vực nông thôn, miền núi, vùng sâu, vùng xa
+. Bên cạnh đó, Mobile Money
+được phát triển dựa trên
+tận dụng hạ tầng viễn thông
+nên sẽ
+giảm các chi phí xã hội
+để phát triển
+TTKDTM
+.
+Đối với các
+Doanh nghiệp viễn thông triển khai dịch vụ Mobile-Money:
+sẽ
+phát triển và đa dạng hóa sản phẩm, dịch vụ và đối tượng khách hàng (ngoài các dịch
+vụ viễn thông truyền thống),
+nhờ
+đó, mở rộng thị trường, tăng doanh thu và nâng cao khả năng cạnh tranh.
+Đ
+ối vớ
+i khách hàng:
+Mobile-Money cung ứng cho nhóm khách hàng không có tài khoản ngân hàng một kênh giao dịch nhanh chóng và thuận tiện
+,
+sử dụng 24/7, thanh toán mọi lúc, mọi nơi với thiết bị di động.
+Mobile-Money cũng góp phần phổ cập kiến thức tài chính toàn diện cho toàn dân. Thông qua đó, người sử dụng sẽ dần quen với sử dụng các dịch vụ tài chính chính thức khác tại các ngân hàng và các tổ chức trung gian thanh toán. Bên cạnh đó, dưới áp lực cạnh tranh buộc các tổ chức cung ứng dịch vụ phải nâng cao chất lượng dịch vụ, do đó, khách hàng được trải nghiệm dịch vụ tốt hơn.
+Vậy M
+obile Money khác gì ví điện tử, thưa ông?
+Để mở và sử dụng
+v
+í điện tử, khách hàng cần
+có tài khoản
+ngân hàng hoặc thẻ ghi nợ
+và phải
+liên kết
+v
+í
+điện tử
+với tài khoản ngân hàng.
+Hạn mức sử dụng của
+v
+í điện tử cá nhân
+là
+100 triệu đồng/tháng
+.
+Trong khi đó,
+khách hàng mở và sử dụng dịch vụ Mobile-Money
+không đòi hỏi phải có tài khoản ngân hàng
+.
+Khách hàng cần có SIM thuê bao di động được định danh, xác thực theo quy định của pháp luật, có thời gian kích hoạt và sử dụng liên tục trong ít nhất 3 tháng liền kề là có thể mở và sử dụng dịch vụ Mobile-Money.
+Đ
+ể hạn chế rủi ro
+trong giai đoạn thí điểm
+và phù hợp với giao dịch giá trị nhỏ, hạn mức giao dịch của Mobile-Money là 10 triệu đồng/tháng.
+Như vậy, đ
+iểm khác biệt lớn nhất
+giữa
+dịch vụ Mobile Money
+và
+v
+í điện tử là
+không yêu cầu phải có tài khoản ngân hàng
+.
+Nhờ đó, d
+ịch vụ Mobile-Money sẽ hỗ trợ cho việc phát triển
+TTKDTM
+, tăng cường tiếp cận và sử dụng các dịch vụ tài chính, đặc biệt tại khu vực nông thôn, miền núi, vùng sâu, vùng xa, biên giới và hải đảo của Việt Nam
+.
+Các doanh nghiệp muốn xin giấy phép để cung cấp dịch vụ này cần đáp ứng những điều kiện gì
+,
+thưa ông
+?
+Trước tiên,
+d
+oanh nghiệp phải đáp ứng tiêu chí có đồng thời
+g
+iấy phép hoạt động cung ứng dịch vụ trung gian thanh toán
+v
+í điện tử và
+g
+iấy phép thiết lập mạng viễn thông công cộng di động mặt đất sử dụng băng tần số vô tuyến điện hoặc là công ty con được
+c
+ông ty mẹ có
+g
+iấy phép thiết lập mạng viễn thông công cộng di động mặt đất sử dụng băng tần số vô tuyến điện cho phép sử dụng hạ tầng, mạng lưới, dữ liệu viễn thông theo quy định tại
+Quyết định số 316/QĐ-TTg ngày 09/3/2021 của Thủ tướng Chính phủ.
+Các
+d
+oanh nghiệp viễn thông cần xây dựng Hồ sơ đề nghị triển khai thí điểm dịch vụ Mobile
+-
+Money đảm bảo đáp ứng đầy đủ các điều kiện quy định tại Quyết định 316/QĐ-TTg, gửi NHNN đầu mối xem xét, thẩm định.
+Trên cơ sở Hồ sơ đề nghị của các
+d
+oanh nghiệp viễn thông, NHNN sẽ
+đầu mối,
+phối hợp với Bộ T
+hông tin và Truyền thông
+(Bộ TTTT)
+và Bộ Công an để xem xét, chấp thuận việc triển khai dịch vụ Mobile-Money.
+Vậy khi nào người dân có thể
+được
+sử
+dụng Mobile Money
+và
+với dịch vụ này, khách hàng có thể làm gì, thưa ông
+?
+Ngay sau khi các
+d
+oanh nghiệp viễn thông
+đáp ứng các điều kiện và
+được chấp thuận
+triển khai cung ứng
+dịch vụ Mobile
+-
+Money, người dân có nhu cầu sử dụng dịch vụ
+,
+đặc biệt là người dân ở khu vực nông thôn, vùng sâu, vùng xa
+có thể
+đăng ký mở, nạp tiền và sử dụng dịch vụ Mobile-Money.
+Khi
+đăng ký
+sử dụng dịch vụ Mobile-Money, k
+hách hàng
+sẽ
+phải cung cấp
+chứng minh nhân dân (
+CMND)
+hoặc
+Căn cước công dân
+hoặc
+Hộ chiếu
+trùng với thông tin đăng ký số thuê bao di động của khách hàng.
+Ngoài ra, cũng cần lưu ý m
+ỗi khách hàng chỉ được mở 01 tài khoản Mobile
+Money tại mỗi
+d
+oanh nghiệp
+viễn thông
+.
+Theo Quyết định 316,
+K
+hách hàng có thể
+sử dụng Mobile Money để
+thực hiện nhiều giao dịch khác nhau như:
+n
+ạp
+, rút
+tiền
+, thanh toán
+việc mua hàng hóa, dịch vụ
+, chuyển tiền
+.
+Khách hàng có thể nạp, rút
+bằng
+tiền mặt
+tại các điểm kinh doanh, nạp/rút
+từ
+tài khoản thanh toán
+của khách hàng tại ngân hàng hoặc
+từ Ví điện tử
+của khách hàng tại chính
+D
+oanh nghiệp
+viễn thông thực hiện thí điểm
+.
+Sau khi mở tài khoản Mobile-Money, khách hàng có thể
+nhận tiền và chuyển tiền từ tài khoản ngân hàng, Ví điện tử hoặc tài khoản Mobile-Money khác
+.
+K
+hách hàng không được
+cho thuê, mượn,
+trao đổi, tặng, cho hoặc mua, bán tài khoản Mobile-Money để đảm bảo an toàn, bảo mật khi sử dụng dịch vụ.
+Ông có thể chia sẻ thêm về
+thời hạn
+thí điểm cụ thể
+Sau 2 năm, kết quả thực hiện thí điểm dịch vụ Mobile-Money là cơ sở thực tiễn để cơ quan quản lý có thẩm quyền xem xét, xây dựng và ban hành quy định pháp lý chính thức cho hoạt động cung ứng dịch vụ Mobile-Money tại Việt Nam.
+Theo ông
+,
+đâu là yếu tố quan trọng để triển khai Mobile-Money thành công?
+Như trên đã nói,
+theo
+Quyết đị
+nh 316
+, các doanh nghiệp thực hiện thí điểm cần tuân thủ và đảm bảo các điều kiện, quy định khi tổ chức triển khai
+.
+Để triển khai thành công Mobile-Money
+phụ thuộc vào nhiều bên
+, nhiều yếu tố
+khác nhau
+.
+Trong đó các yếu tố mang tính tiền đề là
+:
+Đ
+ối với
+d
+oanh nghiệp viễn thông
+:
+cần xây dựng ứng dụng an toàn, thuận tiện, dễ sử dụng; xây dựng hệ thống các điểm kinh doanh trên toàn quốc, trong đó ưu tiên triển khai thí điểm tại các địa bàn thuộc khu vực nông thôn, vùng sâu, vùng xa.
+C
+ác đơn vị cung ứng hàng hóa/dịch vụ, cần chấp nhận rộng rãi phương thức thanh toán này với các chi phí hợp lý.
+Về phía người dùng cần thấy rõ lợi ích khi sử dụng phương thức này trên cả khía cạnh lợi ích tài chính và tính thuận tiện trong sử dụng. Do đó
+, các
+d
+oanh nghiệp viễn thông, cơ quan chức năng
+cần đẩy mạnh truyền thông, giáo dục tài chính để nâng cao kiến thức, kỹ năng sử dụng dịch vụ tài chính đối với đối tượng người dân khu vực nông thôn, vùng sâu vùng xa, người nghèo, các đối tượng chính sách...
+Đối với công tác quản lý nhà nước, Mobile-Money
+là dịch vụ mới tại Việt Nam, d
+o
+đó
+,
+cần sự phối hợp
+chặt chẽ
+giữa NHNN, Bộ TTTT, Bộ Công an trong việc thẩm định, cấp phép, thanh tra, kiểm tra, giám sát theo đúng
+quy định tại
+Quyết định 316 của Thủ tướng Chính phủ
+,
+đặc biệt
+phối hợp
+trong việc hoàn thiện chính sách
+về dịch vụ Mobile-Money
+sau 02 năm
+thí điểm
+.
+Trong thời gian tới, NHNN sẽ tiếp tục theo dõi và nắm bắt thông tin phản ánh dư luận liên quan đến việc thực hiện thí điểm Mobile Money để kịp thời phối hợp với các Bộ ngành xử lý các vướng mắc, phát sinh.
+Xin cảm ơn Phó Thống đốc!
+Phương Linh
+(thực hiện)
+1

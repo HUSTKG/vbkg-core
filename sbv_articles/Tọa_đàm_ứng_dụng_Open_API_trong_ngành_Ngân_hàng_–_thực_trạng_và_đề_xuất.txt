@@ -1,0 +1,27 @@
+TIÊU ĐỀ: Tọa đàm ứng dụng Open API trong ngành Ngân hàng – thực trạng và đề xuất
+
+URL: https://sbv.gov.vn/vi/w/sbv443813
+
+------------------ NỘI DUNG ------------------
+
+Sáng ngày 29/3/2021, Ngân hàng Nhà nước Việt Nam (NHNN) phối hợp với Ngân hàng Phát triển Châu Á (ADB) tổ chức buổi tọa đàm “Ứng dụng Open API trong ngành Ngân hàng – Thực trạng và đề xuất” tại Hà Nội. Tham dự buổi tọa đàm có ông Tô Huy Vũ – Vụ trưởng Vụ Hợp tác quốc tế; đại diện ADB ông Andrew Jefferies – Giám đốc Quốc gia ADB; đại diện các Vụ, Cục chức năng và ngân hàng thương mại, các công ty trung gian thanh toán.
+Quang cảnh buổi tọa đàm
+Phát biểu khai mạc buổi tọa đàm, ông Tô Huy Vũ cho biết,
+dưới tác động của công nghệ tài chính (fintech), thị trường tài chính đang trở nên ngày càng minh bạch và hoạt động hiệu quả với chi phí hợp lý hơn. Một trong những
+nhân tố thúc đẩy cải cách
+trên thị trường tài chính là
+Ngân hàng mở (Open Banking)
+cùng với sự hỗ trợ của
+công nghệ Giao diện lập trình ứng dụng mở (Open API)
+. Dưới góc độ cơ quan quản lý nhà nước về hoạt động ngân hàng, NHNN cũng bước đầu
+nghiên cứu xây dựng, thử nghiệm và dần hoàn thiện các khung pháp lý
+để quản lý hoạt động ngân hàng mở.
+Tại buổi toạn đàm, đại diện các đơn vị chức năng của NHNN trình bày các bài tham luận về tổng quan và xu hướng quốc tế, thực tiễn
+chính sách quản lý
+tại Việt Nam đối vớ
+i các mô hình
+Open API trong ngành Ngân hàng. Đại diện một số NHTM và công ty trung gian thanh toán diễn giải về kinh nghiệm quốc tế,
+kinh nghiệm thực tế
+triể
+n khai và đưa ra một số kiến nghị về chính sách quản lý đối với mô hình này. Cuối buổi tọa đàm, các đại biểu sôi nổi tham gia phiên thảo luận với các nhà hoạch định chính sách, các ngân hàng thương mại và các công ty công nghệ về dịch vụ tài chính.
+P.C.

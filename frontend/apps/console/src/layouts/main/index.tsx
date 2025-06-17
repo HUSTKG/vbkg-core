@@ -68,7 +68,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           profileMenuItems={profileMenuItems}
         />
         {/* Page Content */}
-        <main className="pt-16 h-full overflow-auto">
+        <main className="pt-16 h-full overflow-y-auto">
           <div className="p-6">{children}</div>
         </main>
       </div>

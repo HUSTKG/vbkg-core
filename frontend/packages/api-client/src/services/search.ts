@@ -2,6 +2,19 @@ import {
 	ICreateEntityEmbeddingRequest,
 	ICreateEntityEmbeddingResponse,
 	IFindSimilarEntitiesRequest,
+	IAISearchRequest,
+	IAISearchResponse,
+	ISearchSuggestionsRequest,
+	ISearchSuggestionsResponse,
+	IQuickAISearchRequest,
+	IPersonRankRequest,
+	IPersonRankResponse,
+	ISearchSubgraphRequest,
+	ISearchSubgraphResponse,
+	IExplainAISearchRequest,
+	IExplainAISearchResponse,
+	ISearchTypeInfoResponse,
+	IAISearchStatsResponse,
 	IFindSimilarEntitiesResponse,
 	IGenerateEmbeddingsRequest,
 	IGenerateEmbeddingsResponse,
@@ -72,6 +85,104 @@ const updateEntityEmbeddingBatch = async (
 		.then((res) => res.data);
 };
 
+const aiSearch = async (
+	input: IAISearchRequest,
+): Promise<IAISearchResponse> => {
+	return await api()
+		.post<IAISearchResponse>(API_ENDPOINTS.AI_SEARCH, input)
+		.then((res) => res.data);
+};
+
+// Quick AI Search
+const quickAISearch = async (
+	params: IQuickAISearchRequest,
+): Promise<IAISearchResponse> => {
+	const searchParams = new URLSearchParams();
+	searchParams.append("q", params.q);
+
+	if (params.entity_types) {
+		params.entity_types.forEach((type) =>
+			searchParams.append("entity_types", type),
+		);
+	}
+
+	if (params.max_results) {
+		searchParams.append("max_results", params.max_results.toString());
+	}
+
+	if (params.generate_answer !== undefined) {
+		searchParams.append("generate_answer", params.generate_answer.toString());
+	}
+
+	return await api()
+		.get<IAISearchResponse>(
+			`${API_ENDPOINTS.QUICK_AI_SEARCH}?${searchParams.toString()}`,
+		)
+		.then((res) => res.data);
+};
+
+// Search Suggestions
+const getSearchSuggestions = async (
+	params: ISearchSuggestionsRequest,
+): Promise<ISearchSuggestionsResponse> => {
+	const searchParams = new URLSearchParams();
+	searchParams.append("q", params.partial_query);
+
+	if (params.limit) {
+		searchParams.append("limit", params.limit.toString());
+	}
+
+	return await api()
+		.get<ISearchSuggestionsResponse>(
+			`${API_ENDPOINTS.SEARCH_SUGGESTIONS}?${searchParams.toString()}`,
+		)
+		.then((res) => res.data);
+};
+
+// PersonRank Scores
+const calculatePersonRankScores = async (
+	input: IPersonRankRequest,
+): Promise<IPersonRankResponse> => {
+	return await api()
+		.post<IPersonRankResponse>(API_ENDPOINTS.PERSONRANK_SCORES, input)
+		.then((res) => res.data);
+};
+
+// AI Subgraph
+const getAISubgraph = async (
+	input: ISearchSubgraphRequest,
+): Promise<ISearchSubgraphResponse> => {
+	return await api()
+		.post<ISearchSubgraphResponse>(API_ENDPOINTS.AI_SUBGRAPH, input)
+		.then((res) => res.data);
+};
+
+// Explain AI Search
+const explainAISearch = async (
+	input: IExplainAISearchRequest,
+): Promise<IExplainAISearchResponse> => {
+	return await api()
+		.post<IExplainAISearchResponse>(
+			API_ENDPOINTS.EXPLAIN_AI_SEARCH,
+			input,
+		)
+		.then((res) => res.data);
+};
+
+// Get Search Type Info
+const getSearchTypeInfo = async (): Promise<ISearchTypeInfoResponse> => {
+	return await api()
+		.get<ISearchTypeInfoResponse>(API_ENDPOINTS.SEARCH_TYPE_INFO)
+		.then((res) => res.data);
+};
+
+// Get AI Search Stats
+const getAISearchStats = async (): Promise<IAISearchStatsResponse> => {
+	return await api()
+		.get<IAISearchStatsResponse>(API_ENDPOINTS.AI_SEARCH_STATS)
+		.then((res) => res.data);
+};
+
 export const SearchService = {
 	searchEntities,
 	findSimilarEntities,
@@ -79,4 +190,12 @@ export const SearchService = {
 	generateEmbedding,
 	createEntityEmbedding,
 	updateEntityEmbeddingBatch,
+	aiSearch,
+	quickAISearch,
+	getSearchSuggestions,
+	calculatePersonRankScores,
+	getAISubgraph,
+	explainAISearch,
+	getSearchTypeInfo,
+	getAISearchStats,
 };
