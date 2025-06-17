@@ -198,7 +198,7 @@ const FileSelectorDialog = ({
 
 				{/* Uploaded files list */}
 				{selectedFiles.length > 0 && (
-					<div className="border rounded-md">
+					<div className="border overflow-y-auto rounded-md">
 						<div className="p-3 border-b bg-gray-50 flex justify-between items-center">
 							<h3 className="text-sm font-medium">
 								File đã chọn ({selectedFiles.length}/{maxFiles})

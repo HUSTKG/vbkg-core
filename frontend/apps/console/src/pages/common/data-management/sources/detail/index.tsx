@@ -1479,6 +1479,7 @@ const DataSourceDetailPage: React.FC = () => {
 			{/* Dialog upload file */}
 			<FileSelectorDialog
 				open={showUploadDialog}
+				maxFiles={100}
 				onOpenChange={setShowUploadDialog}
 				onSelect={(file) => handleUploadFile(file)}
 			/>

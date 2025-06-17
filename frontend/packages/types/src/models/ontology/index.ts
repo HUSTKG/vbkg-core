@@ -218,3 +218,62 @@ export interface PropertyConstraints {
 	items?: OntologyProperty; // For array types
 	properties?: Record<string, OntologyProperty>; // For object types
 }
+
+// types/index.ts - Thêm vào types hiện có
+
+export type ApplyEntitySuggestionRequest = {
+  mapping_id: string;
+  suggestion_index: number;
+  user_id?: string;
+};
+
+export type ApplyEntitySuggestionResponse = {
+  success: boolean;
+  message: string;
+  updated_mapping: EntityMapping;
+};
+
+export type ApplyRelationshipSuggestionRequest = {
+  mapping_id: string;
+  suggestion_index: number;
+  user_id?: string;
+};
+
+export type ApplyRelationshipSuggestionResponse = {
+  success: boolean;
+  message: string;
+  updated_mapping: RelationshipMapping;
+};
+
+// Auto mapping request types
+export type AutoMapHighConfidenceRequest = {
+  confidence_threshold?: number;
+  entity_types?: string[];
+  relationship_types?: string[];
+  domain?: string;
+};
+
+export type AutoMapHighConfidenceResponse = {
+  success: boolean;
+  message: string;
+  entity_mappings_applied: number;
+  relationship_mappings_applied: number;
+  failed_mappings: number;
+  errors?: string[];
+};
+
+// Bulk apply suggestions types
+export type BulkApplySuggestionsRequest = {
+  confidence_threshold?: number;
+  mapping_ids?: string[];
+  entity_types?: string[];
+  relationship_types?: string[];
+};
+
+export type BulkApplySuggestionsResponse = {
+  success: boolean;
+  message: string;
+  suggestions_applied: number;
+  failed_applications: number;
+  errors?: string[];
+};

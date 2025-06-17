@@ -1,0 +1,13 @@
+TIÊU ĐỀ: Ban hành Tiêu chuẩn cơ sở đặc tả kỹ thuật QR Code hiển thị từ phía khách hàng tại Việt Nam
+
+URL: https://sbv.gov.vn/vi/w/sbv618843
+
+------------------ NỘI DUNG ------------------
+
+Ngày 15/11/2024, Thống đốc Ngân hàng Nhà nước Việt Nam (NHNN) đã ký ban hành Quyết định số 2525/QĐ-NHNN ban hành Tiêu chuẩn cơ sở (TCCS) Đặc tả kỹ thuật QR Code hiển thị từ phía khách hàng tại Việt Nam, ký hiệu TCCS 04:2024/NHNN.
+TCCS
+Đặc tả kỹ thuật QR Code hiển thị từ phía khách hàng tại Việt Nam
+quy định các yêu cầu về đặc tả kỹ thuật, định dạng cấu trúc và thành phần dữ liệu QR Code hiển thị từ phía khách hàng, được sử dụng trong lĩnh vực thanh toán thực hiện trên lãnh thổ Việt Nam để khuyến khích các tổ chức cung ứng dịch vụ thanh toán, tổ chức cung ứng dịch vụ trung gian thanh toán triển khai theo một tiêu chuẩn chung, thống nhất, tạo thuận lợi cho việc kết nối liên thông thanh toán bằng mã QR. Đồng thời, việc ban hành TCCS sẽ hỗ trợ, thúc đẩy sự nhất quán, đồng bộ trong yêu cầu kỹ thuật của QR Code hiển thị từ phía khách hàng tại Việt Nam và thế giới.
+Quyết định này có
+hiệu lực kể từ ngày ký./.
+HP
