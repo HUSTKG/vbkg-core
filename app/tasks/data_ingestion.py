@@ -1,21 +1,18 @@
-import asyncio
-import logging
 import os
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from app.core.supabase import get_supabase
+from app.tasks.executors import StepLogger
 from app.utils.file_processor import process_file
-
-logger = logging.getLogger(__name__)
 
 
 class DataIngestionTask:
     """Task for handling various data ingestion operations"""
 
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, logger: StepLogger):
+        self.logger = logger
 
     async def ingest_file(
         self,
@@ -53,13 +50,16 @@ class DataIngestionTask:
             )
 
             if not response.data:
-                self.logger.error(f"Data source {datasource_id} not found")
+                await self.logger.error(f"Data source {datasource_id} not found")
                 return None
 
             # Update file status to pending
-            file_record = await supabase.table("file_uploads").update(
-                {"upload_status": "pending"}
-            ).eq("id", file_id).execute()
+            file_record = (
+                await supabase.table("file_uploads")
+                .update({"upload_status": "pending"})
+                .eq("id", file_id)
+                .execute()
+            )
 
             # Process file content
             text_content = await process_file(UUID(file_id))
@@ -77,14 +77,14 @@ class DataIngestionTask:
                 "metadata": {
                     "processed_at": datetime.now(timezone.utc).isoformat(),
                     "content_length": len(text_content) if text_content else 0,
-                }
+                },
             }
 
-            self.logger.info(f"Successfully ingested file {file_name}")
+            await self.logger.info(f"Successfully ingested file {file_name}")
             return file_record
 
         except Exception as e:
-            self.logger.error(f"Error ingesting file {file_name}: {str(e)}")
+            await self.logger.error(f"Error ingesting file {file_name}: {str(e)}")
             return None
 
     async def ingest_multiple_files(
@@ -109,14 +109,16 @@ class DataIngestionTask:
 
             upload_service = UploadService()
 
-            self.logger.info(f"Starting file ingestion for data source {datasource_id}")
+            await self.logger.info(
+                f"Starting file ingestion for data source {datasource_id}"
+            )
 
             # Get file uploads for the data source
             file_uploads = await upload_service.get_file_uploads(
                 data_source_id=datasource_id
             )
 
-            self.logger.info(
+            await self.logger.info(
                 f"Retrieved {len(file_uploads.data)} file uploads for data source {datasource_id}"
             )
 
@@ -136,21 +138,29 @@ class DataIngestionTask:
 
                     if file_record:
                         processed_files.append(file_record)
-                        self.logger.info(f"Successfully processed file {file['file_name']}")
+                        await self.logger.info(
+                            f"Successfully processed file {file['file_name']}"
+                        )
                     else:
-                        failed_files.append({
-                            "file_id": file["id"],
-                            "file_name": file["file_name"],
-                            "error": "Processing failed"
-                        })
+                        failed_files.append(
+                            {
+                                "file_id": file["id"],
+                                "file_name": file["file_name"],
+                                "error": "Processing failed",
+                            }
+                        )
 
                 except Exception as e:
-                    self.logger.error(f"Error processing file {file['file_name']}: {e}")
-                    failed_files.append({
-                        "file_id": file["id"],
-                        "file_name": file["file_name"],
-                        "error": str(e)
-                    })
+                    await self.logger.error(
+                        f"Error processing file {file['file_name']}: {e}"
+                    )
+                    failed_files.append(
+                        {
+                            "file_id": file["id"],
+                            "file_name": file["file_name"],
+                            "error": str(e),
+                        }
+                    )
 
             return {
                 "processed_files": processed_files,
@@ -161,18 +171,18 @@ class DataIngestionTask:
                 "metadata": {
                     "ingestion_time": datetime.now(timezone.utc).isoformat(),
                     "datasource_id": str(datasource_id),
-                }
+                },
             }
 
         except Exception as e:
-            self.logger.error(f"Error in multiple file ingestion: {str(e)}")
+            await self.logger.error(f"Error in multiple file ingestion: {str(e)}")
             return {
                 "processed_files": [],
                 "failed_files": [],
                 "total_files": 0,
                 "successful_files": 0,
                 "failed_count": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     async def ingest_api_data(
@@ -202,6 +212,7 @@ class DataIngestionTask:
         """
         try:
             import httpx
+
             from app.services.file_upload import UploadService
 
             supabase = await get_supabase()
@@ -216,7 +227,7 @@ class DataIngestionTask:
             )
 
             if not response.data:
-                self.logger.error(f"Data source {datasource_id} not found")
+                await self.logger.error(f"Data source {datasource_id} not found")
                 return None
 
             # Make API request
@@ -226,7 +237,9 @@ class DataIngestionTask:
 
                 # Add authentication if provided
                 if auth_params:
-                    self._add_authentication(client, request_headers, request_params, auth_params)
+                    self._add_authentication(
+                        client, request_headers, request_params, auth_params
+                    )
 
                 # Make the request
                 response = await client.get(
@@ -235,7 +248,7 @@ class DataIngestionTask:
 
                 # Check response
                 if not response.is_success:
-                    self.logger.error(
+                    await self.logger.error(
                         f"API request failed: {response.status_code} - {response.text}"
                     )
                     return None
@@ -267,7 +280,9 @@ class DataIngestionTask:
                 )
 
         except Exception as e:
-            self.logger.error(f"Error ingesting API data from {api_url}: {str(e)}")
+            await self.logger.error(
+                f"Error ingesting API data from {api_url}: {str(e)}"
+            )
             return None
 
     async def ingest_database_data(
@@ -295,6 +310,7 @@ class DataIngestionTask:
             import pandas as pd
             import sqlalchemy
             from sqlalchemy import create_engine, text
+
             from app.services.file_upload import UploadService
 
             upload_service = UploadService()
@@ -309,7 +325,7 @@ class DataIngestionTask:
             )
 
             if not response.data:
-                self.logger.error(f"Data source {datasource_id} not found")
+                await self.logger.error(f"Data source {datasource_id} not found")
                 return None
 
             # Create engine and execute query
@@ -360,15 +376,17 @@ class DataIngestionTask:
                 )
 
         except Exception as e:
-            self.logger.error(f"Error ingesting database data with query {query}: {str(e)}")
+            await self.logger.error(
+                f"Error ingesting database data with query {query}: {str(e)}"
+            )
             return None
 
     def _add_authentication(
-        self, 
-        client: 'httpx.AsyncClient', 
-        headers: Dict[str, str], 
-        params: Dict[str, Any], 
-        auth_params: Dict[str, Any]
+        self,
+        client: "httpx.AsyncClient",
+        headers: Dict[str, str],
+        params: Dict[str, Any],
+        auth_params: Dict[str, Any],
     ) -> None:
         """Add authentication to the HTTP client"""
         auth_type = auth_params.get("type", "").lower()
@@ -389,7 +407,9 @@ class DataIngestionTask:
             else:
                 params[key_name] = key_value
 
-    def _save_dataframe(self, df: 'pd.DataFrame', file_path: str, output_format: str) -> str:
+    def _save_dataframe(
+        self, df: "pd.DataFrame", file_path: str, output_format: str
+    ) -> str:
         """Save dataframe in the specified format"""
         if output_format == "csv":
             df.to_csv(file_path, index=False)

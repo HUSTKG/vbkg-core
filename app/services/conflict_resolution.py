@@ -13,6 +13,7 @@ from app.schemas.conflict_resolution import (ConflictResolution,
                                              ConflictStatus, ConflictType,
                                              ResolutionMethod)
 from app.services.knowledge_graph import KnowledgeGraphService
+from app.services.rule_based_resolution import RuleBasedResolutionService
 
 logger = logging.getLogger(__name__)
 
@@ -23,66 +24,64 @@ class ConflictResolutionService:
     def __init__(self):
         self.kg_service = KnowledgeGraphService()
         self.llm_client = get_llm_client()
+        self.rule_based_service = RuleBasedResolutionService()
+
 
     async def resolve_conflict_automatically(
-        self, conflict_id: str, use_ai: bool = True, confidence_threshold: float = 0.95
-    ) -> Dict[str, Any]:
-        """Attempt to resolve conflict automatically using AI"""
-
-        supabase = await get_supabase()
-
-        # Get conflict details
-        conflict_response = (
-            await supabase.table("conflicts")
-            .select("*")
-            .eq("id", str(conflict_id))
-            .maybe_single()
-            .execute()
-        )
-
-        if not conflict_response or not conflict_response.data:
-            raise ValueError(f"Conflict {conflict_id} not found")
-
-        conflict = conflict_response.data
-
-        # Skip one that has auto_resolution_suggestions
-        if conflict.get("auto_resolution_suggestions"):
-            logger.info(f"Conflict {conflict_id} already has AI suggestions")
-
-        # Generate AI resolution suggestions
-        if use_ai and not conflict.get("auto_resolution_suggestions"):
-            ai_suggestions = await self._generate_ai_resolution(conflict)
-
-            await supabase.table("conflicts").update(
-                {"auto_resolution_suggestions": ai_suggestions}
-            ).eq("id", conflict_id).execute()
-
-            # Filter by confidence threshold
-            viable_suggestions = [
-                s
-                for s in ai_suggestions
-                if s.get("confidence", 0) >= confidence_threshold
-            ]
-
-            if viable_suggestions:
-                # Apply the highest confidence suggestion
-                best_suggestion = max(
-                    viable_suggestions, key=lambda x: x.get("confidence", 0)
-                )
-                return await self._apply_resolution(conflict_id, best_suggestion)
-
-        # Fallback to rule-based resolution
-        rule_based_resolution = await self._apply_rule_based_resolution(conflict)
-        if rule_based_resolution:
-            return await self._apply_resolution(conflict_id, rule_based_resolution)
-
-        # Mark for manual review
-        await self._assign_for_manual_review(conflict_id)
-        return {
-            "success": False,
-            "message": "Conflict requires manual review",
-            "assigned_for_review": True,
-        }
+            self, conflict_id: str, use_ai: bool = False, confidence_threshold: float = 0.7
+        ) -> Dict[str, Any]:
+            """Updated to prefer rule-based resolution over AI"""
+            
+            supabase = await get_supabase()
+            
+            # Get conflict details
+            conflict_response = (
+                await supabase.table("conflicts")
+                .select("*")
+                .eq("id", str(conflict_id))
+                .maybe_single()
+                .execute()
+            )
+            
+            if not conflict_response or not conflict_response.data:
+                raise ValueError(f"Conflict {conflict_id} not found")
+            
+            conflict = conflict_response.data
+            
+            # Try rule-based resolution first
+            rule_based_resolution = await self._apply_rule_based_resolution(conflict)
+            if rule_based_resolution and rule_based_resolution.get("confidence", 0) >= confidence_threshold:
+                logger.info(f"Rule-based resolution succeeded for conflict {conflict_id}")
+                return await self._apply_resolution(conflict_id, rule_based_resolution)
+            
+            # Fall back to AI if use_ai is True and rule-based didn't work
+            if use_ai and not conflict.get("auto_resolution_suggestions"):
+                logger.info(f"Falling back to AI resolution for conflict {conflict_id}")
+                ai_suggestions = await self._generate_ai_resolution(conflict)
+                
+                await supabase.table("conflicts").update(
+                    {"auto_resolution_suggestions": ai_suggestions}
+                ).eq("id", conflict_id).execute()
+                
+                # Filter by confidence threshold
+                viable_suggestions = [
+                    s for s in ai_suggestions
+                    if s.get("confidence", 0) >= confidence_threshold
+                ]
+                
+                if viable_suggestions:
+                    best_suggestion = max(viable_suggestions, key=lambda x: x.get("confidence", 0))
+                    return await self._apply_resolution(conflict_id, best_suggestion)
+            
+            # Mark for manual review
+            await self._assign_for_manual_review(conflict_id)
+            return {
+                "success": False,
+                "message": "Conflict requires manual review",
+                "assigned_for_review": True,
+                "rule_based_attempted": rule_based_resolution is not None,
+                "ai_attempted": use_ai
+            }
 
     async def _generate_ai_resolution(self, conflict: Dict) -> List[Dict[str, Any]]:
         """Generate AI-powered resolution suggestions"""
@@ -612,38 +611,10 @@ class ConflictResolutionService:
 
         return context
 
-    async def _apply_rule_based_resolution(
-        self, conflict: Dict
-    ) -> Optional[Dict[str, Any]]:
-        """Apply rule-based resolution for common conflict patterns"""
-
-        conflict_type = conflict["conflict_type"]
-        confidence = conflict["confidence_score"]
-
-        # High confidence duplicate entities
-        if conflict_type == "duplicate_entity" and confidence >= 0.95:
-            return {
-                "resolution_method": ResolutionMethod.MERGE_ENTITIES,
-                "reasoning": f"High confidence duplicate detected ({confidence:.2f})",
-                "confidence": 0.9,
-                "actions": {
-                    "merge_strategy": "prefer_more_complete",
-                    "preserve_all_relationships": True,
-                },
-            }
-
-        # Source reliability rules
-        if conflict.get("context_data", {}).get("source_reliability"):
-            reliability = conflict["context_data"]["source_reliability"]
-            if reliability["source"] > reliability["target"] + 0.2:
-                return {
-                    "resolution_method": ResolutionMethod.KEEP_SOURCE,
-                    "reasoning": f"Source has higher reliability score",
-                    "confidence": 0.8,
-                    "actions": {"delete_target": True},
-                }
-
-        return None
+    async def _apply_rule_based_resolution(self, conflict: Dict) -> Optional[Dict[str, Any]]:
+            """Enhanced rule-based resolution using the new service"""
+            
+            return await self.rule_based_service.apply_rule_based_resolution(conflict)
 
     async def resolve_conflict_manually(
         self, conflict_id: str, resolution: ConflictResolution, expert_id: str
@@ -675,19 +646,31 @@ class ConflictResolutionService:
 
         try:
             if method == ResolutionMethod.MERGE_ENTITIES:
-                result = await self._merge_entities_via_kg_service(conflict_id, actions, resolved_by)
+                result = await self._merge_entities_via_kg_service(
+                    conflict_id, actions, resolved_by
+                )
             elif method == ResolutionMethod.KEEP_SOURCE:
-                result = await self._keep_source_entity_via_kg_service(conflict_id, actions, resolved_by)
+                result = await self._keep_source_entity_via_kg_service(
+                    conflict_id, actions, resolved_by
+                )
             elif method == ResolutionMethod.KEEP_TARGET:
-                result = await self._keep_target_entity_via_kg_service(conflict_id, actions, resolved_by)
+                result = await self._keep_target_entity_via_kg_service(
+                    conflict_id, actions, resolved_by
+                )
             elif method == ResolutionMethod.KEEP_BOTH:
                 result = await self._keep_both_entities(conflict_id, actions)
             elif method == ResolutionMethod.CREATE_NEW:
-                result = await self._create_new_entity_via_kg_service(conflict_id, actions, resolved_by)
+                result = await self._create_new_entity_via_kg_service(
+                    conflict_id, actions, resolved_by
+                )
             elif method == ResolutionMethod.DELETE_CONFLICTING:
-                result = await self._delete_conflicting_via_kg_service(conflict_id, actions, resolved_by)
+                result = await self._delete_conflicting_via_kg_service(
+                    conflict_id, actions, resolved_by
+                )
             elif method == ResolutionMethod.MANUAL_EDIT:
-                result = await self._manual_edit_via_kg_service(conflict_id, actions, resolved_by)
+                result = await self._manual_edit_via_kg_service(
+                    conflict_id, actions, resolved_by
+                )
             else:
                 raise ValueError(f"Unknown resolution method: {method}")
 
@@ -723,7 +706,7 @@ class ConflictResolutionService:
         """Merge two conflicting entities using KG service"""
 
         supabase = await get_supabase()
-        
+
         # Get conflict details
         conflict_response = (
             await supabase.table("conflicts")
@@ -741,8 +724,12 @@ class ConflictResolutionService:
         target_entity_id = conflict["target_entity_id"]
 
         # Get entity details
-        source_entity = await self.kg_service.get_entity(source_entity_id, include_relationships=True)
-        target_entity = await self.kg_service.get_entity(target_entity_id, include_relationships=True)
+        source_entity = await self.kg_service.get_entity(
+            source_entity_id, include_relationships=True
+        )
+        target_entity = await self.kg_service.get_entity(
+            target_entity_id, include_relationships=True
+        )
 
         if not source_entity or not target_entity:
             raise ValueError("One or both entities not found")
@@ -763,8 +750,7 @@ class ConflictResolutionService:
 
         # Merge properties
         merged_properties = self._merge_entity_properties(
-            primary_entity.get("properties", {}), 
-            secondary_entity.get("properties", {})
+            primary_entity.get("properties", {}), secondary_entity.get("properties", {})
         )
 
         # Update primary entity through KG service
@@ -778,6 +764,14 @@ class ConflictResolutionService:
         }
 
         updated_entity = await self.kg_service._update_entity(update_data, resolved_by)
+
+                # Soft delete in PostgreSQL
+        await supabase.table("kg_entities").update(
+            {
+                "merged_into": primary_entity["id"],
+            }
+        ).eq("id", secondary_entity["id"]).execute()
+
 
         # Delete secondary entity through KG service (this will handle Neo4j too)
         await self.kg_service._delete_entity(secondary_entity["id"], resolved_by)
@@ -804,10 +798,10 @@ class ConflictResolutionService:
             .maybe_single()
             .execute()
         )
-        
+
         if not conflict_response or not conflict_response.data:
             raise ValueError(f"Conflict {conflict_id} not found")
-        
+
         conflict = conflict_response.data
         source_entity_id = conflict["source_entity_id"]
         target_entity_id = conflict["target_entity_id"]
@@ -836,10 +830,10 @@ class ConflictResolutionService:
             .maybe_single()
             .execute()
         )
-        
+
         if not conflict_response or not conflict_response.data:
             raise ValueError(f"Conflict {conflict_id} not found")
-        
+
         conflict = conflict_response.data
         source_entity_id = conflict["source_entity_id"]
         target_entity_id = conflict["target_entity_id"]
@@ -868,10 +862,10 @@ class ConflictResolutionService:
             .maybe_single()
             .execute()
         )
-        
+
         if not conflict_response or not conflict_response.data:
             raise ValueError(f"Conflict {conflict_id} not found")
-        
+
         conflict = conflict_response.data
 
         # Add disambiguation info to both entities if provided
@@ -882,7 +876,9 @@ class ConflictResolutionService:
             if disambiguation.get("source_context"):
                 source_update = {
                     "id": conflict["source_entity_id"],
-                    "properties": {"disambiguation_context": disambiguation["source_context"]}
+                    "properties": {
+                        "disambiguation_context": disambiguation["source_context"]
+                    },
                 }
                 await self.kg_service._update_entity(source_update, "system")
 
@@ -890,7 +886,9 @@ class ConflictResolutionService:
             if disambiguation.get("target_context"):
                 target_update = {
                     "id": conflict["target_entity_id"],
-                    "properties": {"disambiguation_context": disambiguation["target_context"]}
+                    "properties": {
+                        "disambiguation_context": disambiguation["target_context"]
+                    },
                 }
                 await self.kg_service._update_entity(target_update, "system")
 
@@ -916,10 +914,10 @@ class ConflictResolutionService:
             .maybe_single()
             .execute()
         )
-        
+
         if not conflict_response or not conflict_response.data:
             raise ValueError(f"Conflict {conflict_id} not found")
-        
+
         conflict = conflict_response.data
 
         # Get source and target entities
@@ -985,7 +983,7 @@ class ConflictResolutionService:
                     .maybe_single()
                     .execute()
                 )
-                
+
                 if rel_response and rel_response.data:
                     # Soft delete relationship in PostgreSQL
                     await supabase.table("kg_relationships").update(
@@ -993,7 +991,9 @@ class ConflictResolutionService:
                             "is_active": False,
                             "deleted_at": datetime.now().isoformat(),
                             "deleted_by": resolved_by,
-                            "deleted_reason": actions.get("delete_reason", "Conflict resolution")
+                            "deleted_reason": actions.get(
+                                "delete_reason", "Conflict resolution"
+                            ),
                         }
                     ).eq("id", rel_id).execute()
 
@@ -1001,12 +1001,13 @@ class ConflictResolutionService:
                     relationship = rel_response.data
                     if relationship.get("neo4j_id"):
                         from app.utils.neo4j import get_neo4j_driver
+
                         neo4j_driver = get_neo4j_driver()
-                        
+
                         async with neo4j_driver.session() as session:
                             await session.run(
                                 "MATCH ()-[r]->() WHERE id(r) = $neo4j_id DELETE r",
-                                {"neo4j_id": int(relationship["neo4j_id"])}
+                                {"neo4j_id": int(relationship["neo4j_id"])},
                             )
 
                     deleted_items.append({"type": "relationship", "id": rel_id})
@@ -1020,7 +1021,7 @@ class ConflictResolutionService:
         return {
             "deleted_items": deleted_items,
             "delete_reason": actions.get("delete_reason", "Conflict resolution"),
-            "action": "deleted_conflicting"
+            "action": "deleted_conflicting",
         }
 
     async def _manual_edit_via_kg_service(
@@ -1034,7 +1035,7 @@ class ConflictResolutionService:
         if "attribute_updates" in actions:
             for update in actions["attribute_updates"]:
                 entity_id = update["entity_id"]
-                
+
                 # Get current entity
                 entity = await self.kg_service.get_entity(entity_id)
                 if not entity:
@@ -1044,27 +1045,28 @@ class ConflictResolutionService:
                 current_props = entity.get("properties", {})
                 current_props[update["attribute_name"]] = update["new_value"]
 
-                update_data = {
-                    "id": entity_id,
-                    "properties": current_props
-                }
+                update_data = {"id": entity_id, "properties": current_props}
 
                 # Update using KG service
-                updated_entity = await self.kg_service._update_entity(update_data, resolved_by)
-                updated_items.append({
-                    "type": "entity", 
-                    "id": entity_id, 
-                    "update": update,
-                    "updated_entity": updated_entity
-                })
+                updated_entity = await self.kg_service._update_entity(
+                    update_data, resolved_by
+                )
+                updated_items.append(
+                    {
+                        "type": "entity",
+                        "id": entity_id,
+                        "update": update,
+                        "updated_entity": updated_entity,
+                    }
+                )
 
         # Update relationships if specified
         if "relationship_updates" in actions:
             supabase = await get_supabase()
-            
+
             for update in actions["relationship_updates"]:
                 rel_id = update["relationship_id"]
-                
+
                 # Update relationship properties
                 current_rel = (
                     await supabase.table("kg_relationships")
@@ -1073,17 +1075,17 @@ class ConflictResolutionService:
                     .maybe_single()
                     .execute()
                 )
-                
+
                 if current_rel and current_rel.data:
                     current_props = current_rel.data.get("properties", {})
                     current_props.update(update.get("new_properties", {}))
-                    
+
                     # Update in PostgreSQL
                     await supabase.table("kg_relationships").update(
                         {
                             "properties": current_props,
                             "updated_at": datetime.now().isoformat(),
-                            "updated_by": resolved_by
+                            "updated_by": resolved_by,
                         }
                     ).eq("id", rel_id).execute()
 
@@ -1091,8 +1093,9 @@ class ConflictResolutionService:
                     relationship = current_rel.data
                     if relationship.get("neo4j_id"):
                         from app.utils.neo4j import get_neo4j_driver
+
                         neo4j_driver = get_neo4j_driver()
-                        
+
                         async with neo4j_driver.session() as session:
                             await session.run(
                                 """
@@ -1101,29 +1104,28 @@ class ConflictResolutionService:
                                 """,
                                 {
                                     "neo4j_id": int(relationship["neo4j_id"]),
-                                    "properties": json.dumps(current_props)
-                                }
+                                    "properties": json.dumps(current_props),
+                                },
                             )
 
-                    updated_items.append({
-                        "type": "relationship",
-                        "id": rel_id,
-                        "update": update
-                    })
+                    updated_items.append(
+                        {"type": "relationship", "id": rel_id, "update": update}
+                    )
 
         # Create new relationships if specified
         if "create_relationships" in actions:
             for rel_data in actions["create_relationships"]:
-                new_relationship = await self.kg_service._create_relationship(rel_data, resolved_by)
-                updated_items.append({
-                    "type": "new_relationship",
-                    "relationship": new_relationship
-                })
+                new_relationship = await self.kg_service._create_relationship(
+                    rel_data, resolved_by
+                )
+                updated_items.append(
+                    {"type": "new_relationship", "relationship": new_relationship}
+                )
 
         return {
             "updated_items": updated_items,
             "action": "manual_edit",
-            "total_updates": len(updated_items)
+            "total_updates": len(updated_items),
         }
 
     async def get_conflicts_for_review(

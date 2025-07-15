@@ -29,6 +29,10 @@ import {
 	IDeleteRelationshipMappingResponse,
 	IVerifyRelationshipMappingRequest,
 	IVerifyRelationshipMappingResponse,
+	IApplyRelationshipMappingSuggestionResponse,
+	IApplyRelationshipMappingSuggestionRequest,
+	IApplyEntityMappingSuggestionResponse,
+	IApplyEntityMappingSuggestionRequest,
 } from "@vbkg/types";
 import { OntologyService } from "../../services/ontology";
 
@@ -125,8 +129,8 @@ export const useImportOntology = (
 		...options,
 		onSuccess: (...params) => {
 			// Invalidate queries related to FIBO classes and properties
-			queryClient.invalidateQueries({queryKey: ["ontologyClasses", {}]});
-			queryClient.invalidateQueries({queryKey: ["ontologyProperties", {}]});
+			queryClient.invalidateQueries({ queryKey: ["ontologyClasses", {}] });
+			queryClient.invalidateQueries({ queryKey: ["ontologyProperties", {}] });
 			options?.onSuccess?.(...params);
 		},
 	});
@@ -174,11 +178,7 @@ export const useVerifyEntityMapping = (
 
 // Relationship Mapping Mutation Hooks (updated)
 export const useCreateRelationshipMapping = (
-	options?: UseMutationOptions<
-		any,
-		Error,
-		ICreateRelationshipMappingRequest
-	>,
+	options?: UseMutationOptions<any, Error, ICreateRelationshipMappingRequest>,
 ) => {
 	return useMutation({
 		mutationFn: OntologyService.createRelationshipMapping,
@@ -238,3 +238,41 @@ export const useVerifyRelationshipMapping = (
 //     ...options,
 //   });
 // };
+
+export const useApplyEntityMappingSuggestion = (
+	options?: UseMutationOptions<
+		IApplyEntityMappingSuggestionResponse,
+		Error,
+		IApplyEntityMappingSuggestionRequest
+	>,
+) => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: OntologyService.applyEntityMappingSuggestion,
+		...options,
+		onSuccess: (...params) => {
+			// Invalidate entity mappings queries to refresh the data
+			queryClient.invalidateQueries({ queryKey: ["entityMappings"] });
+			options?.onSuccess?.(...params);
+		},
+	});
+};
+
+export const useApplyRelationshipMappingSuggestion = (
+	options?: UseMutationOptions<
+		IApplyRelationshipMappingSuggestionResponse,
+		Error,
+		IApplyRelationshipMappingSuggestionRequest
+	>,
+) => {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: OntologyService.applyRelationshipMappingSuggestion,
+		...options,
+		onSuccess: (...params) => {
+			// Invalidate relationship mappings queries to refresh the data
+			queryClient.invalidateQueries({ queryKey: ["relationshipMappings"] });
+			options?.onSuccess?.(...params);
+		},
+	});
+};

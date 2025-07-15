@@ -18,12 +18,33 @@ export default function KnowledgeGraphOverview() {
 		refetch: refetchStats,
 	} = useKGStats();
 
-	const stats = _stats?.data || {};
+	const stats = _stats?.data;
 
-	const entityTypes = stats?.entity_types?.sort((a, b) => b.count - a.count);
-	const relationshipTypes = stats?.relationship_types?.sort(
-		(a, b) => b.count - a.count,
-	);
+	const entityTypes = [
+		...(stats?.entity_types?.sort((a, b) => b.count - a.count).slice(0, 9) ||
+			[]),
+		{
+			entity_type: "Khác",
+			count:
+				Number(stats?.total_entities) -
+				Number(stats?.entity_types.reduce((acc, type) => acc + type.count, 0)),
+		},
+	];
+
+	const relationshipTypes = [
+		...(stats?.relationship_types
+			?.sort((a, b) => b.count - a.count)
+			.slice(0, 9) || []),
+		{
+			relationship_type: "Khác",
+			count:
+				Number(stats?.total_relationships) -
+				Number(
+					stats?.relationship_types.reduce((acc, type) => acc + type.count, 0),
+				),
+		},
+	];
+
 	return (
 		<div className="p-6 space-y-6">
 			{/* Header */}

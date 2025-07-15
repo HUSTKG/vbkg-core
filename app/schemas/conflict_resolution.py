@@ -208,8 +208,8 @@ class ConflictResolution(BaseModel):
     resolution_data: Dict[str, Any]
     reasoning: str
     confidence_score: Optional[Union[str, float]] = None
-    resolved_by: str  # user_id or "ai_system"
-    resolution_timestamp: str 
+    resolved_by: Optional[str] = None  # user_id or "ai_system"
+    resolution_timestamp: str
     validation_required: bool = False
 
 
@@ -274,6 +274,7 @@ class Conflict(ConflictBase):
     status: ConflictStatus
     detected_at: datetime
     detected_by: str
+    context: Optional[Dict[str, Any]] = None
     assigned_to: Optional[str] = None  # expert user_id
     resolution: Optional[ConflictResolution] = None
     review_notes: Optional[str] = None
@@ -317,7 +318,6 @@ class QualityDimension(str, Enum):
     VALIDITY = "validity"
     UNIQUENESS = "uniqueness"
     TIMELINESS = "timeliness"
-    RELEVANCE = "relevance"
 
 
 class QualityAssessment(BaseModel):

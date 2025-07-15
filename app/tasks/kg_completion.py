@@ -1,10 +1,8 @@
-import logging
 from typing import Any, Dict, List, Optional
 
 from app.core.supabase import get_supabase
 from app.services.knowledge_graph import KnowledgeGraphService
-
-logger = logging.getLogger(__name__)
+from app.tasks.executors import StepLogger
 
 
 class KnowledgeGraphCompletionTask:
@@ -13,8 +11,9 @@ class KnowledgeGraphCompletionTask:
     Now delegates to KnowledgeGraphService for database operations
     """
 
-    def __init__(self):
+    def __init__(self, logger: StepLogger):
         self.kg_service = KnowledgeGraphService()
+        self.logger = logger
 
     async def complete_knowledge_graph(
         self,
@@ -50,7 +49,7 @@ class KnowledgeGraphCompletionTask:
             if completion_types is None:
                 completion_types = ["missing_entities", "missing_relationships"]
 
-            logger.info(
+            await self.logger.info(
                 f"Starting knowledge graph completion with {len(entities)} entities and {len(relationships)} relationships"
             )
 
@@ -73,8 +72,10 @@ class KnowledgeGraphCompletionTask:
             # Auto-apply suggestions if requested
             applied_suggestions = None
             if auto_apply_suggestions:
-                applied_suggestions = await self.kg_service.apply_high_confidence_suggestions(
-                    saved_suggestions, confidence_threshold, user_id
+                applied_suggestions = (
+                    await self.kg_service.apply_high_confidence_suggestions(
+                        saved_suggestions, confidence_threshold, user_id
+                    )
                 )
 
             result = {
@@ -83,20 +84,36 @@ class KnowledgeGraphCompletionTask:
                 "completion_stats": {
                     "input_entities": len(entities),
                     "input_relationships": len(relationships),
-                    "suggested_entities": len([s for s in saved_suggestions if s["suggestion_type"] == "entity"]),
-                    "suggested_relationships": len([s for s in saved_suggestions if s["suggestion_type"] == "relationship"]),
-                    "auto_applied": len(applied_suggestions.get("applied_suggestions", [])) if applied_suggestions else 0,
+                    "suggested_entities": len(
+                        [
+                            s
+                            for s in saved_suggestions
+                            if s["suggestion_type"] == "entity"
+                        ]
+                    ),
+                    "suggested_relationships": len(
+                        [
+                            s
+                            for s in saved_suggestions
+                            if s["suggestion_type"] == "relationship"
+                        ]
+                    ),
+                    "auto_applied": (
+                        len(applied_suggestions.get("applied_suggestions", []))
+                        if applied_suggestions
+                        else 0
+                    ),
                 },
                 "success": True,
             }
 
-            logger.info(
+            await self.logger.info(
                 f"Knowledge graph completion completed with {result['completion_stats']['suggested_entities']} entity and {result['completion_stats']['suggested_relationships']} relationship suggestions"
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error in knowledge graph completion: {e}")
+            await self.logger.error(f"Error in knowledge graph completion: {e}")
             return {
                 "suggestions": [],
                 "error": str(e),
@@ -658,7 +675,7 @@ class KnowledgeGraphCompletionTask:
             return applied_count
 
         except Exception as e:
-            logger.error(f"Error applying suggestions: {e}")
+            await self.logger.error(f"Error applying suggestions: {e}")
             return {"entities": 0, "relationships": 0, "errors": [str(e)]}
 
     async def _find_entity_by_text(self, entity_text: str) -> Optional[str]:
@@ -694,5 +711,5 @@ class KnowledgeGraphCompletionTask:
             return None
 
         except Exception as e:
-            logger.warning(f"Error finding entity by text {entity_text}: {e}")
+            await self.logger.warning(f"Error finding entity by text {entity_text}: {e}")
             return None

@@ -1,5 +1,4 @@
 import asyncio
-import json
 import traceback
 from datetime import datetime, timezone
 from functools import wraps
@@ -14,6 +13,7 @@ from app.schemas.pipeline import PipelineRunStatus, PipelineRunUpdate
 from app.schemas.pipeline_step import PipelineRunStatus as StepStatus
 from app.schemas.pipeline_step import (PipelineStepRunCreate,
                                        PipelineStepRunUpdate, PipelineStepType)
+from app.services.pipeline_step import PipelineStepService
 from app.tasks.executors import GraphState, get_step_executor
 
 # Create Celery app
@@ -33,8 +33,8 @@ celery_app.conf.update(
     worker_concurrency=4,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
-    task_time_limit=3600,  # 1 hour
-    task_soft_time_limit=3000,  # 50 minutes
+    task_time_limit=7200,  # 1 hour
+    task_soft_time_limit=6400,  # 50 minutes
     # Task routing
     task_routes={
         # Main pipeline tasks
@@ -52,9 +52,8 @@ celery_app.conf.update(
     task_default_routing_key="celery",
 )
 
-# Initialize logger
-logger = get_task_logger(__name__)
 
+logger = get_task_logger(__name__)
 # Create an event loop for asyncio
 loop = None
 
@@ -327,53 +326,21 @@ async def run_pipeline_step_task(
     level_index: int = 0,
 ):
     """
-    Execute a single pipeline step with dependency resolution from database.
-    All input data is retrieved from database, not passed via Celery.
-
-    Args:
-        pipeline_id: ID of the pipeline
-        step_id: ID of the step to run
-        pipeline_run_id: ID of the pipeline run
-        level_index: Dependency level index
+    Execute a single pipeline step with detailed logging
     """
-    from app.services.pipeline import PipelineService
     from app.services.pipeline_step import PipelineStepService
 
     step_service = PipelineStepService()
-    pipeline_service = PipelineService()
     step_run_id = None
 
     try:
-        logger.info(
-            f"Starting step {step_id} in pipeline {pipeline_id} (level {level_index})"
-        )
+        # === LOG: Step starting ===
+        logger.info(f"Starting step {step_id} in pipeline {pipeline_id}")
 
         # Get step details
         step = await step_service.get_pipeline_step(step_id, pipeline_id)
         step_type = step["step_type"]
-        config = (
-            json.loads(step["config"])
-            if isinstance(step["config"], str)
-            else step["config"]
-        )
-
-        logger.info(
-            f"Step type: {step_type}, config keys: {list(config.keys()) if config else []}"
-        )
-
-        # Wait for dependencies to complete (if any)
-        await wait_for_dependencies(step, pipeline_run_id)
-
-        logger.info(f"Dependencies ready for step {step_id}")
-
-        # Resolve input data from dependencies (retrieved from database)
-        resolved_input_data = await resolve_step_input_data_from_db(
-            step, pipeline_run_id
-        )
-
-        logger.info(
-            f"Resolved input data for step {step_id}: {len(resolved_input_data)} keys"
-        )
+        config = step["config"] if isinstance(step["config"], str) else step["config"]
 
         # Create step run record
         step_run_data = PipelineStepRunCreate(
@@ -381,7 +348,7 @@ async def run_pipeline_step_task(
             step_id=step_id,
             status=StepStatus.RUNNING,
             run_order=step["run_order"],
-            input_data=resolved_input_data,
+            input_data={},  # Will be updated later
             celery_task_id=self.request.id,
             start_time=datetime.now(timezone.utc),
         )
@@ -389,36 +356,159 @@ async def run_pipeline_step_task(
         step_run = await step_service.create_step_run(step_run_data)
         step_run_id = step_run["id"]
 
-        logger.info(f"Step run created with ID {step_run_id}")
+        # === LOG: Step run created ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": f"Step run created for {step['name']} ({step_type})",
+                "details": {
+                    "step_id": step_id,
+                    "step_name": step["name"],
+                    "step_type": step_type,
+                    "run_order": step["run_order"],
+                    "config_keys": list(config.keys()) if config else [],
+                },
+            },
+        )
 
-        # Execute step based on type
+        # === LOG: Waiting for dependencies ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": "Checking step dependencies",
+                "details": {
+                    "depends_on": step.get("depends_on", []),
+                    "inputs": step.get("inputs", []),
+                },
+            },
+        )
+
+        # Wait for dependencies
+        await wait_for_dependencies(step, pipeline_run_id)
+
+        # === LOG: Dependencies ready ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": "All dependencies are ready, proceeding with execution",
+            },
+        )
+
+        # Resolve input data
+        resolved_input_data = await resolve_step_input_data_from_db(
+            step, pipeline_run_id
+        )
+
+        # === LOG: Input data resolved ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": f"Input data resolved",
+                "details": {
+                    "input_data_keys": list(resolved_input_data.keys()),
+                    "graph_state_available": "graph_state" in resolved_input_data,
+                    "entities_count": len(
+                        resolved_input_data.get("graph_state", {}).get("entities", [])
+                    ),
+                    "relationships_count": len(
+                        resolved_input_data.get("graph_state", {}).get(
+                            "relationships", []
+                        )
+                    ),
+                },
+            },
+        )
+
+        # Update step run with input data
+        await step_service.update_pipeline_step_run(
+            step_run_id=step_run_id,
+            step_run_update=PipelineStepRunUpdate(input_data=resolved_input_data),
+        )
+
+        # === LOG: Starting step execution ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": f"Starting execution of {step_type}",
+                "details": {"execution_config": config},
+            },
+        )
+
+        # Execute step
         step_metadata = {
             "step_id": step_id,
             "step_name": step["name"],
+            "step_run_id": step_run_id,
             "step_type": step_type,
+            "pipeline_run_id": pipeline_run_id,
+            "pipeline_id": pipeline_id,
         }
+
         output_data = await execute_step_by_type(
-            step_type, config, resolved_input_data, step_metadata
+            step_type, config, resolved_input_data, step_metadata, step_service
         )
 
-        logger.info(
-            f"Step {step_id} executed successfully, output size: {len(str(output_data))} characters"
+        start_time = datetime.fromisoformat(
+            step_run["start_time"].replace("Z", "+00:00")
+        )
+
+        # === LOG: Step execution completed ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": f"Step execution completed successfully",
+                "details": {
+                    "output_data_size": len(str(output_data)),
+                    "output_keys": (
+                        list(output_data.keys())
+                        if isinstance(output_data, dict)
+                        else []
+                    ),
+                    "execution_duration": (
+                        datetime.now(timezone.utc) - start_time
+                    ).total_seconds(),
+                },
+            },
         )
 
         # Update step run as completed
         await step_service.update_pipeline_step_run(
             step_run_id=step_run_id,
-            pipeline_run_id=pipeline_run_id,
             step_run_update=PipelineStepRunUpdate(
                 status=StepStatus.COMPLETED,
-                end_time=datetime.now(timezone.utc),
+                end_time=datetime.now(timezone.utc).isoformat(),
                 output_data=output_data,
             ),
         )
 
-        logger.info(f"Step {step_id} completed successfully")
+        # === LOG: Final success ===
+        await step_service.create_step_execution_log(
+            step_run_id=step_run_id,
+            pipeline_run_id=pipeline_run_id,
+            log_data={
+                "log_level": "INFO",
+                "message": f"Step {step['name']} completed successfully",
+                "details": {
+                    "final_status": "COMPLETED",
+                    "total_execution_time": (
+                        datetime.now(timezone.utc) - start_time
+                    ).total_seconds(),
+                },
+            },
+        )
 
-        # Return minimal data - just status info, no large output data
         return {
             "status": StepStatus.COMPLETED,
             "step_run_id": step_run_id,
@@ -426,39 +516,37 @@ async def run_pipeline_step_task(
             "level_index": level_index,
             "pipeline_id": pipeline_id,
             "pipeline_run_id": pipeline_run_id,
-            "output_size": (
-                len(str(output_data)) if output_data else 0
-            ),  # Just for logging
+            "output_size": len(str(output_data)) if output_data else 0,
         }
 
     except Exception as e:
         error_message = f"Step execution failed: {str(e)}"
         logger.error(f"Step {step_id} failed: {error_message}")
-        logger.error(traceback.format_exc())
 
-        # Update step run as failed
+        # === LOG: Error occurred ===
         if step_run_id:
-            await step_service.update_pipeline_step_run(
+            await step_service.create_step_execution_log(
                 step_run_id=step_run_id,
                 pipeline_run_id=pipeline_run_id,
+                log_data={
+                    "log_level": "ERROR",
+                    "message": error_message,
+                    "details": {
+                        "error_type": type(e).__name__,
+                        "traceback": traceback.format_exc(),
+                    },
+                },
+            )
+
+            # Update step run as failed
+            await step_service.update_pipeline_step_run(
+                step_run_id=step_run_id,
                 step_run_update=PipelineStepRunUpdate(
                     status=StepStatus.FAILED,
-                    end_time=datetime.now(timezone.utc),
+                    end_time=datetime.now(timezone.utc).isoformat(),
                     error_message=error_message,
                 ),
             )
-
-        # Update pipeline as failed
-        pipeline_service = PipelineService()
-        await pipeline_service.update_pipeline_run(
-            pipeline_run_id,
-            pipeline_id=pipeline_id,
-            run_update=PipelineRunUpdate(
-                status=PipelineRunStatus.FAILED,
-                end_time=datetime.now(timezone.utc).isoformat(),
-                error_message=error_message,
-            ),
-        )
 
         raise Exception(f"Step {step_id} execution failed: {error_message}")
 
@@ -670,6 +758,8 @@ async def build_graph_state_from_dependencies(
                     graph_state.cleaned_data = dep_graph_state.cleaned_data
                 if dep_graph_state.validation_results:
                     graph_state.validation_results = dep_graph_state.validation_results
+                if dep_graph_state.conflicts:
+                    graph_state.conflicts = dep_graph_state.conflicts
 
                 # Merge metadata và step history
                 graph_state.metadata.update(dep_graph_state.metadata)
@@ -983,19 +1073,54 @@ async def execute_step_by_type(
     config: Dict[str, Any],
     input_data: Optional[Dict[str, Any]] = None,
     step_metadata: Optional[Dict[str, Any]] = None,
+    step_service: Optional[PipelineStepService] = None,
 ) -> Dict[str, Any]:
     """
-    Enhanced step execution với GraphState support
+    Enhanced step execution với detailed logging
     """
+    pipeline_run_id = step_metadata.get("pipeline_run_id") if step_metadata else None
+    step_run_id = step_metadata.get("step_run_id") if step_metadata else None
+
     try:
-        # Check if enhanced execution is supported
-        logger.info(f"Using enhanced execution cho step type {step_type}")
+        # === LOG: Pre-execution ===
+        if step_service and step_run_id:
+            await step_service.create_step_execution_log(
+                step_run_id=step_run_id,
+                pipeline_run_id=pipeline_run_id,
+                log_data={
+                    "log_level": "DEBUG",
+                    "message": f"Initializing {step_type} executor",
+                    "details": {
+                        "step_type": step_type,
+                        "config_provided": config is not None,
+                        "input_data_provided": input_data is not None,
+                    },
+                },
+            )
 
         # Extract GraphState
-        graph_state_dict = input_data.get("graph_state", {})
+        graph_state_dict = input_data.get("graph_state", {}) if input_data else {}
         graph_state = GraphState.from_dict(graph_state_dict)
 
-        # Get enhanced executor
+        # === LOG: Graph state loaded ===
+        if step_service and step_run_id:
+            await step_service.create_step_execution_log(
+                step_run_id=step_run_id,
+                pipeline_run_id=pipeline_run_id,
+                log_data={
+                    "log_level": "DEBUG",
+                    "message": "Graph state loaded",
+                    "details": {
+                        "entities_count": len(graph_state.entities),
+                        "relationships_count": len(graph_state.relationships),
+                        "text_data_count": len(graph_state.raw_text_data),
+                        "chunks_count": len(graph_state.processed_chunks),
+                        "completed_steps": graph_state.step_history,
+                    },
+                },
+            )
+
+        # Get executor
         executor = get_step_executor(
             step_type=PipelineStepType(step_type),
             step_config=config,
@@ -1003,17 +1128,65 @@ async def execute_step_by_type(
             graph_state=graph_state,
         )
 
-        # Execute với GraphState context
-        output_data = await executor.execute(input_data)
+        # === LOG: Executor created ===
+        if step_service and step_run_id:
+            await step_service.create_step_execution_log(
+                step_run_id=step_run_id,
+                pipeline_run_id=pipeline_run_id,
+                log_data={
+                    "log_level": "DEBUG",
+                    "message": f"Executor created for {step_type}",
+                    "details": {
+                        "executor_class": executor.__class__.__name__,
+                        "prerequisites_met": executor._check_prerequisites(),
+                    },
+                },
+            )
 
-        logger.info(f"Enhanced execution completed cho step {step_type}")
+        # Execute với GraphState context
+        output_data = await executor.execute(input_data, step_service)
+
+        # === LOG: Execution successful ===
+        if step_service and step_run_id:
+            final_graph_state = output_data.get("graph_state", {})
+            await step_service.create_step_execution_log(
+                step_run_id=step_run_id,
+                pipeline_run_id=pipeline_run_id,
+                log_data={
+                    "log_level": "INFO",
+                    "message": f"Executor completed successfully",
+                    "details": {
+                        "output_contains_graph_state": "graph_state" in output_data,
+                        "final_entities_count": len(
+                            final_graph_state.get("entities", [])
+                        ),
+                        "final_relationships_count": len(
+                            final_graph_state.get("relationships", [])
+                        ),
+                        "output_data_keys": list(output_data.keys()),
+                    },
+                },
+            )
+
         return output_data
 
     except Exception as e:
-        logger.error(f"Enhanced step execution failed, falling back to legacy: {e}")
-        raise Exception(
-            f"Failed to execute step {step_type} with enhanced execution: {str(e)}"
-        )
+        # === LOG: Execution failed ===
+        if step_service and step_run_id:
+            await step_service.create_step_execution_log(
+                step_run_id=step_run_id,
+                pipeline_run_id=pipeline_run_id,
+                log_data={
+                    "log_level": "ERROR",
+                    "message": f"Executor failed: {str(e)}",
+                    "details": {
+                        "error_type": type(e).__name__,
+                        "traceback": traceback.format_exc(),
+                    },
+                },
+            )
+
+        raise Exception(f"Failed to execute step {step_type}: {str(e)}")
 
 
 @celery_app.task(name="cancel_pipeline_run")
@@ -1048,11 +1221,10 @@ async def cancel_pipeline_run_task(run_id: str, pipeline_id: str = None):
 
                     # Update step run status
                     await step_service.update_pipeline_step_run(
-                        step_run["id"],
                         run_id,
                         PipelineStepRunUpdate(
                             status=StepStatus.CANCELLED,
-                            end_time=datetime.now(timezone.utc),
+                            end_time=datetime.now(timezone.utc).isoformat(),
                             error_message="Cancelled by user",
                         ),
                     )

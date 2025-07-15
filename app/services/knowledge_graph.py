@@ -1,14 +1,13 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from postgrest.types import CountMethod
 
-from app.core import supabase
 from app.core.supabase import get_supabase
 from app.nlp.embeddings import get_text_embedding
-from app.schemas.conflict_resolution import KGEdit, KGEditAction, KGEditResult
+from app.schemas.conflict_resolution import KGEdit, KGEditAction
 from app.services.user import UserService
 from app.utils.neo4j import get_neo4j_driver
 from app.utils.similarity import calculate_similarity
@@ -462,10 +461,10 @@ class KnowledgeGraphService:
             MATCH (center:Entity {entity_id: $entity_id})
             RETURN center
             """
-            
+
             center_result = await session.run(center_query, {"entity_id": entity_id})
             center_record = await center_result.single()
-            
+
             if not center_record:
                 return {
                     "nodes": [],
@@ -475,9 +474,9 @@ class KnowledgeGraphService:
                     "node_count": 0,
                     "edge_count": 0,
                 }
-            
+
             center_node = center_record["center"]
-            
+
             # Step 2: Lấy connected nodes trong radius
             if relationship_types:
                 # Filter theo relationship types
@@ -501,16 +500,16 @@ class KnowledgeGraphService:
                 LIMIT {max_nodes - 1}
                 RETURN collect(connected) as connected_nodes
                 """
-            
+
             nodes_result = await session.run(nodes_query, {"entity_id": entity_id})
             nodes_record = await nodes_result.single()
-            
+
             connected_nodes = nodes_record["connected_nodes"] if nodes_record else []
             all_nodes = [center_node] + connected_nodes
-            
+
             # Step 3: Lấy relationships giữa các nodes với thông tin đầy đủ về source và target
             entity_ids = [node["entity_id"] for node in all_nodes]
-            
+
             if relationship_types:
                 rel_types_str = "', '".join(relationship_types)
                 rels_query = f"""
@@ -527,9 +526,9 @@ class KnowledgeGraphService:
                   AND target.entity_id IN $entity_ids
                 RETURN DISTINCT r, source, target
                 """
-            
+
             rels_result = await session.run(rels_query, {"entity_ids": entity_ids})
-            
+
             # Format nodes
             nodes = []
             for node in all_nodes:
@@ -552,7 +551,7 @@ class KnowledgeGraphService:
                 rel = record["r"]
                 source_node = record["source"]
                 target_node = record["target"]
-                
+
                 edges.append(
                     {
                         "id": rel.get("relationship_id", f"rel_{rel.id}"),
@@ -986,13 +985,15 @@ class KnowledgeGraphService:
             await supabase.table("kg_entities")
             .select("*")
             .eq("id", entity_id)
-            .single()
+            .maybe_single()
             .execute()
         )
+
+        if not entity_response:
+            raise ValueError(f"Entity {entity_id} not found")
+
         entity = entity_response.data
 
-        if not entity:
-            raise ValueError(f"Entity {entity_id} not found")
 
         # Soft delete in PostgreSQL
         await supabase.table("kg_entities").update(
@@ -1224,6 +1225,7 @@ class KnowledgeGraphService:
         }
 
         await supabase.table("kg_edit_logs").insert(log_entry).execute()
+
     async def get_completion_suggestions(
         self,
         suggestion_type: Optional[str] = None,
@@ -1240,7 +1242,7 @@ class KnowledgeGraphService:
             supabase = await get_supabase()
             # Build query
             query = supabase.from_("kg_completion_suggestions").select("*")
-            
+
             # Apply filters
             if suggestion_type:
                 query = query.eq("suggestion_type", suggestion_type)
@@ -1254,33 +1256,44 @@ class KnowledgeGraphService:
                 query = query.lte("confidence", max_confidence)
             if source:
                 query = query.eq("source", source)
-            
+
             # Get total count
             count_result = await query.execute()
             total = len(count_result.data) if count_result.data else 0
-            
+
             # Apply pagination and ordering
-            result = await query.order("created_at", desc=True).range(skip, skip + limit - 1).execute()
-            
+            result = (
+                await query.order("created_at", desc=True)
+                .range(skip, skip + limit - 1)
+                .execute()
+            )
+
             suggestions = result.data if result.data else []
 
             return {
                 "suggestions": suggestions,
                 "total": total,
                 "limit": limit,
-                "skip": skip
+                "skip": skip,
             }
 
         except Exception as e:
             logger.error(f"Error getting completion suggestions: {e}")
             raise
 
-    async def get_completion_suggestion(self, suggestion_id: str) -> Optional[Dict[str, Any]]:
+    async def get_completion_suggestion(
+        self, suggestion_id: str
+    ) -> Optional[Dict[str, Any]]:
         """Get a specific completion suggestion by ID"""
         try:
             supabase = await get_supabase()
-            result = await supabase.from_("kg_completion_suggestions").select("*").eq("id", suggestion_id).execute()
-            
+            result = (
+                await supabase.from_("kg_completion_suggestions")
+                .select("*")
+                .eq("id", suggestion_id)
+                .execute()
+            )
+
             if result.data:
                 return result.data[0]
             return None
@@ -1293,7 +1306,12 @@ class KnowledgeGraphService:
         """Delete a completion suggestion"""
         try:
             supabase = await get_supabase()
-            result = await supabase.from_("kg_completion_suggestions").delete().eq("id", suggestion_id).execute()
+            result = (
+                await supabase.from_("kg_completion_suggestions")
+                .delete()
+                .eq("id", suggestion_id)
+                .execute()
+            )
             return bool(result.data)
 
         except Exception as e:
@@ -1305,7 +1323,7 @@ class KnowledgeGraphService:
         try:
             supabase = await get_supabase()
             result = await supabase.rpc("get_kg_completion_stats").execute()
-            
+
             if result.data:
                 return result.data[0]
             else:
@@ -1319,7 +1337,7 @@ class KnowledgeGraphService:
                     "entity_suggestions": 0,
                     "relationship_suggestions": 0,
                     "avg_confidence": 0.0,
-                    "high_priority_pending": 0
+                    "high_priority_pending": 0,
                 }
 
         except Exception as e:
@@ -1327,16 +1345,15 @@ class KnowledgeGraphService:
             raise
 
     async def save_completion_suggestions(
-        self,
-        suggestions: Dict[str, Any],
-        user_id: Optional[str]
+        self, suggestions: Dict[str, Any], user_id: Optional[str]
     ) -> List[Dict[str, Any]]:
         """Save completion suggestions to database"""
         try:
             from app.core.supabase import get_supabase
+
             supabase = await get_supabase()
             saved_suggestions = []
-            
+
             # Save entity suggestions
             for entity_suggestion in suggestions.get("missing_entities", []):
                 suggestion_data = {
@@ -1349,19 +1366,27 @@ class KnowledgeGraphService:
                     "source": entity_suggestion["source"],
                     "context_data": entity_suggestion.get("context_data"),
                     "created_by": user_id,
-                    "status": "pending"
+                    "status": "pending",
                 }
-                
-                result = await supabase.from_("kg_completion_suggestions").insert(suggestion_data).execute()
+
+                result = (
+                    await supabase.from_("kg_completion_suggestions")
+                    .insert(suggestion_data)
+                    .execute()
+                )
                 if result.data:
                     saved_suggestions.append(result.data[0])
-            
+
             # Save relationship suggestions
             for rel_suggestion in suggestions.get("missing_relationships", []):
                 # Find entity IDs by text
-                source_entity_id = await self._find_entity_by_text(rel_suggestion["source_entity"])
-                target_entity_id = await self._find_entity_by_text(rel_suggestion["target_entity"])
-                
+                source_entity_id = await self._find_entity_by_text(
+                    rel_suggestion["source_entity"]
+                )
+                target_entity_id = await self._find_entity_by_text(
+                    rel_suggestion["target_entity"]
+                )
+
                 if source_entity_id and target_entity_id:
                     suggestion_data = {
                         "suggestion_type": "relationship",
@@ -1375,69 +1400,95 @@ class KnowledgeGraphService:
                         "priority": rel_suggestion.get("priority", "medium"),
                         "source": "pattern_based",
                         "context_data": {
-                            "source_entity_type": rel_suggestion.get("source_entity_type"),
-                            "target_entity_type": rel_suggestion.get("target_entity_type")
+                            "source_entity_type": rel_suggestion.get(
+                                "source_entity_type"
+                            ),
+                            "target_entity_type": rel_suggestion.get(
+                                "target_entity_type"
+                            ),
                         },
                         "created_by": user_id,
-                        "status": "pending"
+                        "status": "pending",
                     }
-                    
-                    result = await supabase.from_("kg_completion_suggestions").insert(suggestion_data).execute()
+
+                    result = (
+                        await supabase.from_("kg_completion_suggestions")
+                        .insert(suggestion_data)
+                        .execute()
+                    )
                     if result.data:
                         saved_suggestions.append(result.data[0])
-            
+
             return saved_suggestions
-            
+
         except Exception as e:
             logger.error(f"Error saving suggestions to database: {e}")
             raise
 
     async def apply_completion_suggestions(
-        self,
-        suggestion_ids: List[str],
-        user_id: Optional[str] = None
+        self, suggestion_ids: List[str], user_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Apply specific suggestions by ID"""
         try:
             from app.core.supabase import get_supabase
+
             supabase = await get_supabase()
             # Get suggestions
-            result = await supabase.from_("kg_completion_suggestions").select("*").in_("id", suggestion_ids).execute()
+            result = (
+                await supabase.from_("kg_completion_suggestions")
+                .select("*")
+                .in_("id", suggestion_ids)
+                .execute()
+            )
             suggestions = result.data if result.data else []
-            
+
             applied_entities = []
             applied_relationships = []
             errors = []
             processed_suggestions = []
-            
+
             for suggestion in suggestions:
                 try:
                     if suggestion["suggestion_type"] == "entity":
-                        entity_id = await self._create_entity_from_suggestion(suggestion, user_id)
+                        entity_id = await self._create_entity_from_suggestion(
+                            suggestion, user_id
+                        )
                         if entity_id:
                             applied_entities.append(entity_id)
-                            await self._mark_suggestion_applied(suggestion["id"], entity_id=entity_id, user_id=user_id)
+                            await self._mark_suggestion_applied(
+                                suggestion["id"], entity_id=entity_id, user_id=user_id
+                            )
                             processed_suggestions.append(suggestion["id"])
-                    
+
                     elif suggestion["suggestion_type"] == "relationship":
-                        relationship_id = await self._create_relationship_from_suggestion(suggestion, user_id)
+                        relationship_id = (
+                            await self._create_relationship_from_suggestion(
+                                suggestion, user_id
+                            )
+                        )
                         if relationship_id:
                             applied_relationships.append(relationship_id)
-                            await self._mark_suggestion_applied(suggestion["id"], relationship_id=relationship_id, user_id=user_id)
+                            await self._mark_suggestion_applied(
+                                suggestion["id"],
+                                relationship_id=relationship_id,
+                                user_id=user_id,
+                            )
                             processed_suggestions.append(suggestion["id"])
-                
+
                 except Exception as e:
-                    errors.append(f"Error applying suggestion {suggestion['id']}: {str(e)}")
-            
+                    errors.append(
+                        f"Error applying suggestion {suggestion['id']}: {str(e)}"
+                    )
+
             return {
                 "processed_suggestions": processed_suggestions,
                 "applied_entities": applied_entities,
                 "applied_relationships": applied_relationships,
                 "errors": errors,
                 "success": len(errors) == 0,
-                "message": f"Applied {len(processed_suggestions)} suggestions successfully"
+                "message": f"Applied {len(processed_suggestions)} suggestions successfully",
             }
-            
+
         except Exception as e:
             logger.error(f"Error applying suggestions: {e}")
             raise
@@ -1448,31 +1499,37 @@ class KnowledgeGraphService:
         action: str,
         user_id: Optional[str] = None,
         review_notes: Optional[str] = None,
-        rejection_reason: Optional[str] = None
+        rejection_reason: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Update suggestion status (accept, reject)"""
         try:
             from app.core.supabase import get_supabase
+
             supabase = await get_supabase()
             update_data = {
                 "status": action,
                 "reviewed_by": user_id,
-                "reviewed_at": datetime.utcnow().isoformat()
+                "reviewed_at": datetime.utcnow().isoformat(),
             }
-            
+
             if review_notes:
                 update_data["review_notes"] = review_notes
             if rejection_reason and action == "rejected":
                 update_data["rejection_reason"] = rejection_reason
-            
-            result = await supabase.from_("kg_completion_suggestions").update(update_data).in_("id", suggestion_ids).execute()
-            
+
+            result = (
+                await supabase.from_("kg_completion_suggestions")
+                .update(update_data)
+                .in_("id", suggestion_ids)
+                .execute()
+            )
+
             return {
                 "processed_suggestions": suggestion_ids,
                 "success": True,
-                "message": f"Updated {len(suggestion_ids)} suggestions to {action}"
+                "message": f"Updated {len(suggestion_ids)} suggestions to {action}",
             }
-            
+
         except Exception as e:
             logger.error(f"Error updating suggestion status: {e}")
             raise
@@ -1481,25 +1538,26 @@ class KnowledgeGraphService:
         self,
         suggestions: List[Dict[str, Any]],
         confidence_threshold: float,
-        user_id: Optional[str]
+        user_id: Optional[str],
     ) -> Dict[str, Any]:
         """Apply suggestions that meet confidence threshold"""
         try:
             high_confidence_ids = [
-                suggestion["id"] for suggestion in suggestions 
+                suggestion["id"]
+                for suggestion in suggestions
                 if suggestion.get("confidence", 0) >= confidence_threshold
             ]
-            
+
             if not high_confidence_ids:
                 return {
                     "applied_suggestions": [],
                     "applied_entities": [],
                     "applied_relationships": [],
-                    "errors": []
+                    "errors": [],
                 }
-            
+
             return await self.apply_completion_suggestions(high_confidence_ids, user_id)
-            
+
         except Exception as e:
             logger.error(f"Error applying high confidence suggestions: {e}")
             raise
@@ -1508,10 +1566,13 @@ class KnowledgeGraphService:
     # PRIVATE HELPER METHODS
     # =============================================
 
-    async def _create_entity_from_suggestion(self, suggestion: Dict[str, Any], user_id: Optional[str]) -> Optional[str]:
+    async def _create_entity_from_suggestion(
+        self, suggestion: Dict[str, Any], user_id: Optional[str]
+    ) -> Optional[str]:
         """Create entity from suggestion"""
         try:
             from app.core.supabase import get_supabase
+
             supabase = await get_supabase()
             entity_data = {
                 "entity_text": suggestion["suggested_entity_text"],
@@ -1538,10 +1599,13 @@ class KnowledgeGraphService:
             logger.error(f"Error creating entity from suggestion: {e}")
             return None
 
-    async def _create_relationship_from_suggestion(self, suggestion: Dict[str, Any], user_id: Optional[str]) -> Optional[str]:
+    async def _create_relationship_from_suggestion(
+        self, suggestion: Dict[str, Any], user_id: Optional[str]
+    ) -> Optional[str]:
         """Create relationship from suggestion"""
 
         from app.core.supabase import get_supabase
+
         supabase = await get_supabase()
         try:
             relationship_data = {
@@ -1561,7 +1625,11 @@ class KnowledgeGraphService:
                 },
             }
 
-            result = await supabase.from_("kg_relationships").insert(relationship_data).execute()
+            result = (
+                await supabase.from_("kg_relationships")
+                .insert(relationship_data)
+                .execute()
+            )
             if result.data:
                 return result.data[0]["id"]
             return None
@@ -1571,29 +1639,32 @@ class KnowledgeGraphService:
             return None
 
     async def _mark_suggestion_applied(
-        self, 
-        suggestion_id: str, 
-        entity_id: Optional[str] = None, 
-        relationship_id: Optional[str] = None, 
-        user_id: Optional[str] = None
+        self,
+        suggestion_id: str,
+        entity_id: Optional[str] = None,
+        relationship_id: Optional[str] = None,
+        user_id: Optional[str] = None,
     ):
         """Mark suggestion as applied"""
         try:
             from app.core.supabase import get_supabase
+
             supabase = await get_supabase()
             update_data = {
                 "status": "applied",
                 "applied_at": datetime.utcnow().isoformat(),
-                "applied_by": user_id
+                "applied_by": user_id,
             }
-            
+
             if entity_id:
                 update_data["applied_entity_id"] = entity_id
             if relationship_id:
                 update_data["applied_relationship_id"] = relationship_id
-            
-            await supabase.from_("kg_completion_suggestions").update(update_data).eq("id", suggestion_id).execute()
-            
+
+            await supabase.from_("kg_completion_suggestions").update(update_data).eq(
+                "id", suggestion_id
+            ).execute()
+
         except Exception as e:
             logger.error(f"Error marking suggestion as applied: {e}")
 
@@ -1601,6 +1672,7 @@ class KnowledgeGraphService:
         """Find entity ID by text with Vietnamese-aware matching"""
         try:
             from app.core.supabase import get_supabase
+
             supabase = await get_supabase()
             # First try exact match
             response = (
@@ -1652,5 +1724,4 @@ class KnowledgeGraphService:
         text = text.replace("nh", "ngân hàng")
 
         return text
-
 

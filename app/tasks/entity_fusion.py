@@ -1,11 +1,8 @@
-import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
-from uuid import UUID
+from typing import Any, Dict, List, Optional
 
 from app.core.supabase import get_supabase
-
-logger = logging.getLogger(__name__)
+from app.tasks.executors import StepLogger
 
 
 class EntityFusionTask:
@@ -13,8 +10,8 @@ class EntityFusionTask:
     Task for entity fusion with Vietnamese support and conflict resolution
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, logger: Optional[StepLogger] = None):
+        self.logger = logger
 
     async def fuse_entities(
         self,
@@ -28,7 +25,7 @@ class EntityFusionTask:
     ) -> Dict[str, Any]:
         """
         Fuse entities based on clusters and strategy
-        
+
         Args:
             resolved_entities: List of resolved entities
             entity_clusters: List of entity clusters
@@ -37,7 +34,7 @@ class EntityFusionTask:
             conflict_resolution: How to resolve conflicts (highest_confidence, most_recent, merge_all)
             auto_save: Whether to save results automatically
             user_id: User performing fusion
-            
+
         Returns:
             Dictionary containing fusion results
         """
@@ -69,11 +66,13 @@ class EntityFusionTask:
                 "success": True,
             }
 
-            logger.info(f"Entity fusion completed: {len(resolved_entities)} -> {len(fused_entities)} entities")
+            await self.logger.info(
+                f"Entity fusion completed: {len(resolved_entities)} -> {len(fused_entities)} entities"
+            )
             return result
 
         except Exception as e:
-            logger.error(f"Error in entity fusion: {e}")
+            await self.logger.error(f"Error in entity fusion: {e}")
             return {
                 "fused_entities": [],
                 "error": str(e),
@@ -143,8 +142,10 @@ class EntityFusionTask:
             base_entity = max(cluster_entities, key=lambda e: e.get("confidence", 0))
         elif fusion_strategy == "most_recent":
             base_entity = max(
-                cluster_entities, 
-                key=lambda e: self._parse_timestamp(e.get("timestamp", e.get("created_at", "1970-01-01")))
+                cluster_entities,
+                key=lambda e: self._parse_timestamp(
+                    e.get("timestamp", e.get("created_at", "1970-01-01"))
+                ),
             )
         else:
             base_entity = cluster_entities[0]
@@ -207,15 +208,17 @@ class EntityFusionTask:
         fused_entity["confidence"] = sum(confidences) / len(confidences)
 
         # Merge Vietnamese-specific fields
-        fused_entity = self._merge_vietnamese_fields(fused_entity, cluster_entities, conflict_resolution)
+        fused_entity = self._merge_vietnamese_fields(
+            fused_entity, cluster_entities, conflict_resolution
+        )
 
         return fused_entity
 
     def _resolve_property_conflict(
-        self, 
-        property_key: str, 
-        value_list: List[Dict[str, Any]], 
-        conflict_resolution: str
+        self,
+        property_key: str,
+        value_list: List[Dict[str, Any]],
+        conflict_resolution: str,
     ) -> Any:
         """Resolve conflicts in property values with Vietnamese-aware handling"""
         if conflict_resolution == "highest_confidence":
@@ -223,14 +226,16 @@ class EntityFusionTask:
             return best_value["value"]
         elif conflict_resolution == "most_recent":
             best_value = max(
-                value_list, 
-                key=lambda v: self._parse_timestamp(v.get("timestamp", "1970-01-01"))
+                value_list,
+                key=lambda v: self._parse_timestamp(v.get("timestamp", "1970-01-01")),
             )
             return best_value["value"]
         elif conflict_resolution == "merge_all":
             # Special handling for Vietnamese text fields
             if property_key in ["entity_text", "text", "name"]:
-                return self._merge_vietnamese_text_values([v["value"] for v in value_list])
+                return self._merge_vietnamese_text_values(
+                    [v["value"] for v in value_list]
+                )
             else:
                 return [v["value"] for v in value_list]
         else:
@@ -241,36 +246,36 @@ class EntityFusionTask:
         """Merge Vietnamese text values intelligently"""
         if not text_values:
             return ""
-        
+
         # Remove duplicates while preserving order
         unique_values = []
         seen = set()
-        
+
         for value in text_values:
             normalized = self._normalize_vietnamese_text(str(value))
             if normalized not in seen:
                 seen.add(normalized)
                 unique_values.append(str(value))
-        
+
         if len(unique_values) == 1:
             return unique_values[0]
-        
+
         # If multiple unique values, choose the longest (most descriptive)
         return max(unique_values, key=len)
 
     def _normalize_vietnamese_text(self, text: str) -> str:
         """Normalize Vietnamese text for comparison"""
         import re
-        
+
         text = text.lower().strip()
-        
+
         # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
-        
+        text = re.sub(r"\s+", " ", text)
+
         # Remove common Vietnamese prefixes/suffixes
-        text = re.sub(r'^(ông|bà|anh|chị|em|cô|chú|bác)\s+', '', text)
-        text = re.sub(r'\s+(ạ|à|ơi|nhé)$', '', text)
-        
+        text = re.sub(r"^(ông|bà|anh|chị|em|cô|chú|bác)\s+", "", text)
+        text = re.sub(r"\s+(ạ|à|ơi|nhé)$", "", text)
+
         return text
 
     def _merge_vietnamese_fields(
@@ -286,7 +291,7 @@ class EntityFusionTask:
             text = entity.get("text", entity.get("entity_text", ""))
             if text:
                 entity_texts.append(text)
-        
+
         if entity_texts:
             if conflict_resolution == "merge_all":
                 fused_entity["text"] = self._merge_vietnamese_text_values(entity_texts)
@@ -295,7 +300,15 @@ class EntityFusionTask:
                 fused_entity["text"] = entity_texts[0]
 
         # Merge Vietnamese entity types
-        entity_types = list(set([e.get("entity_type", "") for e in cluster_entities if e.get("entity_type")]))
+        entity_types = list(
+            set(
+                [
+                    e.get("entity_type", "")
+                    for e in cluster_entities
+                    if e.get("entity_type")
+                ]
+            )
+        )
         if len(entity_types) == 1:
             fused_entity["entity_type"] = entity_types[0]
         elif len(entity_types) > 1:
@@ -315,7 +328,7 @@ class EntityFusionTask:
         try:
             if isinstance(timestamp_str, str):
                 # Handle various timestamp formats
-                timestamp_str = timestamp_str.replace('Z', '+00:00')
+                timestamp_str = timestamp_str.replace("Z", "+00:00")
                 return datetime.fromisoformat(timestamp_str)
             return datetime.fromisoformat("1970-01-01T00:00:00+00:00")
         except:
@@ -336,7 +349,9 @@ class EntityFusionTask:
                 if entity.get("is_fused", False):
                     # Create new fused entity record
                     entity_data = {
-                        "entity_text": entity.get("text", entity.get("entity_text", "")),
+                        "entity_text": entity.get(
+                            "text", entity.get("entity_text", "")
+                        ),
                         "entity_type": entity.get("entity_type", ""),
                         "ontology_class_id": entity.get("ontology_class_id"),
                         "confidence": entity.get("confidence", 0),
@@ -347,14 +362,20 @@ class EntityFusionTask:
                         "properties": {
                             **entity.get("properties", {}),
                             "is_fused": True,
-                            "source_entities_count": entity.get("source_entities_count", 1),
+                            "source_entities_count": entity.get(
+                                "source_entities_count", 1
+                            ),
                             "cluster_id": entity.get("cluster_id"),
                             "fusion_timestamp": entity.get("fusion_timestamp"),
                             "fusion_provenance": entity.get("fusion_provenance", []),
                         },
                     }
 
-                    response = await supabase.from_("kg_entities").insert(entity_data).execute()
+                    response = (
+                        await supabase.from_("kg_entities")
+                        .insert(entity_data)
+                        .execute()
+                    )
                     if response.data:
                         entity_ids.append(response.data[0]["id"])
 
@@ -364,7 +385,7 @@ class EntityFusionTask:
             }
 
         except Exception as e:
-            logger.error(f"Error saving fusion results: {e}")
+            await self.logger.error(f"Error saving fusion results: {e}")
             return {"error": str(e)}
 
     async def detect_fusion_conflicts(
@@ -389,39 +410,53 @@ class EntityFusionTask:
             for key, value in entity.get("properties", {}).items():
                 if key not in all_properties:
                     all_properties[key] = []
-                all_properties[key].append({
-                    "value": value,
-                    "entity_id": entity.get("id"),
-                    "confidence": entity.get("confidence", 0),
-                })
+                all_properties[key].append(
+                    {
+                        "value": value,
+                        "entity_id": entity.get("id"),
+                        "confidence": entity.get("confidence", 0),
+                    }
+                )
 
         for prop_key, prop_values in all_properties.items():
             unique_values = set(str(v["value"]) for v in prop_values)
             if len(unique_values) > 1:
-                conflicts["property_conflicts"].append({
-                    "property": prop_key,
-                    "values": list(unique_values),
-                    "conflict_count": len(unique_values),
-                })
+                conflicts["property_conflicts"].append(
+                    {
+                        "property": prop_key,
+                        "values": list(unique_values),
+                        "conflict_count": len(unique_values),
+                    }
+                )
 
         # Analyze text conflicts (Vietnamese-aware)
         entity_texts = []
         for entity in cluster_entities:
             text = entity.get("text", entity.get("entity_text", ""))
             if text:
-                entity_texts.append({
-                    "text": text,
-                    "normalized": self._normalize_vietnamese_text(text),
-                    "entity_id": entity.get("id"),
-                    "confidence": entity.get("confidence", 0),
-                })
+                entity_texts.append(
+                    {
+                        "text": text,
+                        "normalized": self._normalize_vietnamese_text(text),
+                        "entity_id": entity.get("id"),
+                        "confidence": entity.get("confidence", 0),
+                    }
+                )
 
         normalized_texts = set(t["normalized"] for t in entity_texts)
         if len(normalized_texts) > 1:
             conflicts["text_conflicts"] = entity_texts
 
         # Analyze type conflicts
-        entity_types = list(set([e.get("entity_type", "") for e in cluster_entities if e.get("entity_type")]))
+        entity_types = list(
+            set(
+                [
+                    e.get("entity_type", "")
+                    for e in cluster_entities
+                    if e.get("entity_type")
+                ]
+            )
+        )
         if len(entity_types) > 1:
             conflicts["type_conflicts"] = entity_types
 
@@ -436,15 +471,17 @@ class EntityFusionTask:
             }
 
         conflicts["total_conflicts"] = (
-            len(conflicts["property_conflicts"]) +
-            (1 if conflicts["text_conflicts"] else 0) +
-            (1 if len(conflicts["type_conflicts"]) > 1 else 0) +
-            (1 if conflicts["confidence_conflicts"] else 0)
+            len(conflicts["property_conflicts"])
+            + (1 if conflicts["text_conflicts"] else 0)
+            + (1 if len(conflicts["type_conflicts"]) > 1 else 0)
+            + (1 if conflicts["confidence_conflicts"] else 0)
         )
 
         return conflicts
 
-    async def get_fusion_statistics(self, domain: Optional[str] = None) -> Dict[str, Any]:
+    async def get_fusion_statistics(
+        self, domain: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Get statistics about entity fusion"""
         try:
             supabase = await get_supabase()
@@ -454,16 +491,25 @@ class EntityFusionTask:
             entities = entity_response.data
 
             total_entities = len(entities)
-            fused_entities = len([e for e in entities if e.get("properties", {}).get("is_fused", False)])
-            
+            fused_entities = len(
+                [e for e in entities if e.get("properties", {}).get("is_fused", False)]
+            )
+
             # Calculate fusion ratios
-            fusion_ratio = (fused_entities / total_entities * 100) if total_entities > 0 else 0
+            fusion_ratio = (
+                (fused_entities / total_entities * 100) if total_entities > 0 else 0
+            )
 
             # Get average source entities count for fused entities
-            fused_entity_data = [e for e in entities if e.get("properties", {}).get("is_fused", False)]
+            fused_entity_data = [
+                e for e in entities if e.get("properties", {}).get("is_fused", False)
+            ]
             avg_source_count = 0
             if fused_entity_data:
-                source_counts = [e.get("properties", {}).get("source_entities_count", 1) for e in fused_entity_data]
+                source_counts = [
+                    e.get("properties", {}).get("source_entities_count", 1)
+                    for e in fused_entity_data
+                ]
                 avg_source_count = sum(source_counts) / len(source_counts)
 
             return {
@@ -476,5 +522,5 @@ class EntityFusionTask:
             }
 
         except Exception as e:
-            logger.error(f"Error getting fusion statistics: {e}")
+            await self.logger.error(f"Error getting fusion statistics: {e}")
             return {}

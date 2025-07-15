@@ -1,9 +1,12 @@
 import { format, formatDistance } from "date-fns";
+import { vi } from "date-fns/locale";
 
 export const formatDate = (date?: Date | string): string => {
 	if (!date) return "";
 	const d = typeof date === "string" ? new Date(date) : date;
-	return format(d, "PP");
+	return format(d, "PP", {
+		locale: vi,
+	});
 };
 
 export const formatDateTime = (date: Date | string): string => {

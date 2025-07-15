@@ -19,8 +19,8 @@ export default function DeleteDataSourceDialog({
       onConfirm={() => {
         onOpenChange(false);
       }}
-      title="Delete Data Source"
-      message={`Are you sure you want to delete "${selectedSource?.name}"? This action cannot be undone.`}
+      title="Xóa nguồn dữ liệu"
+      message={`Bạn có chắc chắn muốn xóa "${selectedSource?.name}"? Hành động này không thể hoàn tác.`}
     />
   );
 }

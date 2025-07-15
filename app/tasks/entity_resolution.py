@@ -1,9 +1,7 @@
-import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.supabase import get_supabase
-
-logger = logging.getLogger(__name__)
+from app.tasks.executors import StepLogger
 
 
 class EntityResolutionTask:
@@ -11,12 +9,13 @@ class EntityResolutionTask:
     Task for entity resolution using various strategies with Vietnamese support
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, logger: StepLogger):
+        self.logger = logger
 
     async def resolve_entities(
         self,
         entities: List[Dict[str, Any]],
+        step_run_id: Optional[str] = None,
         resolution_strategy: str = "fuzzy_match",
         similarity_threshold: float = 0.8,
         clustering_method: str = "single_linkage",
@@ -38,7 +37,7 @@ class EntityResolutionTask:
             Dictionary containing resolution results
         """
         try:
-            logger.info(f"Starting entity resolution task {entities}")
+            await self.logger.info(f"Starting entity resolution task {entities}")
             if not entities:
                 return {
                     "resolved_entities": [],
@@ -52,14 +51,14 @@ class EntityResolutionTask:
                     "success": True,
                 }
 
-            logger.info(
+            await self.logger.info(
                 f"Starting entity resolution with strategy: {resolution_strategy}"
             )
-            logger.debug(f"Input entities: {entities}")
+            await self.logger.debug(f"Input entities: {entities}")
             # Perform entity resolution based on strategy
 
             if resolution_strategy == "fuzzy_match":
-                logger.info("Using fuzzy match resolution strategy")
+                await self.logger.info("Using fuzzy match resolution strategy")
                 resolved_entities, entity_clusters = await self._fuzzy_match_resolution(
                     entities, similarity_threshold, clustering_method
                 )
@@ -83,7 +82,7 @@ class EntityResolutionTask:
             saved_data = None
             if auto_save:
                 saved_data = await self._save_resolution_results(
-                    resolved_entities, entity_clusters, user_id
+                    resolved_entities, entity_clusters, user_id, step_run_id
                 )
 
             result = {
@@ -100,13 +99,13 @@ class EntityResolutionTask:
                 "success": True,
             }
 
-            logger.info(
+            await self.logger.info(
                 f"Entity resolution completed: {len(entities)} -> {len(resolved_entities)} entities"
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error in entity resolution: {e}")
+            await self.logger.error(f"Error in entity resolution: {e}")
             return {
                 "resolved_entities": [],
                 "entity_clusters": [],
@@ -124,7 +123,7 @@ class EntityResolutionTask:
         n = len(entities)
         similarity_matrix = [[0.0 for _ in range(n)] for _ in range(n)]
 
-        logger.info(
+        await self.logger.info(
             f"Calculating similarity matrix for {n} entities with threshold {threshold}"
         )
 
@@ -140,7 +139,7 @@ class EntityResolutionTask:
                 # Check if entities are of the same type
                 type1 = entities[i].get("entity_type", "")
                 type2 = entities[j].get("entity_type", "")
-                logger.debug(
+                await self.logger.debug(
                     f"Comparing entities {i} and {j}: "
                     f"text1='{text1}', text2='{text2}', type1='{type1}', type2='{type2}'"
                 )
@@ -169,7 +168,7 @@ class EntityResolutionTask:
             if len(cluster) > 1:
                 clusters.append(cluster)
 
-        logger.info(f"Formed {len(clusters)} clusters from {n} entities")
+        await self.logger.info(f"Formed {len(clusters)} clusters from {n} entities")
         # Create resolved entities and cluster information
         resolved_entities = []
         entity_clusters = []
@@ -206,7 +205,9 @@ class EntityResolutionTask:
                 }
             )
 
-        logger.debug(f"Resolved {len(resolved_entities)} entities from clusters")
+        await self.logger.debug(
+            f"Resolved {len(resolved_entities)} entities from clusters"
+        )
 
         # Add unclustered entities
         for i, entity in enumerate(entities):
@@ -217,7 +218,7 @@ class EntityResolutionTask:
                 entity_copy["is_resolved"] = False
                 resolved_entities.append(entity_copy)
 
-        logger.info(
+        await self.logger.info(
             f"Fuzzy match resolution completed: {len(entities)} input entities, "
             f"{resolved_entities} resolved entities, {entity_clusters} clusters formed"
         )
@@ -370,7 +371,7 @@ class EntityResolutionTask:
             return resolved_entities, entity_clusters
 
         except Exception as e:
-            logger.warning(
+            await self.logger.warning(
                 f"Semantic similarity resolution failed, falling back to fuzzy match: {e}"
             )
             return await self._fuzzy_match_resolution(
@@ -402,6 +403,7 @@ class EntityResolutionTask:
         resolved_entities: List[Dict[str, Any]],
         entity_clusters: List[Dict[str, Any]],
         user_id: Optional[str] = None,
+        step_run_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Save resolution results to database"""
         try:
@@ -415,10 +417,9 @@ class EntityResolutionTask:
                     "cluster_size": cluster["cluster_size"],
                     "confidence_score": cluster.get("avg_similarity", 0.0),
                     "resolution_method": cluster.get("match_type", "fuzzy"),
-                    "entity_ids": [
-                        e.get("id") for e in cluster["cluster_entities"]
-                    ],
+                    "entity_ids": [e.get("id") for e in cluster["cluster_entities"]],
                     "created_by": user_id,
+                    "step_run_id": step_run_id,
                 }
 
                 response = (
@@ -448,7 +449,7 @@ class EntityResolutionTask:
             }
 
         except Exception as e:
-            logger.error(f"Error saving resolution results: {e}")
+            await self.logger.error(f"Error saving resolution results: {e}")
             return {"error": str(e)}
 
     async def get_resolution_statistics(
@@ -493,5 +494,5 @@ class EntityResolutionTask:
             }
 
         except Exception as e:
-            logger.error(f"Error getting resolution statistics: {e}")
+            await self.logger.error(f"Error getting resolution statistics: {e}")
             return {}

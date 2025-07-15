@@ -53,6 +53,7 @@ export interface DataSourceBase {
 	description?: string;
 	source_type: SourceType;
 	connection_details: Record<string, any>; // Connection details specific to the source type
+	trust_score?: number; // Trust score for the data source
 	credentials?: Record<string, any>;
 }
 

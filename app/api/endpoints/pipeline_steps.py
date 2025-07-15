@@ -1,6 +1,6 @@
 from typing import Annotated, Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi import status as httpStatus
 
 from app.api.deps import PermissionChecker
@@ -224,6 +224,68 @@ async def read_pipeline_step_runs(
     )
 
 
+@router.get("/runs/logs", response_model=PaginatedResponse[Dict[str, Any]])
+async def get_pipeline_step_logs(
+    step_run_id: Optional[str] = Query(None, description="Pipeline step run ID"),
+    log_level: Optional[str] = Query(
+        None, description="Filter by log level (DEBUG, INFO, WARN, ERROR)"
+    ),
+    start_time: Optional[str] = Query(
+        None, description="Start time filter (ISO format)"
+    ),
+    end_time: Optional[str] = Query(None, description="End time filter (ISO format)"),
+    skip: int = Query(0, ge=0, description="Number of logs to skip"),
+    search: Optional[str] = Query(None, description="Search term to filter logs"),
+    limit: int = Query(100, ge=1, le=1000, description="Number of logs to return"),
+    current_user: User = Depends(check_read_permission),
+) -> PaginatedResponse[Dict[str, Any]]:
+    """
+    Get execution logs for a specific pipeline step run.
+    """
+
+    from app.services.pipeline_step import PipelineStepService
+
+    try:
+        pipeline_step_service = PipelineStepService()
+
+        if step_run_id:
+            # Validate step run exists
+            step_run = await pipeline_step_service.get_pipeline_step_run(step_run_id)
+            if not step_run:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Pipeline step run not found",
+                )
+
+        logs_response = await pipeline_step_service.get_step_execution_logs(
+            step_run_id=step_run_id,
+            log_level=log_level,
+            start_time=start_time,
+            end_time=end_time,
+            search=search,
+            skip=skip,
+            limit=limit,
+        )
+
+        return PaginatedResponse(
+            data=logs_response.data,
+            meta=PaginatedMeta(
+                total=logs_response.count if logs_response.count else 0,
+                limit=limit,
+                skip=skip,
+            ),
+            status=httpStatus.HTTP_200_OK,
+            message="Pipeline step logs retrieved successfully",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving pipeline step logs: {str(e)}",
+        )
+
+
 @router.get(
     "/runs/{step_run_id}",
     response_model=ApiResponse[PipelineStepRun],
@@ -269,7 +331,7 @@ async def update_pipeline_step_run(
 
     pipeline_step_service = PipelineStepService()
     pipeline_step_run = await pipeline_step_service.update_pipeline_step_run(
-        step_run_id=step_run_id, step_run_in=step_run_in.model_dump()
+        step_run_id=step_run_id, step_run_update=step_run_in
     )
     if not pipeline_step_run:
         raise HTTPException(
@@ -371,21 +433,22 @@ async def get_pipeline_run_status(
         status=httpStatus.HTTP_200_OK,
         message="Pipeline run status retrieved successfully",
     )
-    
+
+
 @router.get("/{pipeline_id}/steps/execution-order", response_model=Dict[str, Any])
 async def get_step_execution_order(
-    pipeline_id: str,
-    current_user: Dict = Depends(check_read_permission)
+    pipeline_id: str, current_user: Dict = Depends(check_read_permission)
 ):
     """Get step execution order considering dependencies"""
     from app.services.pipeline_step import PipelineStepService
+
     try:
         pipeline_step_service = PipelineStepService()
-        execution_order = await pipeline_step_service.get_step_execution_order(pipeline_id)
+        execution_order = await pipeline_step_service.get_step_execution_order(
+            pipeline_id
+        )
         return {"success": True, "data": {"execution_levels": execution_order}}
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-

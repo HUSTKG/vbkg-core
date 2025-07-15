@@ -24,17 +24,17 @@ import {
 } from "lucide-react";
 import { useKGEntitiesSearch, useKGSubgraph } from "@vbkg/api-client";
 import { useSearchParams } from "react-router";
-import GraphVisualization from "./components/Graph";
 import SearchSelect, { Option } from "@/components/search-select";
+import { D3GraphVisualization } from "@/pages/user/visualization/components/D3GraphVisualization";
+import { GraphLayoutType } from "@vbkg/types";
 
 export default function KnowledgeGraphExplorer() {
 	const [searchParams, setSearchParams] = useSearchParams();
-	const selectedEntityId = searchParams.get("entity_id") || "";
+	const entityId = searchParams.get("entity_id") || "";
 	const selectedRadius = searchParams.get("radius") || "2";
 	const [radius, setRadius] = useState(selectedRadius);
 	const [searchQuery, setSearchQuery] = useState<string>("");
 	const [searchOptions, setSearchOptions] = useState<Option[]>([]);
-	const [entityId, setEntityId] = useState(selectedEntityId);
 	const { data: entities, isFetching: loadEntities } = useKGEntitiesSearch({
 		limit: 10,
 		query: searchQuery,
@@ -42,9 +42,18 @@ export default function KnowledgeGraphExplorer() {
 
 	const { data: graphData, isFetching: loading } =
 		useKGSubgraph({
-			entity_id: selectedEntityId,
+			entity_id: entityId,
 			radius: selectedRadius ? parseInt(selectedRadius) : 2,
 		}) || {};
+
+	const setEntityId = (id: string) => {
+		if (id) {
+			setSearchParams({
+				entity_id: id,
+				radius: radius.toString(),
+			});
+		}
+	};
 
 	return (
 		<div className="p-6 space-y-6">
@@ -71,15 +80,11 @@ export default function KnowledgeGraphExplorer() {
 				<CardContent className="space-y-4">
 					<div className="flex flex-wrap items-end gap-4">
 						<div className="grow">
-							<label className="text-sm font-medium">
-								Tìm kiếm Thực thể
-							</label>
+							<label className="text-sm font-medium">Tìm kiếm Thực thể</label>
 							<div className="relative mt-1">
 								<SearchSelect
 									value={searchOptions}
-									onSearchChange={(term) =>
-										setSearchQuery(term)
-									}
+									onSearchChange={(term) => setSearchQuery(term)}
 									searchTerm={searchQuery}
 									loading={loadEntities}
 									onChange={(value) => {
@@ -105,9 +110,7 @@ export default function KnowledgeGraphExplorer() {
 							/>
 						</div>
 						<div className="shrink-0">
-							<label className="text-sm font-medium">
-								Phạm vi
-							</label>
+							<label className="text-sm font-medium">Phạm vi</label>
 							<Select
 								value={radius.toString()}
 								onValueChange={(val) => setRadius(val)}
@@ -125,11 +128,15 @@ export default function KnowledgeGraphExplorer() {
 							</Select>
 						</div>
 						<div className="flex items-end shrink-0 grow-0 w-40 ml-auto">
-							<Button onClick={() =>
-								setSearchParams({
-									entity_id: entityId,
-									radius: radius.toString()
-								})} className="w-full">
+							<Button
+								onClick={() =>
+									setSearchParams({
+										entity_id: entityId,
+										radius: radius.toString(),
+									})
+								}
+								className="w-full"
+							>
 								<SearchCheck size={16} className="mr-2" />
 								Khám phá
 							</Button>
@@ -138,28 +145,81 @@ export default function KnowledgeGraphExplorer() {
 				</CardContent>
 			</Card>
 
-			{/* Graph Visualization */}
-			<Card>
-				<CardHeader>
-					<div className="flex items-center justify-between">
-						<div>
-							<CardTitle className="flex items-center gap-2">
-								<Network size={20} />
-								Đồ thị trực quan
-							</CardTitle>
-							{graphData && (
-								<CardDescription>
-									Hiển thị {graphData.node_count} đỉnh and{" "}
-									{graphData.edge_count} cạnh 
-								</CardDescription>
-							)}
+			{loading && (
+				<div className="flex items-center justify-center h-64">
+					<p className="text-muted-foreground">Đang tải dữ liệu...</p>
+				</div>
+			)}
+			{!entityId && !loading && (
+				<div className="flex items-center justify-center h-64">
+					<p className="text-muted-foreground">
+						Vui lòng chọn một thực thể để xem đồ thị.
+					</p>
+				</div>
+			)}
+			{!loading && graphData && (
+				<Card>
+					<CardHeader>
+						<div className="flex items-center justify-between">
+							<div>
+								<CardTitle className="flex items-center gap-2">
+									<Network size={20} />
+									Đồ thị trực quan
+								</CardTitle>
+								{graphData && (
+									<CardDescription>
+										Hiển thị {graphData.node_count} đỉnh and{" "}
+										{graphData.edge_count} cạnh
+									</CardDescription>
+								)}
+							</div>
 						</div>
-					</div>
-				</CardHeader>
-				<CardContent>
-					<GraphVisualization loading={loading} graphData={graphData} />
-				</CardContent>
-			</Card>
+					</CardHeader>
+					<CardContent>
+						<D3GraphVisualization
+							data={{
+								nodes: graphData?.nodes || [],
+								edges: graphData?.edges || [],
+							}}
+							centralNodeId={entityId}
+							width={1150}
+							height={700}
+							config={{
+								zoom_enabled: true,
+								pan_enabled: true,
+								clustering_enabled: true,
+								physics_enabled: true,
+								interactive: true,
+								max_nodes: 10,
+								height: 500,
+
+								node_config: {
+									default_color: "#4f46e5",
+									size_range: [5, 15],
+									label_field: "entity_text",
+								},
+								edge_config: {
+									default_color: "#9ca3af",
+									width_range: [0.1, 0.3],
+									label_field: "relationship_type",
+								},
+								layout: {
+									type: GraphLayoutType.FORCE,
+									params: {
+										gravity: 0.1,
+										charge: -100,
+										link_distance: 50,
+										link_strength: 0.1,
+									},
+								},
+								show_labels: true,
+								show_tooltips: true,
+							}}
+							editable
+						/>
+					</CardContent>
+				</Card>
+			)}
 
 			{/* Graph Information */}
 			{graphData && (
@@ -177,9 +237,10 @@ export default function KnowledgeGraphExplorer() {
 								{graphData.nodes.map((node: any) => (
 									<div
 										key={node.id}
-										className={`flex items-center justify-between p-3 rounded border cursor-pointer hover:bg-muted/50 ${node.is_center ? "border-blue-500 bg-blue-50" : ""
-											}`}
-										onClick={() => setSearchParams({ entity_id: node.id })}
+										className={`flex items-center justify-between p-3 rounded border cursor-pointer hover:bg-muted/50 ${
+											node.is_center ? "border-blue-500 bg-blue-50" : ""
+										}`}
+										onClick={() => setEntityId(node.id)}
 									>
 										<div>
 											<div className="font-medium">{node.label}</div>
@@ -189,7 +250,7 @@ export default function KnowledgeGraphExplorer() {
 												</Badge>
 												{node.is_center && (
 													<Badge variant="default" className="text-xs">
-														Trung tâm 
+														Trung tâm
 													</Badge>
 												)}
 											</div>
@@ -213,7 +274,7 @@ export default function KnowledgeGraphExplorer() {
 						</CardHeader>
 						<CardContent>
 							<div className="space-y-3 max-h-80 overflow-y-auto">
-								{graphData.edges.map((edge: any) => (
+								{graphData?.edges.map((edge: any) => (
 									<div
 										key={edge.id}
 										className="p-3 rounded border hover:bg-muted/50"
@@ -225,17 +286,14 @@ export default function KnowledgeGraphExplorer() {
 										</div>
 										<div className="flex items-center gap-2 text-sm">
 											<span className="font-medium">
-												{
-													graphData.nodes.find((n: any) => n.id === edge.source)
-														?.label
-												}
+												{edge.source_entity_text}
 											</span>
-											<ArrowRight size={14} className="text-muted-foreground" />
+											<ArrowRight
+												size={14}
+												className="text-muted-foreground shrink-0"
+											/>
 											<span className="font-medium">
-												{
-													graphData.nodes.find((n: any) => n.id === edge.target)
-														?.label
-												}
+												{edge.target_entity_text}
 											</span>
 										</div>
 									</div>

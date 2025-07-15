@@ -308,3 +308,15 @@ export interface PipelineStepResult {
   duration?: number;
   metadata?: Record<string, any>;
 }
+
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR";
+
+export interface PipelineStepLog {
+  id: string;
+  step_run_id: string;
+  log_level: LogLevel;
+  message: string;
+  details?: Record<string, any>;
+  timestamp: string;
+  created_at: string;
+}

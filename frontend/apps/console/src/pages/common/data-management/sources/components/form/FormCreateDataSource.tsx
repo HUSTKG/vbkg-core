@@ -3,7 +3,6 @@ import { SourceType } from "@vbkg/types";
 import { AppForm, FieldConfig, toast } from "@/components";
 import { z } from "zod";
 import { useCreateDatasource } from "@vbkg/api-client";
-import { tr } from "date-fns/locale";
 
 const formFields = (formData: z.infer<typeof CreateDataSourceSchema>) =>
 	[
@@ -11,18 +10,18 @@ const formFields = (formData: z.infer<typeof CreateDataSourceSchema>) =>
 			label: "Tên",
 			name: "name",
 			type: "text",
-			placeholder: "Enter data source name",
+			placeholder: "Nhập tên nguồn dữ liệu",
 			required: true,
 		},
 		{
 			label: "Loại",
 			name: "source_type",
 			type: "select",
-			placeholder: "Select data source type",
+			placeholder: "Chọn loại nguồn dữ liệu",
 			options: [
 				{ value: SourceType.API, label: "REST API" },
 				{ value: SourceType.DATABASE, label: "CSDL" },
-				{ value: SourceType.FILE, label: "File" },
+				{ value: SourceType.FILE, label: "Tệp" },
 			],
 			required: true,
 		},
@@ -30,20 +29,20 @@ const formFields = (formData: z.infer<typeof CreateDataSourceSchema>) =>
 			label: "Độ tin cậy",
 			name: "trust_score",
 			type: "number",
-			placeholder: "Enter trust score (0-100)",
+			placeholder: "Nhập độ tin cậy (0-1)",
 		},
 		{
 			label: "Mô tả",
 			name: "description",
 			type: "textarea",
-			placeholder: "Enter description",
+			placeholder: "Nhập mô tả nguồn dữ liệu",
 			required: false,
 		},
 		{
 			label: "Thông tin kết nối",
 			name: "connection_details",
 			type: "object",
-			placeholder: "Enter connection details",
+			placeholder: "Nhập thông tin kết nối",
 			required: true,
 			fields: formData?.source_type
 				? getConnectionFields(formData.source_type)
@@ -53,25 +52,25 @@ const formFields = (formData: z.infer<typeof CreateDataSourceSchema>) =>
 			label: "Thông tin xác thực",
 			name: "credentials",
 			type: "array",
-			placeholder: "Enter credentials",
+			placeholder: "Nhập thông tin xác thực",
 			arrayItemLabel: "Khóa",
 			collapsible: true,
 			required: false,
 			fields: [
 				{
-					label: "Key",
+					label: "Khóa",
 					name: "key",
 					type: "text",
 					wrapperClassName: "col-span-6",
-					placeholder: "Enter key",
+					placeholder: "Nhập khóa",
 					required: true,
 				},
 				{
-					label: "Value",
+					label: "Giá trị",
 					name: "value",
 					wrapperClassName: "col-span-6",
 					type: "text",
-					placeholder: "Enter key",
+					placeholder: "Nhập giá trị",
 					required: true,
 				},
 			],
@@ -83,18 +82,18 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 		case SourceType.FILE:
 			return [
 				{
-					label: "File Path",
+					label: "Đường dẫn tệp",
 					name: "file_path",
 					type: "text",
-					placeholder: "Enter file path (e.g., /path/to/file.csv)",
-					description: "Path to the file or folder on the server",
+					placeholder: "Nhập đường dẫn tệp",
+					description: "Đường dẫn đến tệp trên hệ thống tập tin",
 					required: true,
 				},
 				{
-					label: "File Format",
+					label: "Định dạng tệp",
 					name: "file_format",
 					type: "select",
-					placeholder: "Select file format",
+					placeholder: "Chọn định dạng tệp",
 					options: [
 						{ value: "csv", label: "CSV" },
 						{ value: "json", label: "JSON" },
@@ -104,62 +103,62 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 					required: true,
 				},
 				{
-					label: "Encoding",
+					label: "Mã hóa",
 					name: "encoding",
 					type: "text",
-					placeholder: "Enter encoding (optional)",
+					placeholder: "Nhập mã hóa (tùy chọn)",
 					required: false,
 				},
 				{
-					label: "Delimiter",
+					label: "Ký tự phân cách",
 					name: "delimiter",
 					type: "text",
-					placeholder: "Enter delimiter (optional)",
+					placeholder: "Nhập ký tự phân cách (tùy chọn)",
 					required: false,
 				},
 			];
 		case SourceType.DATABASE:
 			return [
 				{
-					label: "Host",
+					label: "Máy chủ",
 					name: "host",
 					type: "text",
-					placeholder: "Enter database host",
+					placeholder: "Nhập địa chỉ máy chủ cơ sở dữ liệu",
 					required: true,
 				},
 				{
-					label: "Port",
+					label: "Cổng",
 					name: "port",
 					type: "number",
-					placeholder: "Enter database port",
+					placeholder: "Nhập cổng cơ sở dữ liệu",
 					required: true,
 				},
 				{
-					label: "Database Name",
+					label: "Tên cơ sở dữ liệu",
 					name: "database",
 					type: "text",
-					placeholder: "Enter database name",
+					placeholder: "Nhập tên cơ sở dữ liệu",
 					required: true,
 				},
 				{
-					label: "Username",
+					label: "Tên người dùng",
 					name: "username",
 					type: "text",
-					placeholder: "Enter username",
+					placeholder: "Nhập tên người dùng",
 					required: true,
 				},
 				{
-					label: "Password",
+					label: "Mật khẩu",
 					name: "password",
 					type: "password",
-					placeholder: "Enter password (optional)",
+					placeholder: "Nhập mật khẩu (tùy chọn)",
 					required: false,
 				},
 				{
-					label: "Database Type",
+					label: "Loại cơ sở dữ liệu",
 					name: "db_type",
 					type: "select",
-					placeholder: "Select database type",
+					placeholder: "Chọn loại cơ sở dữ liệu",
 					options: [
 						{ value: "postgres", label: "PostgreSQL" },
 						{ value: "mysql", label: "MySQL" },
@@ -168,41 +167,41 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 					required: true,
 				},
 				{
-					label: "Use SSL",
+					label: "Sử dụng SSL",
 					name: "ssl",
 					type: "switch",
-					description: "Enable secure connection",
+					description: "Bật kết nối bảo mật",
 					defaultValue: false,
 					required: false,
 				},
 				{
-					label: "SQL Query",
+					label: "Câu truy vấn SQL",
 					name: "query",
 					type: "textarea",
-					placeholder: "Enter SQL query (optional)",
+					placeholder: "Nhập câu truy vấn SQL (tùy chọn)",
 					required: false,
 				},
 				{
-					label: "Table Name",
+					label: "Tên bảng",
 					name: "table",
 					type: "text",
-					placeholder: "Enter table name (optional)",
+					placeholder: "Nhập tên bảng (tùy chọn)",
 					required: false,
 				},
 			];
 		case SourceType.API:
 			return [
 				{
-					label: "API URL",
+					label: "URL API",
 					name: "url",
 					type: "text",
-					placeholder: "Enter API URL (e.g., https://api.example.com/v1)",
+					placeholder: "Nhập URL API (ví dụ: https://api.example.com/v1)",
 					required: true,
 				},
 				{
-					label: "HTTP Method",
+					label: "Phương thức HTTP",
 					name: "method",
-					placeholder: "Select HTTP method",
+					placeholder: "Chọn phương thức HTTP",
 					type: "select",
 					options: [
 						{ value: "GET", label: "GET" },
@@ -213,10 +212,10 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 					required: true,
 				},
 				{
-					label: "Headers",
+					label: "Tiêu đề",
 					name: "headers",
 					type: "object",
-					placeholder: "Enter headers",
+					placeholder: "Nhập tiêu đề",
 					required: false,
 					fields: [
 						{
@@ -236,55 +235,55 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 					],
 				},
 				{
-					label: "Query Parameters",
+					label: "Tham số truy vấn",
 					name: "query_params",
 					type: "object",
-					placeholder: "Enter query parameters",
+					placeholder: "Nhập tham số truy vấn",
 					required: false,
 				},
 				{
-					label: "Request Body",
+					label: "Nội dung yêu cầu",
 					name: "body",
 					type: "textarea",
-					placeholder: "Enter request body (optional)",
+					placeholder: "Nhập nội dung yêu cầu (tùy chọn)",
 					required: false,
 				},
 				{
-					label: "Authentication Type",
+					label: "Loại xác thực",
 					name: "auth_type",
 					type: "select",
-					placeholder: "Select authentication type",
+					placeholder: "Chọn loại xác thực",
 					options: [
-						{ value: "BASIC", label: "Basic Auth" },
+						{ value: "BASIC", label: "Xác thực cơ bản" },
 						{ value: "BEARER", label: "Bearer Token" },
 					],
 					required: false,
 				},
 				{
-					label: "Authentication Config",
+					label: "Cấu hình xác thực",
 					name: "auth_config",
 					type: "object",
 					required: false,
 					fields: [
 						{
-							label: "Username",
+							label: "Tên người dùng",
 							name: "username",
 							type: "text",
-							placeholder: "Enter username",
+							placeholder: "Nhập tên người dùng",
 							required: false,
 						},
 						{
-							label: "Password",
+							label: "Mật khẩu",
 							name: "password",
 							type: "password",
-							placeholder: "Enter password",
+							placeholder: "Nhập mật khẩu",
 							required: false,
 						},
 						{
 							label: "Token",
 							name: "token",
 							type: "text",
-							placeholder: "Enter bearer token",
+							placeholder: "Nhập bearer token",
 							required: false,
 						},
 					],
@@ -296,14 +295,14 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 					label: "URL",
 					name: "url",
 					type: "text",
-					placeholder: "Enter URL (e.g., https://example.com/data)",
+					placeholder: "Nhập URL (ví dụ: https://example.com/data)",
 					required: true,
 				},
 				{
-					label: "Headers",
+					label: "Tiêu đề",
 					name: "headers",
 					type: "object",
-					placeholder: "Enter headers",
+					placeholder: "Nhập tiêu đề",
 					required: false,
 					fields: [
 						{
@@ -323,7 +322,7 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 					],
 				},
 				{
-					label: "Scrape Configuration",
+					label: "Cấu hình thu thập dữ liệu",
 					name: "scrape_config",
 					type: "object",
 					required: false,
@@ -332,25 +331,25 @@ const getConnectionFields = (type: SourceType): FieldConfig[] => {
 							label: "CSS Selector",
 							name: "selector",
 							type: "text",
-							placeholder: "Enter CSS selector",
+							placeholder: "Nhập CSS selector",
 							required: false,
 						},
 						{
 							label: "XPath",
 							name: "xpath",
 							type: "text",
-							placeholder: "Enter XPath",
+							placeholder: "Nhập XPath",
 							required: false,
 						},
 						{
-							label: "Extract Tables",
+							label: "Trích xuất bảng",
 							name: "extract_tables",
 							type: "switch",
 							defaultValue: false,
 							required: false,
 						},
 						{
-							label: "Extract Links",
+							label: "Trích xuất liên kết",
 							name: "extract_links",
 							type: "switch",
 							defaultValue: false,
@@ -373,11 +372,11 @@ export const FormCreateDataSource = ({
 }: FormCreateDataSourceProps) => {
 	const { mutate: createDatasource } = useCreateDatasource({
 		onSuccess: () => {
-			toast.success("Data source created successfully");
+			toast.success("Tạo nguồn dữ liệu thành công");
 			onCloseDialog?.();
 		},
 		onError: () => {
-			toast.error("Error creating data source");
+			toast.error("Lỗi khi tạo nguồn dữ liệu");
 		},
 	});
 
@@ -393,7 +392,6 @@ export const FormCreateDataSource = ({
 					source_type: values.source_type,
 					trust_score: values.trust_score,
 					credentials: values.credentials
-
 						? Object.fromEntries(
 								values.credentials.map((credential) => [
 									credential.key,

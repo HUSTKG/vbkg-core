@@ -223,7 +223,7 @@ const FileSelectorDialog = ({
 										<div className="flex items-center">
 											{getFileIcon("pdf")}
 											<div className="ml-1 flex-1 min-w-0">
-												<p className="font-medium truncate text-xs">
+												<p className="font-medium text-wrap truncate text-xs">
 													{file.file.name}
 												</p>
 												<p className="text-xs text-gray-500">

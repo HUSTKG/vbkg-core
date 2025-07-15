@@ -18,6 +18,7 @@ const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPassword"));
 // Admin Pages
 const AdminDashboard = lazy(() => import("./pages/admin/dashboard"));
 const ManageUser = lazy(() => import("./pages/admin/user-management/users"));
+const AdminLogs = lazy(() => import("./pages/admin/log"));
 const UserDetail = lazy(
 	() => import("./pages/admin/user-management/users/detail"),
 );
@@ -55,13 +56,17 @@ const QualityDashboard = lazy(
 const QualityConflicts = lazy(
 	() => import("./pages/admin/quality-management/conflicts"),
 );
-const AdminCompletion = lazy(() => import("./pages/admin/quality-management/completion"));
+const AdminCompletion = lazy(
+	() => import("./pages/admin/quality-management/completion"),
+);
 
 // Expert Pages
 const ExpertConflict = lazy(
 	() => import("./pages/expert/quality-management/conflicts"),
 );
-const ExpertCompletion = lazy(() => import("./pages/expert/quality-management/completion"));
+const ExpertCompletion = lazy(
+	() => import("./pages/expert/quality-management/completion"),
+);
 const ExpertKGRelationship = lazy(
 	() => import("./pages/common/knowledge-graph/relationship"),
 );
@@ -351,6 +356,14 @@ const routes: RouteObject[] = [
 				element: (
 					<Suspense fallback={<PageLoading />}>
 						<AdminDashboard />
+					</Suspense>
+				),
+			},
+			{
+				path: "logs",
+				element: (
+					<Suspense fallback={<PageLoading />}>
+						<AdminLogs />
 					</Suspense>
 				),
 			},

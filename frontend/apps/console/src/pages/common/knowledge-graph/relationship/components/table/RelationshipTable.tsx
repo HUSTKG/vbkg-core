@@ -10,7 +10,7 @@ import {
 	Dialog,
 	SimpleColumnDef,
 } from "@/components";
-import { Relationship } from "@vbkg/types";
+import { PaginatedResponse, Relationship } from "@vbkg/types";
 import {
 	ArrowRight,
 	CheckCircle,
@@ -23,9 +23,11 @@ import {
 import { useState } from "react";
 import CreateRelationshipDialog from "../dialogs/CreateRelationshipDialog";
 import ViewRelationshipDialog from "../dialogs/ViewRelationshipDialog";
+import { ServerSideParams } from "@/components/table";
+import { useSearchParams } from "react-router";
 
 interface RelationshipTableProps {
-	relationships?: Relationship[];
+	relationships?: PaginatedResponse<Relationship>;
 }
 
 type TValue = string | number | boolean | undefined;
@@ -34,6 +36,7 @@ export default function RelationshipTable({
 	relationships,
 }: RelationshipTableProps) {
 	const [showCreateDialog, setShowCreateDialog] = useState(false);
+	const [_, setParams] = useSearchParams();
 	const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 	const [mode, setMode] = useState<"create" | "edit">("create");
 	const [selectedRelationship, setSelectedRelationship] = useState<
@@ -161,13 +164,23 @@ export default function RelationshipTable({
 			),
 		},
 	];
+
+	const handleFilter = (params: ServerSideParams) => {
+		setParams((prev) => {
+			const newParams = new URLSearchParams(prev);
+			newParams.set("page", String(params.pagination.pageIndex + 1));
+			newParams.set("pageSize", String(params.pagination.pageSize));
+			return newParams;
+		});
+	};
+
 	return (
 		<>
 			<Card>
 				<CardHeader>
 					<div className="flex justify-between items-center">
 						<div>
-							<CardTitle>Mối quan hệ ({relationships?.length})</CardTitle>
+							<CardTitle>Mối quan hệ ({relationships?.meta.total})</CardTitle>
 							<CardDescription>
 								Danh sách các mối quan hệ trong Knowledge Graph của bạn. Bạn có
 								thể tìm kiếm, xem chi tiết, chỉnh sửa hoặc xóa các mối quan hệ
@@ -183,7 +196,19 @@ export default function RelationshipTable({
 					</div>
 				</CardHeader>
 				<CardContent>
-					<DataTable data={relationships} columns={relationshipColumns} />
+					<DataTable
+						showColumnToggle={false}
+						totalCount={relationships?.meta.total || 0}
+						manualPagination
+						showColumnFilters={false}
+						showGlobalFilter={false}
+						serverSideCallbacks={{
+							onGlobalFilterChange: handleFilter,
+							onPaginationChange: handleFilter,
+						}}
+						data={relationships?.data}
+						columns={relationshipColumns}
+					/>
 				</CardContent>
 			</Card>
 

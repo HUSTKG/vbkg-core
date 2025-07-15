@@ -16,6 +16,7 @@ import {
 	IUpdatePipelineResponse,
 } from "@vbkg/types";
 import { PipelineService } from "../../services/pipeline";
+import { QueryKeys } from "../../config/queryKeys";
 
 // Create a new pipeline
 export const useCreatePipeline = (
@@ -53,9 +54,17 @@ export const useDeletePipeline = (
 		IDeletePipelineRequest
 	>,
 ) => {
+	const queryClient = useQueryClient();
 	return useMutation<IDeletePipelineResponse, Error, IDeletePipelineRequest>({
 		mutationFn: PipelineService.deletePipeline,
 		...options,
+		onSuccess: (data, variables, context) => {
+			// Invalidate queries related to pipelines
+			queryClient.invalidateQueries({
+				queryKey: ["pipelines"],
+			});
+			options.onSuccess?.(data, variables, context);
+		},
 	});
 };
 

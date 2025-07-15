@@ -6,11 +6,11 @@ export default function CreateDataSourceSheet() {
 	const [isOpen, setIsOpen] = useState(false);
 	return (
 		<CustomSheet
-			trigger={<Button>Add Data Source</Button>}
-			title="Add Data Source"
+			trigger={<Button>Thêm nguồn dữ liệu</Button>}
+			title="Thêm nguồn dữ liệu"
 			open={isOpen}
 			onOpenChange={setIsOpen}
-			description="Create a new data source configuration"
+			description="Tạo cấu hình nguồn dữ liệu mới"
 			side="right"
 			size="lg"
 		>

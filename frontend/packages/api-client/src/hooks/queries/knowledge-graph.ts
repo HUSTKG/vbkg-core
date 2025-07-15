@@ -32,7 +32,7 @@ import {
 	IReadEntityResponse,
 } from "@vbkg/types";
 
-import { UseQueryOptions,useQuery } from "@tanstack/react-query";
+import { UseQueryOptions, useQuery } from "@tanstack/react-query";
 import { QueryKeys } from "../../config/queryKeys";
 import { KnowledgeGraphService } from "../../services/knowledge-graph";
 
@@ -124,7 +124,7 @@ export const useKGEntityRelationships = (
 			input.relationship_types,
 			input.direction,
 			input.limit,
-			input.offset,
+			input.skip,
 		),
 		queryFn: () => KnowledgeGraphService.getEntityRelationships(input),
 		enabled: !!input.entity_id,
@@ -238,38 +238,37 @@ export const useKnowledgeGraphStats = (
 
 // Get completion suggestions
 export const useKGCompletionSuggestions = (
-  input: ISuggestionFilterRequest,
-  options?: UseQueryOptions<IKGCompletionSuggestionsResponse, Error>,
+	input: ISuggestionFilterRequest,
+	options?: UseQueryOptions<IKGCompletionSuggestionsResponse, Error>,
 ) => {
-  return useQuery<IKGCompletionSuggestionsResponse, Error>({
-    queryKey: QueryKeys.knowledgeGraph.completionSuggestions(input),
-    queryFn: () => KnowledgeGraphService.getCompletionSuggestions(input),
-    ...options,
-  });
+	return useQuery<IKGCompletionSuggestionsResponse, Error>({
+		queryKey: QueryKeys.knowledgeGraph.completionSuggestions(input),
+		queryFn: () => KnowledgeGraphService.getCompletionSuggestions(input),
+		...options,
+	});
 };
 
 // Get single completion suggestion
 export const useKGCompletionSuggestion = (
-  suggestionId: string,
-  options?: UseQueryOptions<IKGCompletionSuggestionResponse, Error>,
+	suggestionId: string,
+	options?: UseQueryOptions<IKGCompletionSuggestionResponse, Error>,
 ) => {
-  return useQuery<IKGCompletionSuggestionResponse, Error>({
-    queryKey: QueryKeys.knowledgeGraph.completionSuggestion(suggestionId),
-    queryFn: () => KnowledgeGraphService.getCompletionSuggestion(suggestionId),
-    enabled: !!suggestionId,
-    ...options,
-  });
+	return useQuery<IKGCompletionSuggestionResponse, Error>({
+		queryKey: QueryKeys.knowledgeGraph.completionSuggestion(suggestionId),
+		queryFn: () => KnowledgeGraphService.getCompletionSuggestion(suggestionId),
+		enabled: !!suggestionId,
+		...options,
+	});
 };
 
 // Get completion statistics
 export const useKGCompletionStats = (
-  options?: UseQueryOptions<IKGCompletionStatsResponse, Error>,
+	options?: UseQueryOptions<IKGCompletionStatsResponse, Error>,
 ) => {
-  return useQuery<IKGCompletionStatsResponse, Error>({
-    queryKey: QueryKeys.knowledgeGraph.completionStats(),
-    queryFn: () => KnowledgeGraphService.getCompletionStats(),
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-    ...options,
-  });
+	return useQuery<IKGCompletionStatsResponse, Error>({
+		queryKey: QueryKeys.knowledgeGraph.completionStats(),
+		queryFn: () => KnowledgeGraphService.getCompletionStats(),
+		refetchInterval: 30000, // Auto-refresh every 30 seconds
+		...options,
+	});
 };
-

@@ -4,10 +4,9 @@ import {
 	DatabaseIcon,
 	Edit3,
 	HomeIcon,
+	LogsIcon,
 	NetworkIcon,
-	Settings,
 	ShieldCheckIcon,
-	Users,
 	UsersIcon,
 } from "lucide-react";
 import { Outlet, useNavigate } from "react-router";
@@ -112,6 +111,11 @@ const AdminLayout = () => {
 						},
 					],
 				},
+				{
+					title: "Logs",
+					icon: <LogsIcon />,
+					path: "/admin/logs",
+				},
 			]}
 			userEmail={session?.user?.email}
 			userName={session?.user?.name}
@@ -125,22 +129,7 @@ const AdminLayout = () => {
 			onNavigation={(path) => {
 				navigate(path);
 			}}
-			profileMenuItems={[
-				{
-					icon: <Users />,
-					label: "Profile",
-					onClick: () => {
-						// Handle profile click
-					},
-				},
-				{
-					icon: <Settings />,
-					label: "Settings",
-					onClick: () => {
-						// Handle settings click
-					},
-				},
-			]}
+			profileMenuItems={[]}
 		>
 			<Outlet />
 		</AppLayout>

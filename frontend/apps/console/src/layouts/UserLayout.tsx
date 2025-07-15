@@ -1,12 +1,6 @@
 import { useLogout } from "@vbkg/api-client";
 import { getSession, setSession } from "@vbkg/utils";
-import {
-	Network,
-	PaintbrushIcon,
-	Settings,
-	UserIcon,
-	Users,
-} from "lucide-react";
+import { Network, PaintbrushIcon, UserIcon } from "lucide-react";
 import { Outlet, useNavigate } from "react-router";
 import { queryClient } from "../App";
 import AppLayout from "./main";
@@ -44,22 +38,7 @@ const UserLayout = () => {
 				navigate("/login");
 			}}
 			onNavigation={(path) => navigate(path)}
-			profileMenuItems={[
-				{
-					icon: <Users />,
-					label: "Profile",
-					onClick: () => {
-						// Handle profile click
-					},
-				},
-				{
-					icon: <Settings />,
-					label: "Settings",
-					onClick: () => {
-						// Handle settings click
-					},
-				},
-			]}
+			profileMenuItems={[]}
 		>
 			<Outlet />
 		</AppLayout>

@@ -1,9 +1,5 @@
 import { AppForm, Dialog } from "@/components";
-import {
-	useCreateRelationship,
-	useKGEntitiesSearch,
-	useRelationshipTypes,
-} from "@vbkg/api-client";
+import { useCreateRelationship, useKGEntitiesSearch } from "@vbkg/api-client";
 import { CreateRelationshipSchema } from "@vbkg/schemas";
 import { Relationship } from "@vbkg/types";
 import z from "zod";
@@ -21,7 +17,6 @@ export default function CreateRelationshipDialog({
 	selectedRelationship,
 	mode = "create",
 }: CreateRelationshipDialogProps) {
-	const { data: relationshipTypes } = useRelationshipTypes({});
 	const { data: entities } = useKGEntitiesSearch({
 		limit: 100,
 	});
@@ -62,7 +57,8 @@ export default function CreateRelationshipDialog({
 								source_entity_id: selectedRelationship?.source_entity.id,
 								target_entity_id: selectedRelationship?.target_entity.id,
 								relationship_type: selectedRelationship?.relationship_type,
-								properties: JSON.stringify(selectedRelationship?.properties) || "{}",
+								properties:
+									JSON.stringify(selectedRelationship?.properties) || "{}",
 								is_verified: selectedRelationship?.is_verified || false,
 								verification_notes: "",
 							}
@@ -98,11 +94,11 @@ export default function CreateRelationshipDialog({
 						type: "select",
 						label: "Relationship Type",
 						placeholder: "Select relationship type",
-						options:
-							relationshipTypes?.data?.map((type) => ({
-								value: type.name,
-								label: type.display_name,
-							})) || [],
+						options: [],
+						// relationshipTypes?.data?.map((type) => ({
+						// 	value: type.name,
+						// 	label: type.display_name,
+						// })) || [],
 						required: true,
 					},
 					{

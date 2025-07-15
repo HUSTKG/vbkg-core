@@ -1,7 +1,7 @@
-from typing import List, Dict, Any, Optional
-from fastapi import HTTPException, status
 from datetime import datetime
+from typing import Any, Dict, Optional
 
+from fastapi import HTTPException, status
 from postgrest.base_request_builder import APIResponse
 from postgrest.types import CountMethod
 
@@ -27,7 +27,7 @@ class NotificationService:
                 "title": title,
                 "message": message,
                 "is_read": False,
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.now().isoformat()
             }
             
             if icon:

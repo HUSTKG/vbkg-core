@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -70,7 +69,7 @@ class PipelineService:
                 "id": step.get("id"),
                 "name": step["name"],
                 "step_type": step["step_type"],
-                "config": json.dumps(step["config"]),
+                "config": step["config"],
                 "run_order": step["run_order"],
                 "pipeline_id": pipeline_id,
                 "description": step.get("description"),
@@ -85,7 +84,7 @@ class PipelineService:
 
             # Handle incremental config
             if step.get("incremental_config"):
-                step_data["incremental_config"] = json.dumps(step["incremental_config"])
+                step_data["incremental_config"] = step["incremental_config"]
 
             processed_steps.append(step_data)
 
@@ -450,7 +449,7 @@ class PipelineService:
                 detail=f"Error creating pipeline run: {str(e)}",
             )
 
-    async def get_pipeline_run(self, run_id: str, pipeline_id: str) -> Dict[str, Any]:
+    async def get_pipeline_run(self, run_id: str) -> Dict[str, Any]:
         """Get a pipeline run by ID"""
         try:
             supabase = await get_supabase()
@@ -458,7 +457,6 @@ class PipelineService:
                 await supabase.from_("pipeline_runs")
                 .select("*")
                 .filter("id", "eq", run_id)
-                .filter("pipeline_id", "eq", pipeline_id)
                 .single()
                 .execute()
             )
@@ -485,7 +483,7 @@ class PipelineService:
         try:
             supabase = await get_supabase()
             # Check if run exists
-            await self.get_pipeline_run(run_id, pipeline_id)
+            await self.get_pipeline_run(run_id)
 
             # Update run
             data = run_update.model_dump(exclude_unset=True)
@@ -497,7 +495,7 @@ class PipelineService:
                 and run_update.end_time
                 and not run_update.duration
             ):
-                run = await self.get_pipeline_run(run_id, pipeline_id)
+                run = await self.get_pipeline_run(run_id)
                 start_time = datetime.fromisoformat(str(run["start_time"]))
                 end_time = datetime.fromisoformat(str(run_update.end_time))
                 data["duration"] = int((end_time - start_time).total_seconds())
@@ -593,7 +591,7 @@ class PipelineService:
             from app.tasks.worker import cancel_pipeline_run_task
 
             # Check if pipeline run exists and can be cancelled
-            pipeline_run = await self.get_pipeline_run(run_id, pipeline_id)
+            pipeline_run = await self.get_pipeline_run(run_id)
 
             if not pipeline_run:
                 raise HTTPException(
@@ -756,13 +754,13 @@ class PipelineService:
                         "file_ingestion",
                         "text_chunking",
                         "knowledge_extractor",
-                        "ontology_enrichment",
-                        "entity_resolution",
-                        "entity_fusion",
+                        "conflict_detection",
+                        "conflict_resolution",
                         "kg_writer",
                         "entity_enrichment",
-                        "quality_monitoring",
+                        "ontology_enrichment",
                         "kg_completion",
+                        "quality_monitoring",
                     ],
                     "estimated_duration": "45-60 minutes",
                     "use_case": "High-quality domain KG construction",

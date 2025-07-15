@@ -683,8 +683,6 @@ const KnowledgeGraphCompletionPage: React.FC = () => {
 							<DataTable
 								data={suggestions}
 								columns={suggestionColumns}
-								showRowSelection={true}
-								onRowSelectionChange={handleRowSelection}
 								actionsOptions={{
 									show: true,
 									actions: suggestionActions,

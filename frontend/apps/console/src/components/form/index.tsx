@@ -136,9 +136,9 @@ const GeneralForm = <T extends z.ZodType>({
 	schema,
 	onSubmit,
 	onError,
-	submitButtonText = "Submit",
+	submitButtonText = "Xác nhận",
 	debug,
-	resetButtonText = "Reset",
+	resetButtonText = "Đặt lại",
 	buttons,
 	resetButton = false,
 	defaultValues = {},
@@ -700,7 +700,8 @@ const GeneralForm = <T extends z.ZodType>({
 							<div className="space-y-4">
 								{fieldArray.fields.length === 0 ? (
 									<p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-										No items added. Click the button above to add an item.
+										Chưa có {field.arrayItemLabel || "Item"} nào. Nhấn nút "Thêm{" "}
+										{field.arrayItemLabel || "Item"}" để bắt đầu.
 									</p>
 								) : (
 									fieldArray.fields.map((item, index) => (
@@ -852,7 +853,7 @@ const GeneralForm = <T extends z.ZodType>({
 							<FormDescription>{field.description}</FormDescription>
 						)}
 
-						<Card>
+						<Card className="pt-0 gap-0">
 							<CardContent className="space-y-4 pt-6">
 								{field.fields?.map((nestedField) => (
 									<div key={nestedField.name}>
@@ -1423,8 +1424,11 @@ const GeneralForm = <T extends z.ZodType>({
 				{currentFields.map(renderField)}
 
 				{submitSuccess && (
-					<div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
-						Form submitted successfully!
+					<div className="bg-green-100  border border-green-400 text-green-700 px-4 py-3 rounded relative">
+						<strong className="font-bold">Thành công!</strong> {" "}
+						<span className="block sm:inline">
+							Đã gửi thành công. Cảm ơn bạn!
+						</span>
 					</div>
 				)}
 				{buttons ? (
@@ -1442,7 +1446,7 @@ const GeneralForm = <T extends z.ZodType>({
 							</Button>
 						)}
 						<Button type="submit" disabled={isLoading}>
-							{isLoading ? "Submitting..." : submitButtonText}
+							{isLoading ? "Đang gửi..." : submitButtonText}
 						</Button>
 					</div>
 				)}
@@ -1528,28 +1532,6 @@ const getColSpanClass = (colSpan?: number): string => {
 	};
 
 	return colSpanMap[colSpan] || "col-span-12";
-};
-
-// Helper function to get grid columns class
-const getGridColsClass = (gridCols?: number): string => {
-	if (!gridCols || gridCols < 1 || gridCols > 12) return "grid-cols-12";
-
-	const gridColsMap: Record<number, string> = {
-		1: "grid-cols-1",
-		2: "grid-cols-2",
-		3: "grid-cols-3",
-		4: "grid-cols-4",
-		5: "grid-cols-5",
-		6: "grid-cols-6",
-		7: "grid-cols-7",
-		8: "grid-cols-8",
-		9: "grid-cols-9",
-		10: "grid-cols-10",
-		11: "grid-cols-11",
-		12: "grid-cols-12",
-	};
-
-	return gridColsMap[gridCols] || "grid-cols-12";
 };
 
 export default GeneralForm;

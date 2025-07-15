@@ -1,19 +1,18 @@
-import logging
 from typing import Any, Dict, List, Optional
 
 from app.core.supabase import get_supabase
+from app.tasks.executors import StepLogger
 from app.utils.neo4j import get_neo4j_driver
-
-logger = logging.getLogger(__name__)
 
 
 class KnowledgeGraphWriterTask:
     """
     Task for writing knowledge graph to various formats with Vietnamese support
+    Now focuses on Neo4j sync and export formats since entities/relationships are already in Supabase
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, logger: Optional[StepLogger] = None):
+        self.logger = logger
 
     async def write_knowledge_graph(
         self,
@@ -26,10 +25,13 @@ class KnowledgeGraphWriterTask:
     ) -> Dict[str, Any]:
         """
         Write knowledge graph to specified format
+        
+        Since entities and relationships are now saved in Supabase during extraction,
+        this method focuses on syncing to Neo4j and exporting to other formats
 
         Args:
-            entities: List of entities to write
-            relationships: List of relationships to write
+            entities: List of entities (should have database IDs from Supabase)
+            relationships: List of relationships (should have database IDs from Supabase)
             graph_format: Target format (neo4j, rdf, cypher, json)
             batch_size: Batch size for writing
             validate_before_write: Whether to validate data before writing
@@ -39,7 +41,7 @@ class KnowledgeGraphWriterTask:
             Dictionary containing write results
         """
         try:
-            logger.info(
+            await self.logger.info(
                 f"Starting knowledge graph write to {graph_format} format with {len(entities)} entities and {len(relationships)} relationships"
             )
 
@@ -59,7 +61,7 @@ class KnowledgeGraphWriterTask:
             # Write based on format
             write_result = {}
             if graph_format == "neo4j":
-                write_result = await self._write_to_neo4j(
+                write_result = await self._sync_to_neo4j(
                     user_id, entities, relationships, batch_size
                 )
             elif graph_format == "rdf":
@@ -78,21 +80,21 @@ class KnowledgeGraphWriterTask:
                 "success": True,
                 "graph_format": graph_format,
                 "write_stats": {
-                    "entities_written": len(entities),
-                    "relationships_written": len(relationships),
+                    "entities_processed": len(entities),
+                    "relationships_processed": len(relationships),
                     "batch_size": batch_size,
                 },
                 "validation_result": validation_result,
                 "write_result": write_result,
             }
 
-            logger.info(
+            await self.logger.info(
                 f"Knowledge graph write completed successfully to {graph_format}"
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error in knowledge graph write: {e}")
+            await self.logger.error(f"Error in knowledge graph write: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -339,127 +341,65 @@ class KnowledgeGraphWriterTask:
 
         return text
 
-    async def _write_to_neo4j(
+    async def _sync_to_neo4j(
         self,
         user_id: Optional[str],
         entities: List[Dict[str, Any]],
         relationships: List[Dict[str, Any]],
         batch_size: int,
     ) -> Dict[str, Any]:
-        """Write knowledge graph to Neo4j with Vietnamese label support"""
+        """
+        Sync entities and relationships to Neo4j (they are already in Supabase)
+        Update Neo4j IDs in Supabase after successful creation
+        """
         try:
-            from app.core.supabase import get_supabase
-
             supabase = await get_supabase()
-
             neo4j_driver = get_neo4j_driver()
-            write_stats = {
-                "entities_created": 0,
-                "relationships_created": 0,
-                "saved_entities": [],
-                "saved_relationships": [],
+            
+            sync_stats = {
+                "entities_synced": 0,
+                "relationships_synced": 0,
                 "errors": [],
             }
 
             async with neo4j_driver.session() as session:
-                # Write entities in batches
+                # Sync entities in batches
                 for i in range(0, len(entities), batch_size):
                     batch = entities[i : i + batch_size]
 
-                    for _entity in batch:
+                    for entity in batch:
                         try:
+                            # Check if entity already exists in Neo4j
+                            entity_db_id = entity.get("id")
+                            neo4j_id = entity.get("neo4j_id")
+                            
+                            if neo4j_id:
+                                await self.logger.info(f"Entity {entity_db_id} already synced to Neo4j with ID {neo4j_id}")
+                                sync_stats["entities_synced"] += 1
+                                continue
+
                             # Safe text extraction
-                            entity_text = self._safe_get_text(
-                                _entity, "text", "entity_text"
-                            )
+                            entity_text = self._safe_get_text(entity, "text", "entity_text")
                             if not entity_text:
-                                write_stats["errors"].append(
-                                    f"Skipping entity with missing text: {_entity.get('id', 'unknown')}"
+                                sync_stats["errors"].append(
+                                    f"Skipping entity with missing text: {entity_db_id}"
                                 )
                                 continue
 
-                            entity_properties: Dict[str, Any] = {} 
-
-                            for prop in _entity.get(
-                                "properties",[] 
-                            ):
-                                if prop["confidence"] >= 0.8:
-                                    entity_properties[prop["property_name"]] = prop["property_value"] 
-
-                            entity_data = {
-                                "entity_text": entity_text,
-                                "entity_type": _entity.get("entity_type"),
-                                "ontology_class_id": _entity.get("ontology_class_id"),
-                                "properties": {
-                                    "start_position": _entity.get("start_position"),
-                                    "end_position": _entity.get("end_position"),
-                                    "entity_type": self._safe_get_text(
-                                        _entity, "entity_type"
-                                    )
-                                    or "Entity",
-                                    "extraction_method": self._safe_get_text(
-                                        _entity, "extraction_method"
-                                    ),
-                                    "is_mapped": _entity.get("is_mapped", False),
-                                    "confidence": _entity.get("confidence", 0.0),
-                                    **{
-                                        k: v for k, v in entity_properties.items() if v is not None
-                                    },
-
-                                },
-                                "confidence": _entity.get("confidence", 0.0),
-                                "extraction_confidence": _entity.get("confidence", 0.0),
-                                "is_verified": False,
-                                "validation_status": "pending",
-                                "created_by": user_id,
-                                "source_document_id": None,
-                            }
-
-                            entity_response = (
-                                await supabase.from_("kg_entities")
-                                .insert(entity_data)
-                                .execute()
-                            )
-
-                            logger.info(
-                                f"Saving entity: {entity_data.get('entity_text', 'unknown')}"
-                            )
-
-                            if not entity_response.data:
-                                write_stats["errors"].append(
-                                    f"Failed to create entity: {entity_data.get('entity_text', 'unknown')}"
-                                )
-                                continue
-
-                            entity = entity_response.data[0]
-                            write_stats["saved_entities"].append(entity)
-
-                            # Safe text extraction for Neo4j
-                            neo4j_entity_text = self._safe_get_text(
-                                entity, "entity_text", "text"
-                            )
-                            entity_type = (
-                                self._safe_get_text(entity, "entity_type") or "Entity"
-                            )
+                            entity_type = self._safe_get_text(entity, "entity_type") or "Entity"
                             properties = entity.get("properties", {})
 
                             # Add Vietnamese-specific properties
                             neo4j_properties = {
-                                "entity_id": str(entity.get("id", "")),
-                                "entity_text": neo4j_entity_text,
+                                "entity_id": str(entity_db_id),
+                                "entity_text": entity_text,
                                 "entity_type": entity_type,
                                 "confidence": float(entity.get("confidence", 0)),
-                                "is_vietnamese": self._contains_vietnamese_characters(
-                                    neo4j_entity_text
-                                ),
-                                **{
-                                    k: v for k, v in properties.items() if v is not None
-                                },
+                                "is_vietnamese": self._contains_vietnamese_characters(entity_text),
+                                **{k: v for k, v in properties.items() if v is not None},
                             }
 
-                            logger.info(
-                                f"Creating Neo4j entity: {neo4j_properties.get('entity_text', 'unknown')}"
-                            )
+                            await self.logger.info(f"Syncing Neo4j entity: {neo4j_properties.get('entity_text', 'unknown')}")
 
                             # Use Vietnamese-safe entity type as label
                             safe_label = self._make_neo4j_safe_label(entity_type)
@@ -473,117 +413,60 @@ class KnowledgeGraphWriterTask:
                                 cypher_query, properties=neo4j_properties
                             )
 
-                            logger.info(
-                                f"Neo4j query executed for entity: {neo4j_entity_text}"
-                            )
-
                             record = await result.single()
 
                             if record:
-                                write_stats["entities_created"] += 1
+                                new_neo4j_id = str(record["neo4j_id"])
+                                
+                                # Update Supabase with Neo4j ID
                                 await supabase.from_("kg_entities").update(
-                                    {"neo4j_id": str(record["neo4j_id"])}
-                                ).eq("id", entity.get("id")).execute()
+                                    {"neo4j_id": new_neo4j_id}
+                                ).eq("id", entity_db_id).execute()
+                                
+                                sync_stats["entities_synced"] += 1
+                                await self.logger.info(f"Successfully synced entity {entity_db_id} to Neo4j with ID {new_neo4j_id}")
 
                         except Exception as e:
-                            logger.error(
-                                f"Error creating entity {_entity.get('id', 'unknown')}: {e}"
-                            )
-                            write_stats["errors"].append(
-                                f"Error creating entity {_entity.get('id', 'unknown')}: {str(e)}"
+                            await self.logger.error(f"Error syncing entity {entity.get('id', 'unknown')}: {e}")
+                            sync_stats["errors"].append(
+                                f"Error syncing entity {entity.get('id', 'unknown')}: {str(e)}"
                             )
 
-                # Write relationships in batches
+                # Sync relationships in batches
                 for i in range(0, len(relationships), batch_size):
                     batch = relationships[i : i + batch_size]
 
-                    for _relationship in batch:
+                    for relationship in batch:
                         try:
+                            # Check if relationship already exists in Neo4j
+                            rel_db_id = relationship.get("id")
+                            neo4j_id = relationship.get("neo4j_id")
+                            
+                            if neo4j_id:
+                                await self.logger.info(f"Relationship {rel_db_id} already synced to Neo4j with ID {neo4j_id}")
+                                sync_stats["relationships_synced"] += 1
+                                continue
+
                             # Safe text extraction for relationships
-                            source_entity_text = self._safe_get_text(
-                                _relationship, "source_entity"
-                            )
-                            target_entity_text = self._safe_get_text(
-                                _relationship, "target_entity"
-                            )
+                            source_entity_text = self._safe_get_text(relationship, "source_entity")
+                            target_entity_text = self._safe_get_text(relationship, "target_entity")
 
                             if not source_entity_text or not target_entity_text:
-                                write_stats["errors"].append(
-                                    f"Skipping relationship with missing entity text: {_relationship.get('id', 'unknown')}"
+                                sync_stats["errors"].append(
+                                    f"Skipping relationship with missing entity text: {rel_db_id}"
                                 )
                                 continue
 
-                            source_entity_id = await self._find_kg_entity_id(
-                                source_entity_text
-                            )
-                            target_entity_id = await self._find_kg_entity_id(
-                                target_entity_text
-                            )
-
-                            relationship_data = {
-                                "source_entity_id": source_entity_id,
-                                "target_entity_id": target_entity_id,
-                                "relationship_type": _relationship.get(
-                                    "relationship_type"
-                                ),
-                                "ontology_property_id": _relationship.get(
-                                    "ontology_property_id"
-                                ),
-                                "properties": {
-                                    "source_entity_id": source_entity_id,
-                                    "target_entity_id": target_entity_id,
-                                    "extraction_method": self._safe_get_text(
-                                        _relationship, "extraction_method"
-                                    ),
-                                    "pattern_matched": self._safe_get_text(
-                                        _relationship, "pattern_matched"
-                                    ),
-                                    "is_mapped": _relationship.get("is_mapped", False),
-                                    "evidence_text": _relationship.get(
-                                        "evidence_text","" 
-                                    ),
-                                },
-                                "confidence": _relationship.get("confidence", 0.0),
-                                "extraction_confidence": _relationship.get(
-                                    "confidence", 0.0
-                                ),
-                                "is_verified": False,
-                                "validation_status": "pending",
-                            }
-
-                            logger.info(f"Saving relationship: {relationship_data}")
-
-                            relationship_response = (
-                                await supabase.from_("kg_relationships")
-                                .insert(relationship_data)
-                                .execute()
-                            )
-
-                            if not relationship_response.data:
-                                write_stats["errors"].append(
-                                    f"Failed to create relationship"
-                                )
-                                continue
-
-                            relationship = relationship_response.data[0]
-                            write_stats["saved_relationships"].append(relationship)
-
-                            # Safe extraction for Neo4j relationship creation
-                            rel_type = (
-                                self._safe_get_text(_relationship, "relationship_type")
-                                or "RELATED_TO"
-                            )
+                            rel_type = self._safe_get_text(relationship, "relationship_type") or "RELATED_TO"
                             properties = relationship.get("properties", {})
 
                             # Add Vietnamese-specific properties
                             neo4j_properties = {
-                                "relationship_id": str(relationship.get("id", "")),
+                                "relationship_id": str(rel_db_id),
                                 "confidence": float(relationship.get("confidence", 0)),
                                 "source_entity_text": source_entity_text,
                                 "target_entity_text": target_entity_text,
-                                **{
-                                    k: v for k, v in properties.items() if v is not None
-                                },
+                                **{k: v for k, v in properties.items() if v is not None},
                             }
 
                             # Use Vietnamese-safe relationship type
@@ -605,100 +488,28 @@ class KnowledgeGraphWriterTask:
                             record = await result.single()
 
                             if record:
-                                write_stats["relationships_created"] += 1
+                                new_neo4j_id = str(record["neo4j_id"])
+                                
+                                # Update Supabase with Neo4j ID
                                 await supabase.from_("kg_relationships").update(
-                                    {"neo4j_id": str(record["neo4j_id"])}
-                                ).eq("id", relationship.get("id")).execute()
+                                    {"neo4j_id": new_neo4j_id}
+                                ).eq("id", rel_db_id).execute()
+                                
+                                sync_stats["relationships_synced"] += 1
+                                await self.logger.info(f"Successfully synced relationship {rel_db_id} to Neo4j with ID {new_neo4j_id}")
 
                         except Exception as e:
-                            logger.error(f"Error creating relationship: {e}")
-                            write_stats["errors"].append(
-                                f"Error creating relationship {_relationship.get('id', 'unknown')}: {str(e)}"
+                            await self.logger.error(f"Error syncing relationship {relationship.get('id', 'unknown')}: {e}")
+                            sync_stats["errors"].append(
+                                f"Error syncing relationship {relationship.get('id', 'unknown')}: {str(e)}"
                             )
 
-            logger.info(f"Writer: {write_stats}")
-            return write_stats
+            await self.logger.info(f"Neo4j sync completed: {sync_stats}")
+            return sync_stats
 
         except Exception as e:
-            logger.error(f"Error writing to Neo4j: {e}")
+            await self.logger.error(f"Error syncing to Neo4j: {e}")
             return {"error": str(e)}
-
-    async def _find_kg_entity_id(
-        self,
-        entity_text: str,
-    ) -> Optional[str]:
-        """
-        Find the corresponding kg_entities ID for an entity text
-        """
-        if not entity_text:
-            return None
-
-        try:
-            supabase = await get_supabase()
-
-            # First try to find entity from the same extraction
-            response = (
-                await supabase.from_("kg_entities")
-                .select("id")
-                .eq("entity_text", entity_text)
-                .limit(1)
-                .execute()
-            )
-
-            if response.data:
-                return response.data[0]["id"]
-
-            # If not found, try fuzzy matching
-            response = (
-                await supabase.from_("kg_entities")
-                .select("id, entity_text")
-                .ilike("entity_text", f"%{entity_text}%")
-                .limit(5)
-                .execute()
-            )
-
-            for entity in response.data:
-                entity_db_text = entity.get("entity_text", "")
-                if (
-                    entity_db_text
-                    and self._vietnamese_similarity(
-                        entity_text.lower(), entity_db_text.lower()
-                    )
-                    > 0.8
-                ):
-                    return entity["id"]
-
-            return None
-
-        except Exception as e:
-            logger.warning(f"Error finding kg_entity_id for {entity_text}: {e}")
-            return None
-
-    def _vietnamese_similarity(self, text1: str, text2: str) -> float:
-        """Calculate similarity between two Vietnamese texts"""
-        if not text1 or not text2:
-            return 0.0
-
-        # Simple similarity based on normalized text comparison
-        norm1 = self._normalize_vietnamese_text(text1)
-        norm2 = self._normalize_vietnamese_text(text2)
-
-        if norm1 == norm2:
-            return 1.0
-
-        # Basic Jaccard similarity for words
-        words1 = set(norm1.split())
-        words2 = set(norm2.split())
-
-        if not words1 and not words2:
-            return 1.0
-        if not words1 or not words2:
-            return 0.0
-
-        intersection = len(words1.intersection(words2))
-        union = len(words1.union(words2))
-
-        return intersection / union if union > 0 else 0.0
 
     def _contains_vietnamese_characters(self, text: str) -> bool:
         """Check if text contains Vietnamese characters"""
@@ -833,7 +644,7 @@ class KnowledgeGraphWriterTask:
             return write_stats
 
         except Exception as e:
-            logger.error(f"Error writing to RDF: {e}")
+            await self.logger.error(f"Error writing to RDF: {e}")
             return {"error": str(e)}
 
     def _make_uri_safe(self, text: str) -> str:

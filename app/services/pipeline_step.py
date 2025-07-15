@@ -3,8 +3,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from fastapi import status as HttpStatus
 from postgrest.base_request_builder import APIResponse
+from postgrest.types import CountMethod
 
 from app.core.supabase import get_supabase
 from app.schemas.pipeline_step import (PipelineStepCreate,
@@ -33,11 +35,9 @@ class PipelineStepService:
 
             # Convert complex fields to JSON strings for database
             if "config" in step_dict:
-                step_dict["config"] = json.dumps(step_dict["config"])
+                step_dict["config"] = step_dict["config"]
             if "incremental_config" in step_dict and step_dict["incremental_config"]:
-                step_dict["incremental_config"] = json.dumps(
-                    step_dict["incremental_config"]
-                )
+                step_dict["incremental_config"] = step_dict["incremental_config"]
             if "inputs" in step_dict and isinstance(step_dict["inputs"], list):
                 step_dict["inputs"] = ",".join(step_dict["inputs"])
 
@@ -47,7 +47,7 @@ class PipelineStepService:
 
             if not response.data:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to create pipeline step",
                 )
 
@@ -55,7 +55,7 @@ class PipelineStepService:
 
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error creating pipeline step: {str(e)}",
             )
 
@@ -74,18 +74,16 @@ class PipelineStepService:
 
             if not response:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=HttpStatus.HTTP_404_NOT_FOUND,
                     detail="Pipeline step not found",
                 )
 
             # Parse JSON fields
             step_data = response.data
             if step_data.get("config"):
-                step_data["config"] = json.loads(step_data["config"])
+                step_data["config"] = step_data["config"]
             if step_data.get("incremental_config"):
-                step_data["incremental_config"] = json.loads(
-                    step_data["incremental_config"]
-                )
+                step_data["incremental_config"] = step_data["incremental_config"]
             if step_data.get("inputs"):
                 step_data["inputs"] = [
                     inp.strip() for inp in step_data["inputs"].split(",") if inp.strip()
@@ -97,7 +95,7 @@ class PipelineStepService:
             raise
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error retrieving pipeline step: {str(e)}",
             )
 
@@ -117,14 +115,12 @@ class PipelineStepService:
 
             # Convert complex fields to JSON strings
             if "config" in update_data:
-                update_data["config"] = json.dumps(update_data["config"])
+                update_data["config"] = update_data["config"]
             if (
                 "incremental_config" in update_data
                 and update_data["incremental_config"]
             ):
-                update_data["incremental_config"] = json.dumps(
-                    update_data["incremental_config"]
-                )
+                update_data["incremental_config"] = update_data["incremental_config"]
             if "depends_on" in update_data and isinstance(
                 update_data["depends_on"], list
             ):
@@ -147,7 +143,7 @@ class PipelineStepService:
 
             if not response.data:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to update pipeline step",
                 )
 
@@ -157,7 +153,7 @@ class PipelineStepService:
             raise
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error updating pipeline step: {str(e)}",
             )
 
@@ -175,7 +171,7 @@ class PipelineStepService:
             dependent_steps = await self._get_dependent_steps(step_id, pipeline_id)
             if dependent_steps:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=HttpStatus.HTTP_400_BAD_REQUEST,
                     detail=f"Cannot delete step with dependencies: {[s['name'] for s in dependent_steps]}",
                 )
 
@@ -188,7 +184,7 @@ class PipelineStepService:
             raise
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error deleting pipeline step: {str(e)}",
             )
 
@@ -215,9 +211,7 @@ class PipelineStepService:
                     "pipeline_id": step_data["pipeline_id"],
                     "name": step_data["name"],
                     "step_type": step_data["step_type"],
-                    "config": (
-                        json.loads(step_data["config"]) if step_data["config"] else {}
-                    ),
+                    "config": (step_data["config"] if step_data["config"] else {}),
                     "run_order": step_data["run_order"],
                     "description": step_data.get("description"),
                     "enabled": step_data.get("enabled", True),
@@ -231,7 +225,7 @@ class PipelineStepService:
                         "is_incremental_capable", False
                     ),
                     "incremental_config": (
-                        json.loads(step_data["incremental_config"])
+                        step_data["incremental_config"]
                         if step_data.get("incremental_config")
                         else None
                     ),
@@ -244,7 +238,7 @@ class PipelineStepService:
 
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error retrieving pipeline steps: {str(e)}",
             )
 
@@ -283,7 +277,7 @@ class PipelineStepService:
                 if not ready_steps:
                     # Circular dependency detected
                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
+                        status_code=HttpStatus.HTTP_400_BAD_REQUEST,
                         detail="Circular dependency detected in pipeline steps",
                     )
 
@@ -294,7 +288,7 @@ class PipelineStepService:
 
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error determining execution order: {str(e)}",
             )
 
@@ -314,7 +308,6 @@ class PipelineStepService:
                 .select("*")
                 .filter("pipeline_run_id", "eq", pipeline_run_id)
             )
-
             if step_id:
                 query = query.filter("step_id", "eq", step_id)
             if status:
@@ -326,25 +319,28 @@ class PipelineStepService:
                 .execute()
             )
 
-            if "output_data" in response.data[0]:
-                for step_run in response.data:
-                    if step_run["output_data"]:
-                        step_run["output_data"] = json.loads(step_run["output_data"])
-            if "input_data" in response.data[0]:
-                for step_run in response.data:
-                    if step_run["input_data"]:
-                        step_run["input_data"] = json.loads(step_run["input_data"])
+            # Check if there's any data before processing
+            if response.data:
+                # Process output_data if it exists in the first record
+                if "output_data" in response.data[0]:
+                    for step_run in response.data:
+                        if step_run["output_data"]:
+                            step_run["output_data"] = step_run["output_data"]
+
+                # Process input_data if it exists in the first record
+                if "input_data" in response.data[0]:
+                    for step_run in response.data:
+                        if step_run["input_data"]:
+                            step_run["input_data"] = step_run["input_data"]
 
             return response
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error retrieving pipeline step runs: {str(e)}",
             )
 
-    async def get_pipeline_step_run(
-        self, pipeline_run_id: str, step_run_id: str
-    ) -> Dict[str, Any]:
+    async def get_pipeline_step_run(self, step_run_id: str) -> Dict[str, Any]:
         """Get a pipeline step run by ID"""
         try:
             supabase = await get_supabase()
@@ -352,13 +348,12 @@ class PipelineStepService:
                 await supabase.from_("pipeline_step_runs")
                 .select("*")
                 .filter("id", "eq", step_run_id)
-                .filter("pipeline_run_id", "eq", pipeline_run_id)
                 .maybe_single()
                 .execute()
             )
             if not response:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=HttpStatus.HTTP_404_NOT_FOUND,
                     detail="Pipeline step run not found",
                 )
             return response.data
@@ -366,7 +361,7 @@ class PipelineStepService:
             raise
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error retrieving pipeline step run: {str(e)}",
             )
 
@@ -380,7 +375,7 @@ class PipelineStepService:
             step_run_data = step_run_in.model_dump(exclude_unset=True)
 
             if "input_data" in step_run_data and step_run_data["input_data"]:
-                step_run_data["input_data"] = json.dumps(step_run_data["input_data"])
+                step_run_data["input_data"] = step_run_data["input_data"]
 
             if "start_time" in step_run_data:
                 step_run_data["start_time"] = step_run_data["start_time"].isoformat()
@@ -395,7 +390,7 @@ class PipelineStepService:
 
             if not response.data:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to create pipeline step run",
                 )
 
@@ -403,14 +398,13 @@ class PipelineStepService:
 
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error creating pipeline step run: {str(e)}",
             )
 
     async def update_pipeline_step_run(
         self,
         step_run_id: str,
-        pipeline_run_id: str,
         step_run_update: PipelineStepRunUpdate,
     ) -> Dict[str, Any]:
         """Update a pipeline step run"""
@@ -421,7 +415,7 @@ class PipelineStepService:
 
             # Convert complex fields to JSON
             if "output_data" in update_data and update_data["output_data"]:
-                update_data["output_data"] = json.dumps(update_data["output_data"])
+                update_data["output_data"] = update_data["output_data"]
 
             if "start_time" in update_data:
                 update_data["start_time"] = update_data["start_time"].isoformat()
@@ -433,13 +427,12 @@ class PipelineStepService:
                 await supabase.from_("pipeline_step_runs")
                 .update(update_data)
                 .eq("id", step_run_id)
-                .eq("pipeline_run_id", pipeline_run_id)
                 .execute()
             )
 
             if not response.data:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Failed to update pipeline step run",
                 )
 
@@ -447,18 +440,16 @@ class PipelineStepService:
 
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error updating pipeline step run: {str(e)}",
             )
 
-    async def delete_pipeline_step_run(
-        self, step_run_id: str, pipeline_run_id: str
-    ) -> Dict[str, Any]:
+    async def delete_pipeline_step_run(self, step_run_id: str) -> Dict[str, Any]:
         """Delete a pipeline step run"""
         try:
             supabase = await get_supabase()
             # Check if step run exists
-            await self.get_pipeline_step_run(step_run_id, pipeline_run_id)
+            await self.get_pipeline_step_run(step_run_id)
             # Delete step run
             await supabase.from_("pipeline_step_runs").delete().eq(
                 "id", step_run_id
@@ -468,7 +459,7 @@ class PipelineStepService:
             raise
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error deleting pipeline step run: {str(e)}",
             )
 
@@ -833,7 +824,7 @@ class PipelineStepService:
 
         if missing_ids:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=HttpStatus.HTTP_400_BAD_REQUEST,
                 detail=f"Dependency steps not found: {list(missing_ids)}",
             )
 
@@ -851,3 +842,124 @@ class PipelineStepService:
         )
 
         return response.data
+
+    async def get_step_execution_logs(
+        self,
+        pipeline_run_id: Optional[str] = None,
+        step_run_id: Optional[str] = None,
+        log_level: Optional[str] = None,
+        start_time: Optional[str] = None,
+        search: Optional[str] = None,
+        end_time: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> APIResponse[Dict[str, Any]]:
+        """Get execution logs for a specific pipeline step run"""
+        try:
+            supabase = await get_supabase()
+
+            # Build query
+            query = supabase.from_("step_execution_logs").select(
+                "*", count=CountMethod.exact
+            )
+
+            if step_run_id:
+                query = query.eq("step_run_id", step_run_id)
+
+            if pipeline_run_id:
+                query = query.eq("pipeline_run_id", pipeline_run_id)
+
+            # Apply filters
+            if log_level:
+                if log_level not in ["DEBUG", "INFO", "WARN", "ERROR"]:
+                    raise HTTPException(
+                        status_code=HttpStatus.HTTP_400_BAD_REQUEST,
+                        detail="Invalid log_level. Must be one of: DEBUG, INFO, WARN, ERROR",
+                    )
+                query = query.eq("log_level", log_level)
+
+            if start_time:
+                query = query.gte("timestamp", start_time)
+
+            if end_time:
+                query = query.lte("timestamp", end_time)
+
+            if search:
+                query = query.ilike("message", f"%{search}%")
+
+            # Execute query with pagination
+            response = (
+                await query.order("timestamp", desc=True)
+                .range(skip, skip + limit - 1)
+                .execute()
+            )
+
+            # Parse details field if it exists
+            for log_entry in response.data:
+                if log_entry.get("details"):
+                    try:
+                        log_entry["details"] = log_entry["details"]
+                    except (json.JSONDecodeError, TypeError):
+                        # Keep as string if not valid JSON
+                        pass
+
+            return response
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error retrieving step execution logs: {str(e)}",
+            )
+
+    async def create_step_execution_log(
+        self, step_run_id: str, log_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Create a new execution log entry for a pipeline step run"""
+        try:
+            supabase = await get_supabase()
+
+            # Prepare log entry data
+            log_entry = {
+                "step_run_id": step_run_id,
+                "log_level": log_data["log_level"],
+                "message": log_data["message"],
+                "timestamp": log_data.get(
+                    "timestamp", datetime.now(timezone.utc).isoformat()
+                ),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+
+            # Add details if provided
+            if "details" in log_data and log_data["details"]:
+                log_entry["details"] = log_data["details"]
+
+            # Insert log entry
+            response = (
+                await supabase.from_("step_execution_logs").insert(log_entry).execute()
+            )
+
+            if not response.data:
+                raise HTTPException(
+                    status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Failed to create step execution log",
+                )
+
+            # Parse details back to object
+            created_log = response.data[0]
+            if created_log.get("details"):
+                try:
+                    created_log["details"] = created_log["details"]
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            return created_log
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=HttpStatus.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating step execution log: {str(e)}",
+            )

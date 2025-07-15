@@ -4,6 +4,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi import status as HttpStatus
 
 from app.api.deps import PermissionChecker, validate_rate_limits
+from app.core import supabase
 from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.pipeline import (Pipeline, PipelineCreate,
                                   PipelineCreateFromTemplate, PipelineRun,
@@ -16,7 +17,7 @@ from app.services.pipeline_step import PipelineStepService
 
 router = APIRouter(
     dependencies=[Depends(validate_rate_limits)],  # Add rate limiting
-        )
+)
 
 check_read_permission = PermissionChecker("pipeline:read")
 check_write_permission = PermissionChecker("pipeline:write")
@@ -105,7 +106,6 @@ async def get_pipeline_runs(
         raise HTTPException(
             status_code=500, detail=f"Error fetching pipeline runs: {str(e)}"
         )
-
 
 @router.get("/{pipeline_id}/runs/{run_id}", response_model=ApiResponse[PipelineRun])
 async def read_pipeline_run(
@@ -296,11 +296,11 @@ async def update_pipeline(
     )
 
 
-@router.delete("/{pipeline_id}", response_model=ApiResponse[Pipeline])
+@router.delete("/{pipeline_id}", response_model=ApiResponse[None])
 async def delete_pipeline(
     pipeline_id: Annotated[str, Path()],
     current_user: User = Depends(check_write_permission),
-) -> ApiResponse[Pipeline]:
+) -> ApiResponse[None]:
     """
     Delete a pipeline.
     """
@@ -318,7 +318,7 @@ async def delete_pipeline(
     pipeline = await pipeline_service.delete_pipeline(pipeline_id=pipeline_id)
 
     return ApiResponse(
-        data=Pipeline(**pipeline),
+        data=None,
         status=HttpStatus.HTTP_200_OK,
         message="Pipeline deleted successfully",
     )
@@ -463,6 +463,31 @@ async def get_pipeline_step_runs(
         message="Pipeline step retrieved successfully",
     )
 
+@router.get("/runs/{pipeline_run_id}/report", response_model=ApiResponse[Dict[str, Any]])
+async def get_pipeline_report(
+    pipeline_run_id: Annotated[str, Path()],
+    current_user: User = Depends(check_read_permission),
+) -> ApiResponse[Dict[str, Any]]:
+    """
+    Get a detailed report of a specific pipeline run
+    """
+    from app.core.supabase import get_supabase
+    supabase = await get_supabase()
+
+    report = await supabase.table("pipeline_quality_reports").select("*").eq(
+        "pipeline_run_id", pipeline_run_id
+    ).execute()
+
+    if not report.data and len(report.data) == 0:
+        raise HTTPException(
+        status_code=404,
+        detail="Pipeline report not found",
+        )
+    return ApiResponse(
+        data=report.data[0],
+        status=HttpStatus.HTTP_200_OK,
+        message="Pipeline report retrieved successfully",
+    )
 
 @router.get(
     "/runs/{pipeline_run_id}/steps/{step_run_id}",
@@ -801,3 +826,4 @@ def _get_step_complexity(step_type: PipelineStepType) -> str:
         return "medium"
     else:
         return "low"
+

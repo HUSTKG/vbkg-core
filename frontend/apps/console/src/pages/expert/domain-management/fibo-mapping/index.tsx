@@ -16,10 +16,6 @@ import {
 	TabsList,
 	TabsTrigger,
 	toast,
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
 } from "@/components";
 import {
 	useEntityMappings,
@@ -30,11 +26,12 @@ import {
 	useVerifyRelationshipMapping,
 	useDeleteEntityMapping,
 	useDeleteRelationshipMapping,
+	useApplyEntityMappingSuggestion,
+	useApplyRelationshipMappingSuggestion,
 } from "@vbkg/api-client";
 import { EntityMapping, RelationshipMapping } from "@vbkg/types";
 import {
 	AlertTriangle,
-	CheckCircle,
 	Database,
 	Eye,
 	Lightbulb,
@@ -73,6 +70,28 @@ const OntologyMappingManagementPage = () => {
 		error: relationshipMappingsError,
 		refetch: refetchRelationshipMappings,
 	} = useRelationshipMappings({ limit: 200 });
+
+	const { mutate: applyEntityMappingSuggestion } =
+		useApplyEntityMappingSuggestion({
+			onSuccess: () => {
+				refetchEntityMappings();
+				toast.success("Đã áp dụng suggestion cho entity mapping!");
+			},
+			onError: (error) => {
+				toast.error(`Lỗi khi áp dụng suggestion: ${error.message}`);
+			},
+		});
+
+	const { mutate: applyRelationshipMappingSuggestion } =
+		useApplyRelationshipMappingSuggestion({
+			onSuccess: () => {
+				refetchRelationshipMappings();
+				toast.success("Đã áp dụng suggestion cho relationship mapping!");
+			},
+			onError: (error) => {
+				toast.error(`Lỗi khi áp dụng suggestion: ${error.message}`);
+			},
+		});
 
 	// Mutation hooks for verify operations
 	const verifyEntityMappingMutation = useVerifyEntityMapping({
@@ -183,7 +202,7 @@ const OntologyMappingManagementPage = () => {
 									{suggestion.is_new_class || suggestion.is_new_property ? (
 										<Badge className="bg-purple-100 text-purple-800">
 											<Plus size={10} className="mr-1" />
-											New
+											Mới
 										</Badge>
 									) : null}
 								</div>
@@ -193,9 +212,19 @@ const OntologyMappingManagementPage = () => {
 								<div className="flex space-x-2">
 									<Button
 										size="sm"
-										onClick={() =>
-											applySuggestion(selectedMapping!, suggestion)
-										}
+										onClick={() => {
+											if (type === "entity") {
+												applyEntityMappingSuggestion({
+													id: selectedMapping?.id,
+													suggestion_index: index,
+												});
+											} else {
+												applyRelationshipMappingSuggestion({
+													id: selectedMapping?.id,
+													suggestion_index: index,
+												});
+											}
+										}}
 										className="bg-green-600 hover:bg-green-700"
 									>
 										<ThumbsUp size={12} className="mr-1" />
@@ -205,7 +234,6 @@ const OntologyMappingManagementPage = () => {
 										size="sm"
 										variant="outline"
 										onClick={() => {
-											// Handle reject suggestion
 											toast.info("Suggestion đã được từ chối");
 										}}
 									>

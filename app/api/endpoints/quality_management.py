@@ -1,8 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi import status as HttpStatus
 
 from app.api.deps import PermissionChecker, validate_rate_limits
@@ -10,15 +9,15 @@ from app.schemas.api import ApiResponse, PaginatedMeta, PaginatedResponse
 from app.schemas.conflict_resolution import (Conflict, ConflictResolution,
                                              ConflictResolutionRequest,
                                              ConflictStatus, ConflictType,
-                                             KGEdit, QualityReport)
+                                             KGEdit)
 from app.services.conflict_detection import ConflictDetectionService
 from app.services.conflict_resolution import ConflictResolutionService
 from app.services.knowledge_graph import KnowledgeGraphService
-from app.services.quality_management import QualityManagementService
+from app.services.quality import QualityManagementService
 
 router = APIRouter(
     dependencies=[Depends(validate_rate_limits)],  # Add rate limiting
-        )
+)
 
 # Permission checkers
 check_read_permission = PermissionChecker("quality:read")
@@ -80,7 +79,7 @@ async def generate_quality_report(
 
 
 @router.post("/monitoring/run")
-def run_quality_monitoring(
+async def run_quality_monitoring(
     background_tasks: BackgroundTasks,
     current_user: Dict[str, Any] = Depends(check_admin_permission),
 ) -> ApiResponse[Dict[str, Any]]:

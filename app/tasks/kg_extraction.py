@@ -5,15 +5,16 @@ from uuid import UUID
 
 from app.nlp.entity_extraction import EntityExtractionService
 from app.nlp.relation_extraction import RelationshipExtractionService
+from app.tasks.executors import StepLogger
 
 logger = logging.getLogger(__name__)
 
 
 class KgExtractionTask:
-    """Task for knowledge graph extraction from text using NLP services"""
+    """Task for knowledge graph extraction from text using NLP services with direct saving"""
 
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, logger: StepLogger):
+        self.logger = logger
         self.entity_service = EntityExtractionService()
         self.relationship_service = RelationshipExtractionService()
 
@@ -23,13 +24,13 @@ class KgExtractionTask:
         domain: Optional[str] = None,
         user_id: Optional[UUID] = None,
         confidence_threshold: float = 0.5,
-        auto_save: bool = False,
+        auto_save: bool = True,
         step_id: Optional[str] = None,
         pipeline_id: Optional[str] = None,
         incremental_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Extract entities and relationships from text content.
+        Extract entities and relationships from text content with direct saving.
 
         Args:
             text_content: Text to extract knowledge from
@@ -42,28 +43,30 @@ class KgExtractionTask:
             incremental_config: Configuration for incremental processing
 
         Returns:
-            Dictionary containing extracted entities and relationships
+            Dictionary containing extracted entities and relationships with database IDs
         """
         try:
-            self.logger.info(
+            logger.info(f"Extracting knowledge from text (length: {len(text_content)})")
+            await self.logger.info(
                 f"Starting knowledge extraction from text (length: {len(text_content)})"
             )
 
-            # Extract entities
+            # Extract entities first (they will be saved automatically if auto_save=True)
             entity_result = await self.entity_service.extract_entities(
                 text=text_content,
                 domain=domain,
-                user_id=user_id,
-                auto_save=False,  # We'll save later if needed
+                user_id=str(user_id) if user_id else None,
+                auto_save=auto_save,
                 step_id=step_id,
                 pipeline_id=pipeline_id,
                 incremental_config=incremental_config,
             )
 
             entities = entity_result.get("entities", [])
-            self.logger.info(entities)
-            self.logger.info(confidence_threshold)
-            self.logger.info(f"Extracted {len(entities)} entities")
+            await self.logger.info(f"Extracted {len(entities)} entities")
+            logger.info(f"Extracted {len(entities)} entities")
+            await self.logger.info(f"Confidence threshold: {confidence_threshold}")
+            logger.info(f"Confidence threshold: {confidence_threshold}")
 
             # Filter entities by confidence
             filtered_entities = [
@@ -72,21 +75,26 @@ class KgExtractionTask:
                 if entity.get("confidence", 0.0) >= confidence_threshold
             ]
 
-            self.logger.info(
+            await self.logger.info(
                 f"Filtered to {len(filtered_entities)} entities above confidence threshold"
             )
 
-            # Extract relationships using filtered entities
+            logger.info(
+                f"Filtered to {len(filtered_entities)} entities above confidence threshold"
+            )
+
+            # Extract relationships using filtered entities (they will be saved automatically if auto_save=True)
             relationship_result = await self.relationship_service.extract_relationships(
                 text=text_content,
-                entities=filtered_entities,
+                entities=filtered_entities,  # Pass entities with database IDs
                 domain=domain,
-                user_id=user_id,
-                auto_save=False,  # We'll save later if needed
+                user_id=str(user_id) if user_id else None,
+                auto_save=auto_save,
             )
 
             relationships = relationship_result.get("relationships", [])
-            self.logger.info(f"Extracted {len(relationships)} relationships")
+            await self.logger.info(f"Extracted {len(relationships)} relationships")
+            logger.info(f"Extracted {len(relationships)} relationships")
 
             # Filter relationships by confidence
             filtered_relationships = [
@@ -95,16 +103,16 @@ class KgExtractionTask:
                 if rel.get("confidence", 0.0) >= confidence_threshold
             ]
 
-            self.logger.info(
+            await self.logger.info(
                 f"Filtered to {len(filtered_relationships)} relationships above confidence threshold"
             )
 
-            # Save results if auto_save is enabled
-            extraction_id = None
-            if auto_save and filtered_entities:
-                extraction_id = await self._save_extraction_results(
-                    text_content, filtered_entities, filtered_relationships, user_id
-                )
+            logger.info(
+                f"Filtered to {len(filtered_relationships)} relationships above confidence threshold"
+            )
+
+            # Get extraction ID from entity result (if auto_save was enabled)
+            extraction_id = entity_result.get("extraction_id")
 
             return {
                 "entities": filtered_entities,
@@ -122,7 +130,8 @@ class KgExtractionTask:
             }
 
         except Exception as e:
-            self.logger.error(f"Error in knowledge extraction: {str(e)}")
+            await self.logger.error(f"Error in knowledge extraction: {str(e)}")
+            logger.error(f"Error in knowledge extraction: {str(e)}")
             return {
                 "entities": [],
                 "relationships": [],
@@ -151,7 +160,7 @@ class KgExtractionTask:
         batch_size: int = 10,
     ) -> Dict[str, Any]:
         """
-        Extract knowledge from multiple text chunks.
+        Extract knowledge from multiple text chunks with direct saving.
 
         Args:
             text_chunks: List of text chunks to process
@@ -164,10 +173,10 @@ class KgExtractionTask:
             batch_size: Number of chunks to process in each batch
 
         Returns:
-            Dictionary containing aggregated extraction results
+            Dictionary containing aggregated extraction results with database IDs
         """
         try:
-            self.logger.info(
+            await self.logger.info(
                 f"Starting knowledge extraction from {len(text_chunks)} chunks"
             )
 
@@ -191,7 +200,7 @@ class KgExtractionTask:
                         domain=domain,
                         user_id=user_id,
                         confidence_threshold=confidence_threshold,
-                        auto_save=False,  # We'll save aggregated results
+                        auto_save=auto_save,  # Each chunk will save its own data
                         step_id=step_id,
                         pipeline_id=pipeline_id,
                     )
@@ -228,44 +237,37 @@ class KgExtractionTask:
                         }
                     )
 
-            # Deduplicate entities and relationships
-            deduplicated_entities = await self._deduplicate_entities(all_entities)
-            deduplicated_relationships = await self._deduplicate_relationships(
-                all_relationships
-            )
+            # Deduplicate entities and relationships (they already have database IDs)
+            # deduplicated_entities = await self._deduplicate_entities(all_entities)
+            # deduplicated_relationships = await self._deduplicate_relationships(
+            #     all_relationships
+            # )
 
-            self.logger.info(
-                f"Aggregated results: {len(deduplicated_entities)} unique entities, {len(deduplicated_relationships)} unique relationships"
-            )
+            # await self.logger.info(
+            #     f"Aggregated results: {len(deduplicated_entities)} unique entities, {len(deduplicated_relationships)} unique relationships"
+            # )
 
-            # Save results if auto_save is enabled
-            extraction_id = None
-            if auto_save and deduplicated_entities:
-                extraction_id = await self._save_extraction_results(
-                    text_content="Multiple chunks",  # Placeholder for aggregated content
-                    entities=deduplicated_entities,
-                    relationships=deduplicated_relationships,
-                    user_id=user_id,
-                )
+            # Note: Individual entities and relationships are already saved from each chunk
+            # We don't need to save again here, just return the deduplicated results
 
             return {
-                "entities": deduplicated_entities,
-                "relationships": deduplicated_relationships,
-                "extraction_id": extraction_id,
+                "entities": all_entities,
+                "relationships": all_relationships,
+                "extraction_id": None,  # Multiple chunks, no single extraction ID
                 "chunk_results": chunk_results,
                 "statistics": {
                     "total_chunks_processed": len(text_chunks),
                     "total_entities_extracted": len(all_entities),
-                    "deduplicated_entities": len(deduplicated_entities),
+                    "deduplicated_entities": len(all_entities),
                     "total_relationships_extracted": len(all_relationships),
-                    "deduplicated_relationships": len(deduplicated_relationships),
+                    "deduplicated_relationships": len(all_relationships),
                     "confidence_threshold": confidence_threshold,
                     "extraction_time": datetime.now(timezone.utc).isoformat(),
                 },
             }
 
         except Exception as e:
-            self.logger.error(f"Error in chunk knowledge extraction: {str(e)}")
+            await self.logger.error(f"Error in chunk knowledge extraction: {str(e)}")
             return {
                 "entities": [],
                 "relationships": [],
@@ -291,69 +293,96 @@ class KgExtractionTask:
         relationships: List[Dict[str, Any]],
         user_id: Optional[UUID],
     ) -> Optional[str]:
-        """Save extraction results and return extraction ID"""
-        try:
-            extraction_id = await self.entity_service.save_extraction_results(
-                text=text_content,
-                entities=entities,
-                user_id=user_id,
-            )
+        """
+        Save extraction results (legacy method - now handled by individual services)
 
-            if relationships and extraction_id:
-                await self.relationship_service.save_extraction_results(
-                    relationships=relationships, extraction_result_id=extraction_id
-                )
+        This method is kept for backward compatibility but saving is now handled
+        by EntityExtractionService and RelationshipExtractionService directly
+        """
+        logger.info(
+            "Using legacy save_extraction_results method - saving is now handled by individual services"
+        )
 
-            return extraction_id
+        # Get extraction ID from entities if available
+        if entities and entities[0].get("extraction_result_id"):
+            return entities[0]["extraction_result_id"]
 
-        except Exception as e:
-            self.logger.error(f"Error saving extraction results: {str(e)}")
-            return None
+        return None
 
     async def _deduplicate_entities(
         self, entities: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Remove duplicate entities based on text and type"""
-        logger.info(f"Deduplicating {entities} entities")
-        seen = set()
+        """Remove duplicate entities based on database ID or text and type"""
+        logger.info(f"Deduplicating {len(entities)} entities")
+        seen_ids = set()
+        seen_text_type = set()
         deduplicated = []
 
         for entity in entities:
-
             logger.info(f"Processing entity: {entity}")
+
+            # Check by database ID first (most reliable)
+            entity_db_id = entity.get("id")
+            if entity_db_id and entity_db_id in seen_ids:
+                logger.info(f"Skipping duplicate entity by ID: {entity_db_id}")
+                continue
+
+            if entity_db_id:
+                seen_ids.add(entity_db_id)
+
+            # Fallback to text-type based deduplication
             entity_key = (
-                entity.get("text", "").lower().strip(),
+                entity.get("text", entity.get("entity_text", "")).lower().strip(),
                 entity.get("entity_type", "").lower().strip(),
             )
 
-            logger.info(f"Entity key: {entity_key}, {entity_key[0]}")
+            logger.info(f"Entity key: {entity_key}")
 
-            if entity_key not in seen and entity_key[0]:  # Skip empty entities
-                seen.add(entity_key)
+            if (
+                entity_key not in seen_text_type and entity_key[0]
+            ):  # Skip empty entities
+                seen_text_type.add(entity_key)
                 deduplicated.append(entity)
+            elif not entity_db_id:  # Only skip if we don't have a database ID
+                logger.info(f"Skipping duplicate entity by text-type: {entity_key}")
 
-        logger.info(f"Seen entities: {seen}")
-        logger.info(f"Total deduplicated entities: {deduplicated}")
+        logger.info(f"Total deduplicated entities: {len(deduplicated)}")
         return deduplicated
 
     async def _deduplicate_relationships(
         self, relationships: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Remove duplicate relationships based on source, target, and type"""
-        seen = set()
+        """Remove duplicate relationships based on database ID or source, target, and type"""
+        seen_ids = set()
+        seen_relationships = set()
         deduplicated = []
 
         for relationship in relationships:
             logger.info(f"Processing relationship: {relationship}")
+
+            # Check by database ID first (most reliable)
+            rel_db_id = relationship.get("id")
+            if rel_db_id and rel_db_id in seen_ids:
+                logger.info(f"Skipping duplicate relationship by ID: {rel_db_id}")
+                continue
+
+            if rel_db_id:
+                seen_ids.add(rel_db_id)
+
+            # Fallback to source-target-type based deduplication
             rel_key = (
                 relationship.get("source_entity", "").lower().strip(),
                 relationship.get("target_entity", "").lower().strip(),
                 relationship.get("relationship_type", "").lower().strip(),
             )
 
-            if rel_key not in seen and all(rel_key):  # Skip incomplete relationships
-                seen.add(rel_key)
+            if rel_key not in seen_relationships and all(
+                rel_key
+            ):  # Skip incomplete relationships
+                seen_relationships.add(rel_key)
                 deduplicated.append(relationship)
+            elif not rel_db_id:  # Only skip if we don't have a database ID
+                logger.info(f"Skipping duplicate relationship by key: {rel_key}")
 
         return deduplicated
 
@@ -443,7 +472,7 @@ class KgExtractionTask:
                 entity_valid = True
 
                 # Check required fields
-                if not entity.get("entity_text"):
+                if not entity.get("entity_text") and not entity.get("text"):
                     entity_issues.append(f"Entity missing text: {entity}")
                     entity_valid = False
 
@@ -479,8 +508,8 @@ class KgExtractionTask:
 
                 # Check required fields
                 required_fields = [
-                    "source_entity_text",
-                    "target_entity_text",
+                    "source_entity",
+                    "target_entity",
                     "relationship_type",
                 ]
                 for field in required_fields:
@@ -528,7 +557,7 @@ class KgExtractionTask:
             return validation_results
 
         except Exception as e:
-            self.logger.error(f"Error validating extraction results: {str(e)}")
+            await self.logger.error(f"Error validating extraction results: {str(e)}")
             return {
                 "is_valid": False,
                 "error": str(e),

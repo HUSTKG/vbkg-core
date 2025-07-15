@@ -96,7 +96,7 @@ export default function ViewRelationshipDialog({
 							Properties
 						</label>
 						<div className="mt-2 p-4 bg-muted rounded-lg">
-							<pre className="text-sm">
+							<pre className="text-sm text-wrap">
 								{JSON.stringify(selectedRelationship.properties, null, 2)}
 							</pre>
 						</div>

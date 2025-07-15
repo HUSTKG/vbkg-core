@@ -11,11 +11,11 @@ export default function TestConnectionDataSourceDialog({
 }: TestConnectionDataSourceDialogProps) {
   return (
     <ConfirmDialog
-      message="Testing connection to the data source..."
+      message="Đang kiểm tra kết nối đến nguồn dữ liệu..."
       isOpen={open}
       onCancel={() => onOpenChange(false)}
       onConfirm={() => onOpenChange(false)}
-      title="Test Connection"
+      title="Kiểm tra kết nối"
     />
   );
 }

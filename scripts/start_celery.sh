@@ -36,12 +36,12 @@ celery -A app.tasks.worker worker \
     --logfile=/tmp/celery_pipeline_worker.log
 
 # Start Celery beat scheduler (if you have scheduled pipelines)
-echo "Starting Celery beat scheduler..."
-celery -A app.tasks.worker beat \
-    --loglevel=info \
-    --detach \
-    --pidfile=/tmp/celery_beat.pid \
-    --logfile=/tmp/celery_beat.log
+# echo "Starting Celery beat scheduler..."
+# celery -A app.tasks.worker beat \
+#     --loglevel=info \
+#     --detach \
+#     --pidfile=/tmp/celery_beat.pid \
+#     --logfile=/tmp/celery_beat.log
 
 export FLOWER_UNAUTHENTICATED_API=true
 

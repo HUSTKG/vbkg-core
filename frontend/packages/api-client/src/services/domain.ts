@@ -57,114 +57,92 @@ import { api } from "../config/axios";
 // DOMAIN SERVICES
 // =============================================
 
-const createDomain = async (
-	input: ICreateDomainRequest,
-): Promise<ICreateDomainResponse> => {
-	return await api()
-		.post<ICreateDomainResponse>(API_ENDPOINTS.CREATE_DOMAIN, input)
-		.then((res) => res.data);
+const createDomain = async (input: ICreateDomainRequest) => {
+	return await api().post<ICreateDomainResponse>(
+		API_ENDPOINTS.CREATE_DOMAIN,
+		input,
+	);
 };
 
-const readDomains = async (
-	input: IReadDomainsRequest,
-): Promise<IReadDomainsResponse> => {
-	return await api()
-		.get<IReadDomainsResponse>(API_ENDPOINTS.READ_DOMAINS, {
-			params: input,
-		})
-		.then((res) => res.data);
+const readDomains = async (input: IReadDomainsRequest) => {
+	return await api().get<IReadDomainsResponse>(API_ENDPOINTS.READ_DOMAINS, {
+		params: input,
+	});
 };
 
-const readDomain = async (
-	input: IReadDomainRequest,
-): Promise<IReadDomainResponse> => {
-	return await api()
-		.get<IReadDomainResponse>(API_ENDPOINTS.READ_DOMAIN(input.id), {
+const readDomain = async (input: IReadDomainRequest) => {
+	return await api().get<IReadDomainResponse>(
+		API_ENDPOINTS.READ_DOMAIN(input.id),
+		{
 			params: { include_types: input.include_types },
-		})
-		.then((res) => res.data);
+		},
+	);
 };
 
-const updateDomain = async (
-	input: IUpdateDomainRequest,
-): Promise<IUpdateDomainResponse> => {
+const updateDomain = async (input: IUpdateDomainRequest) => {
 	const { id, ...updateData } = input;
-	return await api()
-		.put<IUpdateDomainResponse>(API_ENDPOINTS.UPDATE_DOMAIN(id), updateData)
-		.then((res) => res.data);
+	return await api().put<IUpdateDomainResponse>(
+		API_ENDPOINTS.UPDATE_DOMAIN(id),
+		updateData,
+	);
 };
 
-const deleteDomain = async (
-	input: IDeleteDomainRequest,
-): Promise<IDeleteDomainResponse> => {
-	return await api()
-		.delete<IDeleteDomainResponse>(API_ENDPOINTS.DELETE_DOMAIN(input.id))
-		.then((res) => res.data);
+const deleteDomain = async (input: IDeleteDomainRequest) => {
+	return await api().delete<IDeleteDomainResponse>(
+		API_ENDPOINTS.DELETE_DOMAIN(input.id),
+	);
 };
 
-const getDomainStats = async (
-	input: IGetDomainStatsRequest,
-): Promise<IGetDomainStatsResponse> => {
-	return await api()
-		.get<IGetDomainStatsResponse>(API_ENDPOINTS.GET_DOMAIN_STATS(input.id))
-		.then((res) => res.data);
+const getDomainStats = async (input: IGetDomainStatsRequest) => {
+	return await api().get<IGetDomainStatsResponse>(
+		API_ENDPOINTS.GET_DOMAIN_STATS(input.id),
+	);
 };
 
 // =============================================
 // ENTITY TYPE SERVICES
 // =============================================
 
-const createEntityType = async (
-	input: ICreateEntityTypeRequest,
-): Promise<ICreateEntityTypeResponse> => {
-	return await api()
-		.post<ICreateEntityTypeResponse>(API_ENDPOINTS.CREATE_ENTITY_TYPE, input)
-		.then((res) => res.data);
+const createEntityType = async (input: ICreateEntityTypeRequest) => {
+	return await api().post<ICreateEntityTypeResponse>(
+		API_ENDPOINTS.CREATE_ENTITY_TYPE,
+		input,
+	);
 };
 
-const readEntityTypes = async (
-	input: IReadEntityTypesRequest,
-): Promise<IReadEntityTypesResponse> => {
-	return await api()
-		.get<IReadEntityTypesResponse>(API_ENDPOINTS.READ_ENTITY_TYPES, {
+const readEntityTypes = async (input: IReadEntityTypesRequest) => {
+	return await api().get<IReadEntityTypesResponse>(
+		API_ENDPOINTS.READ_ENTITY_TYPES,
+		{
 			params: input,
-		})
-		.then((res) => res.data);
+		},
+	);
 };
 
-const readEntityType = async (
-	input: IReadEntityTypeRequest,
-): Promise<IReadEntityTypeResponse> => {
-	return await api()
-		.get<IReadEntityTypeResponse>(API_ENDPOINTS.READ_ENTITY_TYPE(input.id), {
+const readEntityType = async (input: IReadEntityTypeRequest) => {
+	return await api().get<IReadEntityTypeResponse>(
+		API_ENDPOINTS.READ_ENTITY_TYPE(input.id),
+		{
 			params: {
 				include_domains: input.include_domains,
 				include_usage: input.include_usage,
 			},
-		})
-		.then((res) => res.data);
+		},
+	);
 };
 
-const updateEntityType = async (
-	input: IUpdateEntityTypeRequest,
-): Promise<IUpdateEntityTypeResponse> => {
+const updateEntityType = async (input: IUpdateEntityTypeRequest) => {
 	const { id, ...updateData } = input;
-	return await api()
-		.put<IUpdateEntityTypeResponse>(
-			API_ENDPOINTS.UPDATE_ENTITY_TYPE(id),
-			updateData,
-		)
-		.then((res) => res.data);
+	return await api().put<IUpdateEntityTypeResponse>(
+		API_ENDPOINTS.UPDATE_ENTITY_TYPE(id),
+		updateData,
+	);
 };
 
-const deleteEntityType = async (
-	input: IDeleteEntityTypeRequest,
-): Promise<IDeleteEntityTypeResponse> => {
-	return await api()
-		.delete<IDeleteEntityTypeResponse>(
-			API_ENDPOINTS.DELETE_ENTITY_TYPE(input.id),
-		)
-		.then((res) => res.data);
+const deleteEntityType = async (input: IDeleteEntityTypeRequest) => {
+	return await api().delete<IDeleteEntityTypeResponse>(
+		API_ENDPOINTS.DELETE_ENTITY_TYPE(input.id),
+	);
 };
 
 // =============================================
@@ -173,118 +151,94 @@ const deleteEntityType = async (
 
 const createRelationshipType = async (
 	input: ICreateRelationshipTypeRequest,
-): Promise<ICreateRelationshipTypeResponse> => {
-	return await api()
-		.post<ICreateRelationshipTypeResponse>(
-			API_ENDPOINTS.CREATE_RELATIONSHIP_TYPE,
-			input,
-		)
-		.then((res) => res.data);
+) => {
+	return await api().post<ICreateRelationshipTypeResponse>(
+		API_ENDPOINTS.CREATE_RELATIONSHIP_TYPE,
+		input,
+	);
 };
 
-const readRelationshipTypes = async (
-	input: IReadRelationshipTypesRequest,
-): Promise<IReadRelationshipTypesResponse> => {
-	return await api()
-		.get<IReadRelationshipTypesResponse>(
-			API_ENDPOINTS.READ_RELATIONSHIP_TYPES,
-			{
-				params: input,
-			},
-		)
-		.then((res) => res.data);
+const readRelationshipTypes = async (input: IReadRelationshipTypesRequest) => {
+	return await api().get<IReadRelationshipTypesResponse>(
+		API_ENDPOINTS.READ_RELATIONSHIP_TYPES,
+		{
+			params: input,
+		},
+	);
 };
 
-const readRelationshipType = async (
-	input: IReadRelationshipTypeRequest,
-): Promise<IReadRelationshipTypeResponse> => {
-	return await api()
-		.get<IReadRelationshipTypeResponse>(
-			API_ENDPOINTS.READ_RELATIONSHIP_TYPE(input.id),
-			{
-				params: {
-					include_domains: input.include_domains,
-					include_usage: input.include_usage,
-				},
+const readRelationshipType = async (input: IReadRelationshipTypeRequest) => {
+	return await api().get<IReadRelationshipTypeResponse>(
+		API_ENDPOINTS.READ_RELATIONSHIP_TYPE(input.id),
+		{
+			params: {
+				include_domains: input.include_domains,
+				include_usage: input.include_usage,
 			},
-		)
-		.then((res) => res.data);
+		},
+	);
 };
 
 const updateRelationshipType = async (
 	input: IUpdateRelationshipTypeRequest,
-): Promise<IUpdateRelationshipTypeResponse> => {
+) => {
 	const { id, ...updateData } = input;
-	return await api()
-		.put<IUpdateRelationshipTypeResponse>(
-			API_ENDPOINTS.UPDATE_RELATIONSHIP_TYPE(id),
-			updateData,
-		)
-		.then((res) => res.data);
+	return await api().put<IUpdateRelationshipTypeResponse>(
+		API_ENDPOINTS.UPDATE_RELATIONSHIP_TYPE(id),
+		updateData,
+	);
 };
 
 const deleteRelationshipType = async (
 	input: IDeleteRelationshipTypeRequest,
-): Promise<IDeleteRelationshipTypeResponse> => {
-	return await api()
-		.delete<IDeleteRelationshipTypeResponse>(
-			API_ENDPOINTS.DELETE_RELATIONSHIP_TYPE(input.id),
-		)
-		.then((res) => res.data);
+) => {
+	return await api().delete<IDeleteRelationshipTypeResponse>(
+		API_ENDPOINTS.DELETE_RELATIONSHIP_TYPE(input.id),
+	);
 };
 
 // =============================================
 // DOMAIN MAPPING SERVICES
 // =============================================
 
-const addEntityTypeToDomain = async (
-	input: IAddEntityTypeToDomainRequest,
-): Promise<IAddEntityTypeToDomainResponse> => {
+const addEntityTypeToDomain = async (input: IAddEntityTypeToDomainRequest) => {
 	const { type_id, ...mappingData } = input;
-	return await api()
-		.post<IAddEntityTypeToDomainResponse>(
-			API_ENDPOINTS.ADD_ENTITY_TYPE_TO_DOMAIN(type_id),
-			mappingData,
-		)
-		.then((res) => res.data);
+	return await api().post<IAddEntityTypeToDomainResponse>(
+		API_ENDPOINTS.ADD_ENTITY_TYPE_TO_DOMAIN(type_id),
+		mappingData,
+	);
 };
 
 const removeEntityTypeFromDomain = async (
 	input: IRemoveEntityTypeFromDomainRequest,
-): Promise<IRemoveEntityTypeFromDomainResponse> => {
-	return await api()
-		.delete<IRemoveEntityTypeFromDomainResponse>(
-			API_ENDPOINTS.REMOVE_ENTITY_TYPE_FROM_DOMAIN(
-				input.type_id,
-				input.domain_id,
-			),
-		)
-		.then((res) => res.data);
+) => {
+	return await api().delete<IRemoveEntityTypeFromDomainResponse>(
+		API_ENDPOINTS.REMOVE_ENTITY_TYPE_FROM_DOMAIN(
+			input.type_id,
+			input.domain_id,
+		),
+	);
 };
 
 const addRelationshipTypeToDomain = async (
 	input: IAddRelationshipTypeToDomainRequest,
-): Promise<IAddRelationshipTypeToDomainResponse> => {
+) => {
 	const { type_id, ...mappingData } = input;
-	return await api()
-		.post<IAddRelationshipTypeToDomainResponse>(
-			API_ENDPOINTS.ADD_RELATIONSHIP_TYPE_TO_DOMAIN(type_id),
-			mappingData,
-		)
-		.then((res) => res.data);
+	return await api().post<IAddRelationshipTypeToDomainResponse>(
+		API_ENDPOINTS.ADD_RELATIONSHIP_TYPE_TO_DOMAIN(type_id),
+		mappingData,
+	);
 };
 
 const removeRelationshipTypeFromDomain = async (
 	input: IRemoveRelationshipTypeFromDomainRequest,
-): Promise<IRemoveRelationshipTypeFromDomainResponse> => {
-	return await api()
-		.delete<IRemoveRelationshipTypeFromDomainResponse>(
-			API_ENDPOINTS.REMOVE_RELATIONSHIP_TYPE_FROM_DOMAIN(
-				input.type_id,
-				input.domain_id,
-			),
-		)
-		.then((res) => res.data);
+) => {
+	return await api().delete<IRemoveRelationshipTypeFromDomainResponse>(
+		API_ENDPOINTS.REMOVE_RELATIONSHIP_TYPE_FROM_DOMAIN(
+			input.type_id,
+			input.domain_id,
+		),
+	);
 };
 
 // =============================================
@@ -293,13 +247,11 @@ const removeRelationshipTypeFromDomain = async (
 
 const validateTypeConstraints = async (
 	input: IValidateTypeConstraintsRequest,
-): Promise<IValidateTypeConstraintsResponse> => {
-	return await api()
-		.post<IValidateTypeConstraintsResponse>(
-			API_ENDPOINTS.VALIDATE_TYPE_CONSTRAINTS,
-			input,
-		)
-		.then((res) => res.data);
+) => {
+	return await api().post<IValidateTypeConstraintsResponse>(
+		API_ENDPOINTS.VALIDATE_TYPE_CONSTRAINTS,
+		input,
+	);
 };
 
 // =============================================
@@ -308,54 +260,44 @@ const validateTypeConstraints = async (
 
 const getEntityTypesByDomain = async (
 	input: IGetEntityTypesByDomainRequest,
-): Promise<IGetEntityTypesByDomainResponse> => {
-	return await api()
-		.get<IGetEntityTypesByDomainResponse>(
-			API_ENDPOINTS.GET_ENTITY_TYPES_BY_DOMAIN(input.domain_name),
-			{
-				params: { primary_only: input.primary_only },
-			},
-		)
-		.then((res) => res.data);
+) => {
+	return await api().get<IGetEntityTypesByDomainResponse>(
+		API_ENDPOINTS.GET_ENTITY_TYPES_BY_DOMAIN(input.domain_name),
+		{
+			params: { primary_only: input.primary_only },
+		},
+	);
 };
 
 const getRelationshipTypesByDomain = async (
 	input: IGetRelationshipTypesByDomainRequest,
-): Promise<IGetRelationshipTypesByDomainResponse> => {
-	return await api()
-		.get<IGetRelationshipTypesByDomainResponse>(
-			API_ENDPOINTS.GET_RELATIONSHIP_TYPES_BY_DOMAIN(input.domain_name),
-			{
-				params: { primary_only: input.primary_only },
-			},
-		)
-		.then((res) => res.data);
+) => {
+	return await api().get<IGetRelationshipTypesByDomainResponse>(
+		API_ENDPOINTS.GET_RELATIONSHIP_TYPES_BY_DOMAIN(input.domain_name),
+		{
+			params: { primary_only: input.primary_only },
+		},
+	);
 };
 
 const getCompatibleRelationships = async (
 	input: IGetCompatibleRelationshipsRequest,
-): Promise<IGetCompatibleRelationshipsResponse> => {
-	return await api()
-		.get<IGetCompatibleRelationshipsResponse>(
-			API_ENDPOINTS.GET_COMPATIBLE_RELATIONSHIPS,
-			{
-				params: input,
-			},
-		)
-		.then((res) => res.data);
+) => {
+	return await api().get<IGetCompatibleRelationshipsResponse>(
+		API_ENDPOINTS.GET_COMPATIBLE_RELATIONSHIPS,
+		{
+			params: input,
+		},
+	);
 };
 
-const getDomainOverview = async (
-	input: IGetDomainAnalyticsOverviewRequest,
-): Promise<IGetDomainAnalyticsOverviewResponse> => {
-	return await api()
-		.get<IGetDomainAnalyticsOverviewResponse>(
-			API_ENDPOINTS.GET_DOMAIN_OVERVIEW,
-			{
-				params: input,
-			},
-		)
-		.then((res) => res.data);
+const getDomainOverview = async (input: IGetDomainAnalyticsOverviewRequest) => {
+	return await api().get<IGetDomainAnalyticsOverviewResponse>(
+		API_ENDPOINTS.GET_DOMAIN_OVERVIEW,
+		{
+			params: input,
+		},
+	);
 };
 
 // =============================================

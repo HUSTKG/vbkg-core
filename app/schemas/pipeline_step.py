@@ -18,33 +18,36 @@ class PipelineStepType(str, Enum):
     FILE_INGESTION = "file_ingestion"
     API_INGESTION = "api_ingestion"
     DATABASE_INGESTION = "database_ingestion"
-    
+
     # Data Preprocessing Steps
     TEXT_CHUNKING = "text_chunking"
     DATA_CLEANER = "data_cleaner"
     DATA_VALIDATOR = "data_validator"
-    
+
     # Knowledge Extraction Steps
     KNOWLEDGE_EXTRACTOR = "knowledge_extractor"  # for structured data
     KNOWLEDGE_MAPPING = "knowledge_mapping"  # for unstructured data
-    
+
     # Ontology Management Steps
     ONTOLOGY_ENRICHMENT = "ontology_enrichment"
-    
+
     # Entity Processing Steps
     ENTITY_RESOLUTION = "entity_resolution"
     ENTITY_FUSION = "entity_fusion"
     ENTITY_ENRICHMENT = "entity_enrichment"  # e.g., adding attributes
-    
+
     # Knowledge Graph Operations
     KG_WRITER = "kg_writer"
     KG_COMPLETION = "kg_completion"
-    
+
     # Quality Assurance Steps
     QUALITY_MONITORING = "quality_monitoring"
-    
+
     # Custom and Utility Steps
     CUSTOM_PYTHON = "custom_python"
+
+    CONFLICT_RESOLUTION = "conflict_resolution"  # for handling data conflicts
+    CONFLICT_DETECTION = "conflict_detection"  # for detecting data conflicts
 
 
 class StepConfig(BaseModel):
@@ -366,8 +369,8 @@ class PipelineStepUpdate(BaseModel):
 
 class PipelineStepRunUpdate(BaseModel):
     status: Optional[PipelineRunStatus] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     input_data: Optional[Dict[str, Any]] = None
     output_data: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None

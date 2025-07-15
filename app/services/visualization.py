@@ -7,8 +7,12 @@ from postgrest.base_request_builder import APIResponse
 
 from app.core.config import settings
 from app.core.supabase import get_supabase
-from app.schemas.visualization import (VisualizationCreate, VisualizationData,
-                                       VisualizationType, VisualizationUpdate)
+from app.schemas.visualization import (
+    VisualizationCreate,
+    VisualizationData,
+    VisualizationType,
+    VisualizationUpdate,
+)
 from app.services.user import UserService
 
 
@@ -120,7 +124,7 @@ class VisualizationService:
             await self.get_visualization(visualization_id)
 
             # Update visualization
-            data = visualization_in.dict(exclude_unset=True)
+            data = visualization_in.model_dump(exclude_unset=True)
 
             response = (
                 await supabase.from_("visualizations")

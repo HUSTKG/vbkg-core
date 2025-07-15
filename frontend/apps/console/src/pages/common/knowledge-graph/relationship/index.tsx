@@ -1,7 +1,4 @@
-import {
-	useKGRelationshipsSearch,
-	useRelationshipTypes,
-} from "@vbkg/api-client";
+import { useKGRelationshipsSearch } from "@vbkg/api-client";
 import {
 	Card,
 	CardContent,
@@ -13,10 +10,11 @@ import {
 	SelectValue,
 	Switch,
 } from "@/components";
-import { Circle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import RelationshipTable from "./components/table/RelationshipTable";
+import { useSearchParams } from "react-router";
 
 export default function KnowledgeGraphRelationships() {
 	const [searchQuery, setSearchQuery] = useState("");
@@ -24,18 +22,21 @@ export default function KnowledgeGraphRelationships() {
 	const [confidenceThreshold, setConfidenceThreshold] = useState<string>();
 	const [onlyVerified, setOnlyVerified] = useState(false);
 
-	const { data: relationshipTypes } = useRelationshipTypes({});
-
 	const [query] = useDebounce(searchQuery, 500);
+
+	const [searchParams] = useSearchParams();
+
+	const page = Number(searchParams.get("page")) || 1;
+	const limit = Number(searchParams.get("limit")) || 10;
 
 	const { data: relationships } =
 		useKGRelationshipsSearch({
 			query,
-			relationship_types: selectedType !== "all" ? [selectedType] : undefined,
-			limit: 10000,
+			limit,
+			skip: (page - 1) * limit,
 			min_confidence: Number(confidenceThreshold) || 0.5,
 			verified_only: onlyVerified,
-		}).data || {};
+		});
 
 	return (
 		<div className="p-6 space-y-6">
@@ -91,15 +92,13 @@ export default function KnowledgeGraphRelationships() {
 								<SelectValue placeholder="Loại quan hệ" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="all">
-									Tất cả loại quan hệ
-								</SelectItem>
-								{relationshipTypes?.data?.map((type) => (
-									<SelectItem key={type.id} value={type.name}>
-										<Circle size={16} className="mr-2" color={type.color} />
-										{type.display_name}
-									</SelectItem>
-								))}
+								<SelectItem value="all">Tất cả loại quan hệ</SelectItem>
+								{/* {relationshipTypes?.data?.map((type) => ( */}
+								{/* 	<SelectItem key={type.id} value={type.name}> */}
+								{/* 		<Circle size={16} className="mr-2" color={type.color} /> */}
+								{/* 		{type.display_name} */}
+								{/* 	</SelectItem> */}
+								{/* ))} */}
 							</SelectContent>
 						</Select>
 					</div>
@@ -107,7 +106,7 @@ export default function KnowledgeGraphRelationships() {
 			</Card>
 
 			{/* Relationships Table */}
-			<RelationshipTable relationships={relationships || []} />
+			<RelationshipTable relationships={relationships} />
 		</div>
 	);
 }

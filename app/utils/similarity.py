@@ -1,7 +1,5 @@
 import hashlib
-import math
 import re
-from collections import Counter
 from difflib import SequenceMatcher
 from enum import Enum
 from functools import lru_cache

@@ -8,6 +8,7 @@ from app.api.endpoints import (
     knowledge_graph,
     notifications,
     ontology,
+    pipeline_steps,
     pipelines,
     quality_management,
     search,
@@ -29,6 +30,9 @@ api_router.include_router(
 )
 api_router.include_router(ontology.router, prefix="/ontology", tags=["ontology"])
 api_router.include_router(pipelines.router, prefix="/pipelines", tags=["pipelines"])
+api_router.include_router(
+    pipeline_steps.router, prefix="/pipeline-steps", tags=["pipeline-steps"]
+)
 
 api_router.include_router(
     knowledge_graph.router, prefix="/knowledge-graph", tags=["knowledge_graph"]

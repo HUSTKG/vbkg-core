@@ -52,6 +52,10 @@ export const API_ENDPOINTS = {
 		`/ontology/relationship-mappings/${id}/verify`,
 	SUGGEST_ONTOLOGY_CLASSES: "/ontology/suggest/classes",
 	SUGGEST_ONTOLOGY_PROPERTIES: "/ontology/suggest/properties",
+	APPLY_ENTITY_MAPPING_SUGGESTION: (id: string) =>
+		`/ontology/entity-mappings/${id}/apply-suggestion`,
+	APPLY_RELATIONSHIP_MAPPING_SUGGESTION: (id: string) =>
+		`/ontology/relationship-mappings/${id}/apply-suggestion`,
 
 	// Knowledge Graph - NEW ENDPOINTS
 	// Entities
@@ -84,6 +88,9 @@ export const API_ENDPOINTS = {
 
 	// Knowledge
 	CREATE_ENTITY: "/knowledge-graph/entities",
+	READ_ENTITY: (id: string) => `/knowledge-graph/entities/${id}`,
+	READ_ENTITY_RELATIONSHIPS: (id: string) =>
+		`/knowledge-graph/entities/${id}/relationships`,
 	UPDATE_ENTITY: (id: string) => `/knowledge-graph/entities/${id}`,
 	DELETE_ENTITY: (id: string) => `/knowledge-graph/entities/${id}`,
 	CREATE_RELATIONSHIP: "/knowledge-graph/relationships",
@@ -128,6 +135,7 @@ export const API_ENDPOINTS = {
 		`/pipelines/runs/${pipeline_run_id}/steps`,
 	READ_PIPELINE_STEP_RUN: (step_run_id: string, pipeline_run_id: string) =>
 		`/pipelines/runs/${pipeline_run_id}/steps/${step_run_id}`,
+	READ_PIPELINE_STEP_LOGS: `/pipeline-steps/runs/logs`,
 
 	// Search
 	SEARCH_ENTITIES: "/search/entities",
@@ -311,6 +319,8 @@ export const ACTIVITY_ACTIONS = {
 	LOGIN: "login",
 	LOGOUT: "logout",
 	CREATE_ENTITY: "create_entity",
+	READ_ENTITY: "read_entity",
+	READ_ENTITY_RELATIONSHIPS: "read_entity_relationship",
 	UPDATE_ENTITY: "update_entity",
 	DELETE_ENTITY: "delete_entity",
 	CREATE_RELATIONSHIP: "create_relationship",
@@ -430,117 +440,118 @@ export const SESSION_STORAGE_KEY = "vbkg_session";
 
 // AI Search Configuration
 export const AI_SEARCH_CONFIG = {
-  DEFAULT_MAX_CANDIDATES: 50,
-  DEFAULT_SIMILARITY_THRESHOLD: 0.3,
-  DEFAULT_TOP_K_ENTITIES: 10,
-  DEFAULT_SUBGRAPH_RADIUS: 2,
-  DEFAULT_MAX_SUBGRAPH_NODES: 100,
-  DEFAULT_DAMPING_FACTOR: 0.85,
-  DEFAULT_MAX_ITERATIONS: 20,
-  DEFAULT_LLM_MODEL: "gpt-4o-mini",
-  
-  // Search suggestion settings
-  DEFAULT_SUGGESTION_LIMIT: 5,
-  MIN_SUGGESTION_QUERY_LENGTH: 2,
-  
-  // Quick search limits
-  MAX_QUICK_SEARCH_RESULTS: 50,
-  MIN_QUICK_SEARCH_RESULTS: 1,
-  
-  // Entity type options for search
-  ENTITY_TYPES: [
-    "Company",
-    "Person", 
-    "Product",
-    "Location",
-    "Event",
-    "Organization",
-    "Technology",
-    "Financial Instrument",
-    "Market",
-    "Industry"
-  ],
-  
-  // Search type configurations
-  SEARCH_TYPE_OPTIONS: [
-    {
-      value: "exact",
-      label: "Exact Match",
-      description: "Direct text matching for precise results",
-      icon: "🎯"
-    },
-    {
-      value: "fuzzy", 
-      label: "Fuzzy Search",
-      description: "Approximate text matching with typo tolerance",
-      icon: "🔍"
-    },
-    {
-      value: "semantic",
-      label: "Semantic Search", 
-      description: "Meaning-based search using embeddings",
-      icon: "🧠"
-    },
-    {
-      value: "hybrid",
-      label: "Hybrid Search",
-      description: "Combines exact and semantic search",
-      icon: "⚡"
-    },
-    {
-      value: "ai_powered",
-      label: "AI-Powered Search",
-      description: "Advanced search with PersonRank and LLM answers",
-      icon: "🤖"
-    }
-  ],
-  
-  // LLM Model options
-  LLM_MODELS: [
-    { value: "gpt-4o-mini", label: "GPT-4o Mini (Fast)", recommended: true },
-    { value: "gpt-4o", label: "GPT-4o (Balanced)" },
-    { value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Economical)" }
-  ],
-  
-  // Confidence score thresholds
-  CONFIDENCE_THRESHOLDS: {
-    HIGH: 0.8,
-    MEDIUM: 0.6,
-    LOW: 0.4
-  },
-  
-  // Search result display limits
-  DISPLAY_LIMITS: {
-    MAX_ENTITIES_OVERVIEW: 12,
-    MAX_ENTITIES_TABLE: 100,
-    MAX_RELATIONSHIPS_DISPLAY: 50,
-    MAX_SIMILAR_ENTITIES: 10
-  }
+	DEFAULT_MAX_CANDIDATES: 50,
+	DEFAULT_SIMILARITY_THRESHOLD: 0.3,
+	DEFAULT_TOP_K_ENTITIES: 10,
+	DEFAULT_SUBGRAPH_RADIUS: 2,
+	DEFAULT_MAX_SUBGRAPH_NODES: 100,
+	DEFAULT_DAMPING_FACTOR: 0.85,
+	DEFAULT_MAX_ITERATIONS: 20,
+	DEFAULT_LLM_MODEL: "gpt-4o-mini",
+
+	// Search suggestion settings
+	DEFAULT_SUGGESTION_LIMIT: 5,
+	MIN_SUGGESTION_QUERY_LENGTH: 2,
+
+	// Quick search limits
+	MAX_QUICK_SEARCH_RESULTS: 50,
+	MIN_QUICK_SEARCH_RESULTS: 1,
+
+	// Entity type options for search
+	ENTITY_TYPES: [
+		"Company",
+		"Person",
+		"Product",
+		"Location",
+		"Event",
+		"Organization",
+		"Technology",
+		"Financial Instrument",
+		"Market",
+		"Industry",
+	],
+
+	// Search type configurations
+	SEARCH_TYPE_OPTIONS: [
+		{
+			value: "exact",
+			label: "Exact Match",
+			description: "Direct text matching for precise results",
+			icon: "🎯",
+		},
+		{
+			value: "fuzzy",
+			label: "Fuzzy Search",
+			description: "Approximate text matching with typo tolerance",
+			icon: "🔍",
+		},
+		{
+			value: "semantic",
+			label: "Semantic Search",
+			description: "Meaning-based search using embeddings",
+			icon: "🧠",
+		},
+		{
+			value: "hybrid",
+			label: "Hybrid Search",
+			description: "Combines exact and semantic search",
+			icon: "⚡",
+		},
+		{
+			value: "ai_powered",
+			label: "AI-Powered Search",
+			description: "Advanced search with PersonRank and LLM answers",
+			icon: "🤖",
+		},
+	],
+
+	// LLM Model options
+	LLM_MODELS: [
+		{ value: "gpt-4o-mini", label: "GPT-4o Mini (Fast)", recommended: true },
+		{ value: "gpt-4o", label: "GPT-4o (Balanced)" },
+		{ value: "gpt-3.5-turbo", label: "GPT-3.5 Turbo (Economical)" },
+	],
+
+	// Confidence score thresholds
+	CONFIDENCE_THRESHOLDS: {
+		HIGH: 0.8,
+		MEDIUM: 0.6,
+		LOW: 0.4,
+	},
+
+	// Search result display limits
+	DISPLAY_LIMITS: {
+		MAX_ENTITIES_OVERVIEW: 12,
+		MAX_ENTITIES_TABLE: 100,
+		MAX_RELATIONSHIPS_DISPLAY: 50,
+		MAX_SIMILAR_ENTITIES: 10,
+	},
 } as const;
 
 // Search Quality Indicators
 export const SEARCH_QUALITY = {
-  SCORE_LABELS: {
-    EXCELLENT: { min: 0.9, label: "Excellent", color: "green" },
-    GOOD: { min: 0.7, label: "Good", color: "blue" },
-    FAIR: { min: 0.5, label: "Fair", color: "yellow" },
-    POOR: { min: 0.0, label: "Poor", color: "red" }
-  },
-  
-  EXECUTION_TIME_LABELS: {
-    FAST: { max: 1000, label: "Fast", color: "green" },
-    MODERATE: { max: 3000, label: "Moderate", color: "yellow" },
-    SLOW: { max: Infinity, label: "Slow", color: "red" }
-  }
+	SCORE_LABELS: {
+		EXCELLENT: { min: 0.9, label: "Excellent", color: "green" },
+		GOOD: { min: 0.7, label: "Good", color: "blue" },
+		FAIR: { min: 0.5, label: "Fair", color: "yellow" },
+		POOR: { min: 0.0, label: "Poor", color: "red" },
+	},
+
+	EXECUTION_TIME_LABELS: {
+		FAST: { max: 1000, label: "Fast", color: "green" },
+		MODERATE: { max: 3000, label: "Moderate", color: "yellow" },
+		SLOW: { max: Infinity, label: "Slow", color: "red" },
+	},
 } as const;
 
 // Error Messages
 export const AI_SEARCH_ERRORS = {
-  NO_QUERY: "Please enter a search query",
-  QUERY_TOO_SHORT: "Query must be at least 2 characters long",
-  NO_RESULTS: "No entities found matching your search criteria",
-  SEARCH_FAILED: "Search failed. Please try again",
-  AI_NOT_AVAILABLE: "AI search is not available. Please try a different search type",
-  EMBEDDING_FAILED: "Failed to generate embeddings for your query",
-  SUGGESTION_FAILED: "Failed to load search suggestions"
+	NO_QUERY: "Please enter a search query",
+	QUERY_TOO_SHORT: "Query must be at least 2 characters long",
+	NO_RESULTS: "No entities found matching your search criteria",
+	SEARCH_FAILED: "Search failed. Please try again",
+	AI_NOT_AVAILABLE:
+		"AI search is not available. Please try a different search type",
+	EMBEDDING_FAILED: "Failed to generate embeddings for your query",
+	SUGGESTION_FAILED: "Failed to load search suggestions",
 } as const;

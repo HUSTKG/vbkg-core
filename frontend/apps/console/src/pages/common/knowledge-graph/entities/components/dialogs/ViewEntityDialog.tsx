@@ -83,7 +83,7 @@ export default function ViewEntityDialog({
 							Properties
 						</label>
 						<div className="mt-2 p-4 bg-muted rounded-lg">
-							<pre className="text-sm">
+							<pre className="text-sm text-wrap">
 								{JSON.stringify(selectedEntity.properties, null, 2)}
 							</pre>
 						</div>

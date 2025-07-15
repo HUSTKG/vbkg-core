@@ -41,7 +41,7 @@ export function Header({
   return (
     <header
       className={cn(
-        "bg-white dark:bg-gray-800 shadow-sm h-16 w-full fixed z-10",
+        "bg-white dark:bg-gray-800 shadow-sm h-16 w-full fixed z-40",
         isSidebarOpen ? "pr-64" : "pr-20",
       )}
     >

@@ -28,8 +28,8 @@ class DataSourceService:
             data["source_type"] = data["source_type"].value
 
             # Set default trust score if not provided
-            if "trust_score" not in data:
-                print(self._calculate_default_trust_score(data))
+
+            if "trust_score" not in data or data["trust_score"] is None:
                 data["trust_score"] = self._calculate_default_trust_score(data)
 
             # Handle sensitive credentials - encrypt if needed
@@ -99,10 +99,12 @@ class DataSourceService:
         elif source_type == "file":
             # File format affects trust
             file_format = connection_details.get("file_format", "").lower()
-            if file_format in ["csv", "json", "xml"]:
+            if file_format in ["csv", "json", "xml", "txt"]:
                 return 0.6
             elif file_format in ["pdf", "doc", "docx"]:
                 return 0.4
+            else:
+                return 0.3
 
         return base_score
 
@@ -389,7 +391,7 @@ class DataSourceService:
                 query = query.eq("is_active", is_active)
 
             response = (
-                await query.order("created_at", desc=False)
+                await query.order("created_at", desc=True)
                 .range(skip, skip + limit - 1)
                 .execute()
             )

@@ -1,5 +1,4 @@
 import json
-import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -7,15 +6,14 @@ from typing import Any, Dict, List, Optional
 from app.core.llm_client import get_llm_client
 from app.core.supabase import get_supabase
 from app.services.ontology import OntologyService
-
-logger = logging.getLogger(__name__)
+from app.tasks.executors import StepLogger
 
 
 class OntologyEnrichmentTask:
     """Task for enriching entities and relationships with ontology mapping using AI suggestions"""
 
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
+    def __init__(self, logger: StepLogger):
+        self.logger = logger
         self.ontology_service = OntologyService()
         self.llm_client = get_llm_client()
 
@@ -35,7 +33,7 @@ class OntologyEnrichmentTask:
         start_time = time.time()
 
         try:
-            self.logger.info(
+            await self.logger.info(
                 f"Starting ontology enrichment for {len(entities)} entities and {len(relationships)} relationships"
             )
 
@@ -80,7 +78,7 @@ class OntologyEnrichmentTask:
 
         except Exception as e:
             error_message = str(e)
-            self.logger.error(f"Error in ontology enrichment: {error_message}")
+            await self.logger.error(f"Error in ontology enrichment: {error_message}")
 
             return {
                 "enriched_entities": entities,
@@ -117,7 +115,7 @@ class OntologyEnrichmentTask:
                 ),
             }
         except Exception as e:
-            self.logger.error(f"Error getting ontology context: {e}")
+            await self.logger.error(f"Error getting ontology context: {e}")
             return {
                 "classes": {},
                 "object_properties": {},
@@ -165,22 +163,23 @@ class OntologyEnrichmentTask:
                 )
 
                 # Generate AI suggestions
-                suggestions = await self._generate_entity_suggestions(
-                    entity, ontology_context["classes"]
-                )
+                # suggestions = await self._generate_entity_suggestions(
+                #     entity, ontology_context["classes"]
+                # )
+                suggestions = []
                 enriched_entity["mapping_suggestions"] = suggestions
 
                 # Auto-apply if conditions are met
-                if auto_apply and suggestions:
-                    best_suggestion = max(
-                        suggestions, key=lambda x: x.get("confidence", 0)
-                    )
-                    if best_suggestion.get("confidence", 0) >= confidence_threshold:
-                        self._apply_entity_suggestion(
-                            enriched_entity,
-                            best_suggestion,
-                            ontology_context["classes"],
-                        )
+                # if auto_apply and suggestions:
+                #     best_suggestion = max(
+                #         suggestions, key=lambda x: x.get("confidence", 0)
+                #     )
+                #     if best_suggestion.get("confidence", 0) >= confidence_threshold:
+                #         self._apply_entity_suggestion(
+                #             enriched_entity,
+                #             best_suggestion,
+                #             ontology_context["classes"],
+                #         )
 
             enriched_entities.append(enriched_entity)
 
@@ -227,22 +226,23 @@ class OntologyEnrichmentTask:
                 )
 
                 # Generate AI suggestions
-                suggestions = await self._generate_relationship_suggestions(
-                    relationship, ontology_context["object_properties"]
-                )
+                # suggestions = await self._generate_relationship_suggestions(
+                #     relationship, ontology_context["object_properties"]
+                # )
+                suggestions = []
                 enriched_relationship["mapping_suggestions"] = suggestions
 
                 # Auto-apply if conditions are met
-                if auto_apply and suggestions:
-                    best_suggestion = max(
-                        suggestions, key=lambda x: x.get("confidence", 0)
-                    )
-                    if best_suggestion.get("confidence", 0) >= confidence_threshold:
-                        self._apply_relationship_suggestion(
-                            enriched_relationship,
-                            best_suggestion,
-                            ontology_context["object_properties"],
-                        )
+                # if auto_apply and suggestions:
+                #     best_suggestion = max(
+                #         suggestions, key=lambda x: x.get("confidence", 0)
+                #     )
+                #     if best_suggestion.get("confidence", 0) >= confidence_threshold:
+                #         self._apply_relationship_suggestion(
+                #             enriched_relationship,
+                #             best_suggestion,
+                #             ontology_context["object_properties"],
+                #         )
 
             enriched_relationships.append(enriched_relationship)
 
@@ -315,7 +315,7 @@ class OntologyEnrichmentTask:
             {{
                 "suggestions": [
                     {{
-                        "suggested_class": "NHÃN_LỚP",
+                        "suggested_class": "NHÃN_LỚP" // là tên class mới hoặc id của class cũ,
                         "confidence": 0.85,
                         "reasoning": "Lý do tại sao ánh xạ này có ý nghĩa",
                         "is_new_class": false
@@ -334,7 +334,7 @@ class OntologyEnrichmentTask:
             return []
 
         except Exception as e:
-            self.logger.error(f"Error generating entity suggestions: {e}")
+            await self.logger.error(f"Error generating entity suggestions: {e}")
             return []
 
     async def _generate_relationship_suggestions(
@@ -391,7 +391,7 @@ class OntologyEnrichmentTask:
             return []
 
         except Exception as e:
-            self.logger.error(f"Error generating relationship suggestions: {e}")
+            await self.logger.error(f"Error generating relationship suggestions: {e}")
             return []
 
     def _apply_entity_suggestion(
@@ -497,12 +497,12 @@ class OntologyEnrichmentTask:
                             mapping_record
                         ).execute()
                         entity_mappings_saved += 1
-                        self.logger.info(
+                        await self.logger.info(
                             f"Saved entity mapping: {entity_type} (status: {mapping_record['mapping_status']})"
                         )
 
                 except Exception as e:
-                    self.logger.error(
+                    await self.logger.error(
                         f"Error saving entity mapping for {entity.get('entity_type')}: {e}"
                     )
 
@@ -548,16 +548,16 @@ class OntologyEnrichmentTask:
                             mapping_record
                         ).execute()
                         relationship_mappings_saved += 1
-                        self.logger.info(
+                        await self.logger.info(
                             f"Saved relationship mapping: {relationship_type} (status: {mapping_record['mapping_status']})"
                         )
 
                 except Exception as e:
-                    self.logger.error(
+                    await self.logger.error(
                         f"Error saving relationship mapping for {relationship.get('relationship_type')}: {e}"
                     )
 
-            self.logger.info(
+            await self.logger.info(
                 f"Saved {entity_mappings_saved} entity mappings and {relationship_mappings_saved} relationship mappings"
             )
 
@@ -567,7 +567,7 @@ class OntologyEnrichmentTask:
             }
 
         except Exception as e:
-            self.logger.error(f"Error saving mappings: {e}")
+            await self.logger.error(f"Error saving mappings: {e}")
             return {"entity_mappings_saved": 0, "relationship_mappings_saved": 0}
 
     def _calculate_statistics(
@@ -659,7 +659,7 @@ class OntologyEnrichmentTask:
         """Call AI service for suggestions"""
         try:
             if not self.llm_client:
-                self.logger.error("LLM client not initialized")
+                await self.logger.error("LLM client not initialized")
                 return None
 
             content = await self.llm_client.extract_json(
@@ -669,7 +669,7 @@ class OntologyEnrichmentTask:
             return content
 
         except Exception as e:
-            self.logger.error(f"Error calling AI service: {e}")
+            await self.logger.error(f"Error calling AI service: {e}")
             return None
 
     # ============================================
@@ -728,7 +728,7 @@ class OntologyEnrichmentTask:
             }
 
         except Exception as e:
-            self.logger.error(f"Error generating ontology extensions: {e}")
+            await self.logger.error(f"Error generating ontology extensions: {e}")
             return {
                 "extension_suggestions": [],
                 "entity_patterns": {},

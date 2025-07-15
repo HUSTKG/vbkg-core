@@ -1,15 +1,11 @@
-import json
-import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from uuid import uuid4
 
 from app.core.supabase import get_supabase
-
-logger = logging.getLogger(__name__)
+from app.tasks.executors import StepLogger
 
 
 class QualityDimension(str, Enum):
@@ -65,8 +61,9 @@ class QualityMonitoringTask:
     Task for quality monitoring and assessment with Vietnamese support
     """
 
-    def __init__(self):
+    def __init__(self, logger: StepLogger):
         self.quality_metrics = self._initialize_quality_metrics()
+        self.logger = logger
 
     def _initialize_quality_metrics(self) -> Dict[str, QualityMetric]:
         """Initialize quality metrics for Vietnamese banking knowledge extraction"""
@@ -181,7 +178,7 @@ class QualityMonitoringTask:
             Dictionary containing quality assessment results
         """
         try:
-            logger.info(
+            await self.logger.info(
                 f"Starting quality monitoring for {len(entities)} entities and {len(relationships)} relationships"
             )
 
@@ -230,13 +227,13 @@ class QualityMonitoringTask:
             # Store quality results
             await self._store_quality_results(result, step_id, pipeline_run_id)
 
-            logger.info(
+            await self.logger.info(
                 f"Quality monitoring completed with overall score: {overall_score:.2f}"
             )
             return result
 
         except Exception as e:
-            logger.error(f"Error in quality monitoring: {e}")
+            await self.logger.error(f"Error in quality monitoring: {e}")
             return {
                 "overall_score": 0.0,
                 "overall_level": QualityLevel.CRITICAL.value,
@@ -853,23 +850,22 @@ class QualityMonitoringTask:
 
             # Store quality report
             report_data = {
-                "id": str(uuid4()),
                 "step_id": step_id,
                 "pipeline_run_id": pipeline_run_id,
                 "overall_score": quality_result["overall_score"],
                 "overall_level": quality_result["overall_level"],
                 "passed_threshold": quality_result["passed_threshold"],
-                "dimension_scores": json.dumps(quality_result["dimension_scores"]),
-                "vietnamese_analysis": json.dumps(
-                    quality_result["vietnamese_analysis"]
-                ),
-                "recommendations": json.dumps(quality_result["recommendations"]),
+                "dimension_scores": quality_result["dimension_scores"],
+                "vietnamese_analysis": quality_result["vietnamese_analysis"],
+                "recommendations": quality_result["recommendations"],
                 "entity_count": quality_result["entity_count"],
                 "relationship_count": quality_result["relationship_count"],
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
 
-            await supabase.from_("pipeline_quality_reports").insert(report_data).execute()
+            await supabase.from_("pipeline_quality_reports").insert(
+                report_data
+            ).execute()
 
             # Store individual assessments
             for assessment_dict in quality_result["assessments"]:
@@ -881,6 +877,7 @@ class QualityMonitoringTask:
                     "score": assessment_dict["score"],
                     "level": assessment_dict["level"],
                     "details": assessment_dict["details"],
+                    "timestamp": assessment_dict["timestamp"],
                     "created_at": datetime.now(timezone.utc).isoformat(),
                 }
 
@@ -889,7 +886,7 @@ class QualityMonitoringTask:
                 ).execute()
 
         except Exception as e:
-            logger.error(f"Error storing quality results: {e}")
+            await self.logger.error(f"Error storing quality results: {e}")
 
     async def get_quality_statistics(
         self, domain: Optional[str] = None
@@ -928,5 +925,5 @@ class QualityMonitoringTask:
             }
 
         except Exception as e:
-            logger.error(f"Error getting quality statistics: {e}")
+            await self.logger.error(f"Error getting quality statistics: {e}")
             return {"error": str(e)}

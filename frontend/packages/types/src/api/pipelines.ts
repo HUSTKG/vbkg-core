@@ -254,3 +254,25 @@ export interface IScheduledPipeline extends Pipeline {
 
 export interface IGetScheduledPipelinesResponse
 	extends PaginatedResponse<IScheduledPipeline> {}
+
+export interface IGetPipelineStepLogsRequest {
+	step_run_id: string;
+	log_level?: "DEBUG" | "INFO" | "WARN" | "ERROR";
+	start_time?: string;
+	end_time?: string;
+	skip?: number;
+	limit?: number;
+}
+
+export interface IPipelineStepLogEntry {
+	id: string;
+	step_run_id: string;
+	log_level: "DEBUG" | "INFO" | "WARN" | "ERROR";
+	message: string;
+	details?: Record<string, any>;
+	timestamp: string;
+	created_at: string;
+}
+
+export interface IGetPipelineStepLogsResponse
+	extends PaginatedResponse<IPipelineStepLogEntry> {}
